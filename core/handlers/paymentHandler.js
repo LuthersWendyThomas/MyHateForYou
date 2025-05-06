@@ -23,35 +23,36 @@ export async function handlePayment(bot, id, userMessages) {
   s.paymentInProgress = true;
 
   try {
-    const usd = parseFloat(s.totalPrice);
+    const eur = parseFloat(s.totalPrice);
     const hasAllData =
-      s.wallet && s.currency && s.product?.name && s.quantity && usd && usd > 0;
+      s.wallet && s.currency && s.product?.name && s.quantity && eur && eur > 0;
 
-    if (!hasAllData) throw new Error("Missing or invalid data for payment.");
+    if (!hasAllData) throw new Error("Missing or invalid data for payment");
 
     const rate = await fetchCryptoPrice(s.currency);
-    if (!rate || isNaN(rate) || rate <= 0) throw new Error("Failed to fetch exchange rate.");
+    if (!rate || isNaN(rate) || rate <= 0) throw new Error("Failed to fetch exchange rate");
 
-    const amount = +(usd / rate).toFixed(6);
+    const amount = +(eur / rate).toFixed(6);
     s.expectedAmount = amount;
 
     const qr = await generateQR(s.currency, amount, s.wallet);
-    if (!qr || !(qr instanceof Buffer)) throw new Error("Failed to generate QR code.");
+    if (!qr || !(qr instanceof Buffer)) throw new Error("Failed to generate QR code");
 
     const summary = `
 💸 *Payment summary:*
 
 • Product: ${s.product.name}
 • Quantity: ${s.quantity}
-• Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)
+• Delivery: ${s.deliveryMethod} (${s.deliveryFee}€)
 • Location: ${s.city}
 
-💰 ${usd.toFixed(2)}$ ≈ ${amount} ${s.currency}
+💰 ${eur.toFixed(2)}€ ≈ ${amount} ${s.currency}
 🏦 Wallet: \`${s.wallet}\`
 
 ⏱ Estimated delivery in ~30 minutes.
 ✅ Pay by scanning the QR or copy the wallet address.`.trim();
 
+    // 🛠️ FIX: Set step before sending QR to ensure flow continues if QR sending fails
     s.step = 8;
 
     await bot.sendChatAction(id, "upload_photo").catch(() => {});
@@ -60,6 +61,7 @@ export async function handlePayment(bot, id, userMessages) {
       parse_mode: "Markdown"
     });
 
+    // Clear any existing payment timers
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
 
     const timer = setTimeout(() => {
@@ -109,6 +111,7 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
       return sendAndTrack(bot, id, "❌ Payment not received yet. Please check again later.", {}, userMessages);
     }
 
+    // Clear any existing payment timer
     if (s.paymentTimer) clearTimeout(s.paymentTimer);
     if (paymentTimers[id]) {
       clearTimeout(paymentTimers[id]);
@@ -117,6 +120,7 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
 
     await sendAndTrack(bot, id, "✅ Payment confirmed!\nDelivery in progress...", {}, userMessages);
 
+    // Increment the user order count
     userOrders[id] = (userOrders[id] || 0) + 1;
 
     await saveOrder(id, s.city, s.product.name, s.totalPrice).catch(err =>
