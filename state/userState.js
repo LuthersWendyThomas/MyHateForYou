@@ -13,12 +13,12 @@ export const userMessages = {};     // { [userId]: [messageId1, messageId2, ...]
 // 🛡️ Security data (bans, flood, spam, timers)
 // ==============================
 
-export const activeTimers = {};     // { [userId]: Timeout } – pristatymo laikmačiai
-export const paymentTimers = {};    // { [userId]: Timeout } – mokėjimų laikmačiai
-export const failedAttempts = {};   // { [userId]: number } – neteisingų bandymų skaičius
-export const bannedUntil = {};      // { [userId]: timestampMs } – laikini banai
-export const antiSpam = {};         // { [userId]: timestampMs } – anti-spam trackeris
-export const antiFlood = {};        // { [userId]: number[] } – anti-flood laikai
+export const activeTimers = {};     // { [userId]: Timeout } – delivery timers
+export const paymentTimers = {};    // { [userId]: Timeout } – payment timers
+export const failedAttempts = {};   // { [userId]: number } – number of incorrect attempts
+export const bannedUntil = {};      // { [userId]: timestampMs } – temporary bans
+export const antiSpam = {};         // { [userId]: timestampMs } – anti-spam tracker
+export const antiFlood = {};        // { [userId]: number[] } – anti-flood times
 
 
 // ==============================
