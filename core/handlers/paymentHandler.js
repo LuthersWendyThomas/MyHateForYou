@@ -23,16 +23,16 @@ export async function handlePayment(bot, id, userMessages) {
   s.paymentInProgress = true;
 
   try {
-    const eur = parseFloat(s.totalPrice);
+    const usd = parseFloat(s.totalPrice);
     const hasAllData =
-      s.wallet && s.currency && s.product?.name && s.quantity && eur && eur > 0;
+      s.wallet && s.currency && s.product?.name && s.quantity && usd && usd > 0;
 
     if (!hasAllData) throw new Error("Missing or invalid data for payment.");
 
     const rate = await fetchCryptoPrice(s.currency);
     if (!rate || isNaN(rate) || rate <= 0) throw new Error("Failed to fetch exchange rate.");
 
-    const amount = +(eur / rate).toFixed(6);
+    const amount = +(usd / rate).toFixed(6);
     s.expectedAmount = amount;
 
     const qr = await generateQR(s.currency, amount, s.wallet);
@@ -43,16 +43,15 @@ export async function handlePayment(bot, id, userMessages) {
 
 • Product: ${s.product.name}
 • Quantity: ${s.quantity}
-• Delivery: ${s.deliveryMethod} (${s.deliveryFee}€)
+• Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)
 • Location: ${s.city}
 
-💰 ${eur.toFixed(2)}$ ≈ ${amount} ${s.currency}
+💰 ${usd.toFixed(2)}$ ≈ ${amount} ${s.currency}
 🏦 Wallet: \`${s.wallet}\`
 
 ⏱ Estimated delivery in ~30 minutes.
 ✅ Pay by scanning the QR or copy the wallet address.`.trim();
 
-    // 🛠️ FIX — the step is set BEFORE sending the QR, so that even if the QR sending is stuck — the flow continues to work
     s.step = 8;
 
     await bot.sendChatAction(id, "upload_photo").catch(() => {});
