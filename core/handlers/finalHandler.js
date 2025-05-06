@@ -133,12 +133,12 @@ function greetingText(count) {
 🚚 Delivery in *30 minutes or less*  
 🕵️ Ultra-discreet • No questions asked  
 
-✨ Trusted Quality Since 2020 🔥  
-✨ 24/7 Live Support & Fully Automated Service 🤖  
-✨ Drop / Courier Options Available* 🚚  
+✨ Trusted Quality Since 2020
+✨ 24/7 Live Support & Fully Automated Service
+✨ *Drop / Courier Options Available*
 
-📍 *Drop anywhere in your city* 🌆  
-📍 *Courier to your agreed location* 🚚  
+🌆 *Drop anywhere in your city* 
+🚚 *Courier to your agreed location*  
 
 ❗️ *Do not speak or photograph couriers*  
 ⛔ Any violation = instant *BAN*  
