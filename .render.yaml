@@ -1,0 +1,64 @@
+services:
+  - type: worker
+    name: BalticVaistineBot
+    env: node
+    branch: main
+    runtime: node
+    buildCommand: npm install
+    startCommand: node index.js
+    autoDeploy: true
+    autoRestart: true
+    envVars:
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: ADMIN_ID
+        sync: false
+
+      # --- Crypto Wallets
+      - key: BTC_WALLET
+        sync: false
+      - key: ETH_WALLET
+        sync: false
+      - key: SOL_WALLET
+        sync: false
+      - key: MATIC_WALLET
+        sync: false
+
+      # --- RPC endpoint'ai
+      - key: ETHEREUM_RPC
+        sync: false
+      - key: MATIC_RPC
+        sync: false
+      - key: SOLANA_RPC
+        sync: false
+      - key: BTC_RPC
+        value: https://blockchain.info/q/addressbalance/
+        sync: false
+
+      # --- CoinGecko (EUR kaina)
+      - key: COINGECKO_URL
+        value: https://api.coingecko.com/api/v3/simple/price
+        sync: false
+
+      # --- Feature flag'ai
+      - key: AUTOBAN_ENABLED
+        value: "true"
+        sync: false
+      - key: AUTODELETE_ENABLED
+        value: "true"
+        sync: false
+
+      # --- Miestų sąrašas
+      - key: CITIES
+        value: Vilnius,Kaunas
+        sync: false
+
+  - type: worker
+    name: CleanLogsWorker
+    env: node
+    branch: main
+    runtime: node
+    buildCommand: npm install
+    startCommand: node cron/cleanOldLogs.js
+    autoDeploy: false
+    autoRestart: true

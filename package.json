@@ -1,0 +1,32 @@
+{
+  "name": "BalticVaistineBot",
+  "version": "2.0.1",
+  "description": "Baltic Vaistinė — Telegram bot sistema su Crypto mokėjimais ir Auto-Delivery funkcionalumu.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "cleanlogs": "node cron/cleanOldLogs.js"
+  },
+  "keywords": [
+    "telegram-bot",
+    "baltic",
+    "pharmacy",
+    "crypto",
+    "delivery",
+    "web3",
+    "automated",
+    "telegram",
+    "bot",
+    "nodejs"
+  ],
+  "author": "BalticPharma Core",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "node-fetch": "^2.6.9",
+    "node-telegram-bot-api": "^0.61.0",
+    "ps-tree": "^1.2.0",
+    "qrcode": "^1.5.3"
+  }
+}
