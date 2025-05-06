@@ -9,7 +9,7 @@ import {
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
 /**
- * Tikrina ar vartotojas spaudžia per dažnai (<1s tarp žinučių)
+ * Checks if the user is clicking too frequently (<1s between messages)
  */
 export function isSpamming(id) {
   try {
@@ -18,13 +18,13 @@ export function isSpamming(id) {
     antiSpam[id] = now;
     return now - last < 1000;
   } catch (err) {
-    console.error("❌ [isSpamming klaida]:", err.message);
+    console.error("❌ [isSpamming error]:", err.message);
     return false;
   }
 }
 
 /**
- * Tikrina ar vartotojas nutildytas (laikinas blokavimas)
+ * Checks if the user is muted (temporarily blocked)
  */
 export function isMuted(id) {
   try {
@@ -37,13 +37,13 @@ export function isMuted(id) {
     delete bannedUntil[id];
     return false;
   } catch (err) {
-    console.error("❌ [isMuted klaida]:", err.message);
+    console.error("❌ [isMuted error]:", err.message);
     return false;
   }
 }
 
 /**
- * Dinamiškai nustato leidžiamų veiksmų kiekį (per 5 sek) pagal naudotojo užsakymų kiekį
+ * Dynamically determines allowed actions (per 5s) based on the user's order count
  */
 function getFloodLimit(id) {
   try {
@@ -57,7 +57,7 @@ function getFloodLimit(id) {
 }
 
 /**
- * Apdoroja flood atvejus — jei viršyta dinamika, vartotojas nutildomas 5 min.
+ * Handles flood events — if the limit is exceeded, the user is muted for 5 minutes
  */
 export async function handleFlood(id, bot, userMessages = {}) {
   try {
@@ -66,7 +66,7 @@ export async function handleFlood(id, bot, userMessages = {}) {
     const now = Date.now();
     if (!Array.isArray(antiFlood[id])) antiFlood[id] = [];
 
-    // Filtruojam tik veiksmus per paskutines 5 sekundes
+    // Filter only actions from the last 5 seconds
     antiFlood[id] = antiFlood[id].filter(ts => now - ts < 5000);
     antiFlood[id].push(now);
 
@@ -79,12 +79,12 @@ export async function handleFlood(id, bot, userMessages = {}) {
       await sendAndTrack(
         bot,
         id,
-        "⛔️ *Per daug veiksmų per trumpą laiką.*\n🕓 Seansas pristabdytas *5 minutėms*.",
+        "⛔️ *Too many actions in a short period.*\n🕓 Session paused for *5 minutes*.",
         { parse_mode: "Markdown" },
         userMessages
       );
 
-      console.warn(`🚫 [FLOOD MUTE] ${id} viršijo ribą (${hits}/${limit}/5s) — užmutintas.`);
+      console.warn(`🚫 [FLOOD MUTE] ${id} exceeded limit (${hits}/${limit}/5s) — muted.`);
       return true;
     }
 
@@ -92,7 +92,7 @@ export async function handleFlood(id, bot, userMessages = {}) {
       await sendAndTrack(
         bot,
         id,
-        "⚠️ *Dėmesio:* dar vienas veiksmas ir jūsų seansas bus *laikinai pristabdytas* 5 minutėms.",
+        "⚠️ *Warning:* one more action and your session will be *temporarily paused* for 5 minutes.",
         { parse_mode: "Markdown" },
         userMessages
       );
@@ -101,7 +101,7 @@ export async function handleFlood(id, bot, userMessages = {}) {
     return false;
 
   } catch (err) {
-    console.error("❌ [handleFlood klaida]:", err.message);
+    console.error("❌ [handleFlood error]:", err.message);
     return false;
   }
 }
