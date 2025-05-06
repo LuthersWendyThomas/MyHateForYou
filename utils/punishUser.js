@@ -5,16 +5,16 @@ import { FLAGS } from "../config/config.js";
 import { userMessages } from "../state/userState.js";
 
 /**
- * Reaguoja į neteisingą įvestį — parodo įspėjimą, suseka žinutę, ištrina po 3s (jei įjungta)
- * @param {TelegramBot} bot - Bot instancija
- * @param {number|string} id - Telegram naudotojo ID
- * @param {Object=} messages - Sekamos žinutės (numatyta: userMessages)
+ * Reacts to invalid input — sends a warning, tracks the message, deletes after 3s (if enabled)
+ * @param {TelegramBot} bot - Bot instance
+ * @param {number|string} id - Telegram user ID
+ * @param {Object=} messages - Tracked messages (default: userMessages)
  */
 export async function punish(bot, id, messages = userMessages) {
   try {
     if (!bot || !id) return;
 
-    const warning = "⚠️ *Neleistinas veiksmas.*\nPrašome naudotis *apatiniais mygtukais*.";
+    const warning = "⚠️ *Invalid action.*\nPlease use the *buttons below*.";
 
     const msg = await sendAndTrack(
       bot,
@@ -33,12 +33,12 @@ export async function punish(bot, id, messages = userMessages) {
     if (canDelete && messageId) {
       setTimeout(() => {
         bot.deleteMessage(id, messageId).catch((err) =>
-          console.warn(`⚠️ Nepavyko ištrinti punish žinutės (${messageId}):`, err.message)
+          console.warn(`⚠️ Failed to delete punish message (${messageId}):`, err.message)
         );
       }, 3000);
     }
 
   } catch (err) {
-    console.error("❌ [punishUser klaida]:", err.message || err);
+    console.error("❌ [punishUser error]:", err.message || err);
   }
 }
