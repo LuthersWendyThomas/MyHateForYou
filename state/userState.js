@@ -1,7 +1,7 @@
 // 📦 state/userState.js | BalticPharma V2 — IMMORTAL v2025.6 DIAMOND GRIDLOCK FINAL EDITION
 
 // ==============================
-// 🔁 Vartotojo sesijos ir užsakymų eiga
+// 🔁 User sessions and order progress
 // ==============================
 
 export const userSessions = {};     // { [userId]: { step, city, product, ... } }
@@ -10,7 +10,7 @@ export const userMessages = {};     // { [userId]: [messageId1, messageId2, ...]
 
 
 // ==============================
-// 🛡️ Saugumo duomenys (banai, flood, spam, laikmačiai)
+// 🛡️ Security data (bans, flood, spam, timers)
 // ==============================
 
 export const activeTimers = {};     // { [userId]: Timeout } – pristatymo laikmačiai
@@ -22,11 +22,11 @@ export const antiFlood = {};        // { [userId]: number[] } – anti-flood lai
 
 
 // ==============================
-// 📊 Real-Time aktyvumo trackeris
+// 📊 Real-Time activity tracker
 // ==============================
 
 /**
- * ✅ Aktyvių naudotojų stebėjimas (naudojamas analizei ir UX statistikai)
+ * ✅ Active user tracking (used for analytics and UX statistics)
  */
 export const activeUsers = {
   list: new Set(),
