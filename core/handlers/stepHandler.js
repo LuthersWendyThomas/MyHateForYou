@@ -188,14 +188,20 @@ function renderStep(bot, id, step, userMessages) {
     }
 
     if (step === 5) {
-      return sendKeyboard(
-        bot,
-        id,
-        "⚖️ *Select quantity:*",
-        Object.entries(s.product?.prices || {}).map(([q, p]) => [{ text: `${q} (${p}€)` }]).concat([[{ text: "🔙 Back" }]]),
-        userMessages
-      );
-    }
+  const qtyButtons = Object.entries(s.product?.prices || {}).map(([q, p]) => {
+    return [{ text: `${q} (${p}$)` }];
+  });
+
+  qtyButtons.push([{ text: "🔙 Back" }]);
+
+  return sendKeyboard(
+    bot,
+    id,
+    "⚖️ *Select quantity:*",
+    qtyButtons,
+    userMessages
+  );
+}
 
     if (step === 6) {
       const networks = Object.keys(WALLETS).reduce((rows, key) => {
@@ -217,12 +223,12 @@ function renderStep(bot, id, step, userMessages) {
     if (step === 7) {
       const summary = `📜 *Order summary:*\n\n` +
         `• City: ${s.city}\n` +
-        `• Delivery: ${s.deliveryMethod} (${s.deliveryFee}€)\n` +
+        `• Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)\n` +
         `• Category: ${s.category}\n` +
         `• Product: ${s.product?.name || "N/A"}\n` +
         `• Quantity: ${s.quantity}\n` +
         `• Payment: ${s.currency}\n\n` +
-        `💰 Total amount: *${s.totalPrice.toFixed(2)}€*\n\n` +
+        `💰 Total amount: *${s.totalPrice.toFixed(2)}$*\n\n` +
         `✅ Confirm if everything is correct.`;
 
       return sendKeyboard(
