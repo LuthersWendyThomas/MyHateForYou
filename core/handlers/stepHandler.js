@@ -1,4 +1,4 @@
-// 🧠 core/handlers/stepHandler.js | BalticPharma V2 — IMMORTAL v4.4.1 DIAMOND FIXED QR EDITION
+// 🧠 core/handlers/stepHandler.js | IMMORTAL REGION UI v1.0 FINAL
 
 import { cities, deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
@@ -9,6 +9,16 @@ import { punish } from "../../utils/punishUser.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
 import { resetSession, safeStart } from "./finalHandler.js";
 
+// 🌍 Grouped regions
+const regionMap = {
+  "🗽 East Coast": ["New York", "Boston", "Philadelphia", "Baltimore", "Washington"],
+  "🌴 West Coast": ["Los Angeles", "San Diego", "San Jose", "San Francisco"],
+  "🛢️ South": ["Houston", "Dallas", "Austin", "San Antonio", "Atlanta", "Miami", "El Paso"],
+  "⛰️ Midwest": ["Chicago", "Detroit", "Indianapolis", "Columbus"],
+  "🌲 Northwest": ["Seattle", "Portland", "Denver"],
+  "🏜️ Southwest": ["Phoenix", "Las Vegas", "Oklahoma City"]
+};
+
 export async function handleStep(bot, id, text, userMessages) {
   const s = (userSessions[id] ||= { step: 1, createdAt: Date.now() });
   const input = text?.trim();
@@ -17,10 +27,12 @@ export async function handleStep(bot, id, text, userMessages) {
     return await punish(bot, id, userMessages);
   }
 
-  // 🔙 Back navigation logic
+  // 🔙 Back logic
   if (input === "🔙 Back") {
     if (s.step > 1) {
       s.step--;
+      if (s.step === 1) delete s.region;
+      if (s.step === 1.2) delete s.city;
       return renderStep(bot, id, s.step, userMessages);
     } else {
       await resetSession(id);
@@ -31,7 +43,13 @@ export async function handleStep(bot, id, text, userMessages) {
   try {
     switch (s.step) {
       case 1:
-        if (!cities.includes(input)) return await punish(bot, id, userMessages);
+        if (!regionMap[input]) return await punish(bot, id, userMessages);
+        s.region = input;
+        s.step = 1.2;
+        return renderStep(bot, id, 1.2, userMessages);
+
+      case 1.2:
+        if (!regionMap[s.region]?.includes(input)) return await punish(bot, id, userMessages);
         s.city = input;
         break;
 
@@ -104,105 +122,120 @@ function renderStep(bot, id, step, userMessages) {
   const s = userSessions[id] ||= { step: 1 };
 
   try {
-    switch (step) {
-      case 1:
-        return sendKeyboard(
-          bot,
-          id,
-          "🌍 *Select your city:*",
-          cities.map(c => [{ text: c }]).concat([[{ text: "🔙 Back" }]]),
-          userMessages
-        );
-
-      case 2:
-        return sendKeyboard(
-          bot,
-          id,
-          "🚛 *Choose delivery method:*",
-          deliveryMethods.map(m => [{ text: m.label }]).concat([[{ text: "🔙 Back" }]]),
-          userMessages
-        );
-
-      case 3:
-        return sendKeyboard(
-          bot,
-          id,
-          "📋 *Select product category:*",
-          Object.keys(products).map(k => [{ text: k }]).concat([[{ text: "🔙 Back" }]]),
-          userMessages
-        );
-
-      case 4:
-        const cat = products[s.category] || [];
-        return sendKeyboard(
-          bot,
-          id,
-          "📦 *Choose a product:*",
-          cat.map(p => [{ text: p.name }]).concat([[{ text: "🔙 Back" }]]),
-          userMessages
-        );
-
-      case 5:
-        return sendKeyboard(
-          bot,
-          id,
-          "⚖️ *Select quantity:*",
-          Object.entries(s.product?.prices || {}).map(([q, p]) => [{ text: `${q} (${p}€)` }]).concat([[{ text: "🔙 Back" }]]),
-          userMessages
-        );
-
-      case 6:
-        const networks = Object.keys(WALLETS).reduce((rows, key) => {
-          const last = rows[rows.length - 1];
-          if (last && last.length < 2) last.push({ text: key });
-          else rows.push([{ text: key }]);
-          return rows;
-        }, []);
-        networks.push([{ text: "🔙 Back" }]);
-        return sendKeyboard(
-          bot,
-          id,
-          "💳 *Select payment network:*",
-          networks,
-          userMessages
-        );
-
-      case 7:
-        const summary = `📜 *Order summary:*\n\n` +
-          `• City: ${s.city}\n` +
-          `• Delivery: ${s.deliveryMethod} (${s.deliveryFee}€)\n` +
-          `• Category: ${s.category}\n` +
-          `• Product: ${s.product?.name || "N/A"}\n` +
-          `• Quantity: ${s.quantity}\n` +
-          `• Payment: ${s.currency}\n\n` +
-          `💰 Total amount: *${s.totalPrice.toFixed(2)}€*\n\n` +
-          `✅ Confirm if everything is correct.`;
-
-        return sendKeyboard(
-          bot,
-          id,
-          summary,
-          [[{ text: "✅ CONFIRM" }], [{ text: "🔙 Back" }]],
-          userMessages
-        );
-
-      case 8:
-        return sendKeyboard(
-          bot,
-          id,
-          "❓ *Was the payment completed?*",
-          [
-            [{ text: "✅ CONFIRM" }],
-            [{ text: "❌ Cancel payment" }]
-          ],
-          userMessages
-        );
-
-      default:
-        userSessions[id] = { step: 1, createdAt: Date.now() };
-        return renderStep(bot, id, 1, userMessages);
+    if (step === 1) {
+      return sendKeyboard(
+        bot,
+        id,
+        "🗺 *Select your region:*",
+        Object.keys(regionMap).map(r => [{ text: r }]),
+        userMessages
+      );
     }
 
+    if (step === 1.2) {
+      return sendKeyboard(
+        bot,
+        id,
+        `🏙 *Select your city in ${s.region}:*`,
+        regionMap[s.region].map(c => [{ text: c }]).concat([[{ text: "🔙 Back" }]]),
+        userMessages
+      );
+    }
+
+    if (step === 2) {
+      return sendKeyboard(
+        bot,
+        id,
+        "🚛 *Choose delivery method:*",
+        deliveryMethods.map(m => [{ text: m.label }]).concat([[{ text: "🔙 Back" }]]),
+        userMessages
+      );
+    }
+
+    if (step === 3) {
+      return sendKeyboard(
+        bot,
+        id,
+        "📋 *Select product category:*",
+        Object.keys(products).map(k => [{ text: k }]).concat([[{ text: "🔙 Back" }]]),
+        userMessages
+      );
+    }
+
+    if (step === 4) {
+      const cat = products[s.category] || [];
+      return sendKeyboard(
+        bot,
+        id,
+        "📦 *Choose a product:*",
+        cat.map(p => [{ text: p.name }]).concat([[{ text: "🔙 Back" }]]),
+        userMessages
+      );
+    }
+
+    if (step === 5) {
+      return sendKeyboard(
+        bot,
+        id,
+        "⚖️ *Select quantity:*",
+        Object.entries(s.product?.prices || {}).map(([q, p]) => [{ text: `${q} (${p}€)` }]).concat([[{ text: "🔙 Back" }]]),
+        userMessages
+      );
+    }
+
+    if (step === 6) {
+      const networks = Object.keys(WALLETS).reduce((rows, key) => {
+        const last = rows[rows.length - 1];
+        if (last && last.length < 2) last.push({ text: key });
+        else rows.push([{ text: key }]);
+        return rows;
+      }, []);
+      networks.push([{ text: "🔙 Back" }]);
+      return sendKeyboard(
+        bot,
+        id,
+        "💳 *Select payment network:*",
+        networks,
+        userMessages
+      );
+    }
+
+    if (step === 7) {
+      const summary = `📜 *Order summary:*\n\n` +
+        `• City: ${s.city}\n` +
+        `• Delivery: ${s.deliveryMethod} (${s.deliveryFee}€)\n` +
+        `• Category: ${s.category}\n` +
+        `• Product: ${s.product?.name || "N/A"}\n` +
+        `• Quantity: ${s.quantity}\n` +
+        `• Payment: ${s.currency}\n\n` +
+        `💰 Total amount: *${s.totalPrice.toFixed(2)}€*\n\n` +
+        `✅ Confirm if everything is correct.`;
+
+      return sendKeyboard(
+        bot,
+        id,
+        summary,
+        [[{ text: "✅ CONFIRM" }], [{ text: "🔙 Back" }]],
+        userMessages
+      );
+    }
+
+    if (step === 8) {
+      return sendKeyboard(
+        bot,
+        id,
+        "❓ *Was the payment completed?*",
+        [
+          [{ text: "✅ CONFIRM" }],
+          [{ text: "❌ Cancel payment" }]
+        ],
+        userMessages
+      );
+    }
+
+    // fallback
+    userSessions[id] = { step: 1, createdAt: Date.now() };
+    return renderStep(bot, id, 1, userMessages);
   } catch (err) {
     console.error("❌ [renderStep error]:", err.message);
     return sendKeyboard(
