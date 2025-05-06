@@ -35,10 +35,12 @@ export function resetUser(id) {
       antiFlood
     ];
 
+    // Clear all relevant user data
     for (const store of stores) {
       if (store?.[uid] !== undefined) delete store[uid];
     }
 
+    // Ensure user is removed from active users set
     activeUsers.remove(uid);
     console.log(`🧼 Users ${uid} full state cleared.`);
   } catch (err) {
@@ -54,11 +56,13 @@ export function clearUserActivity(id) {
   if (!uid) return;
 
   try {
+    // Clear only activity data while preserving the session
     delete userMessages[uid];
     delete failedAttempts[uid];
     delete antiSpam[uid];
     delete antiFlood[uid];
 
+    // Ensure user is removed from active users set
     activeUsers.remove(uid);
     console.log(`🧹 Cleared activity (without session): ${uid}`);
   } catch (err) {
@@ -74,6 +78,7 @@ export function clearUserMessages(id) {
   if (!uid) return;
 
   try {
+    // Clear user's message IDs
     delete userMessages[uid];
   } catch (err) {
     console.error("❌ [clearUserMessages error]:", err.message);
@@ -88,18 +93,21 @@ export function clearTimers(id) {
   if (!uid) return;
 
   try {
+    // Clear the active delivery timer
     if (activeTimers?.[uid]) {
       clearTimeout(activeTimers[uid]);
       delete activeTimers[uid];
       console.log(`🕒 ⛔️ Delivery timer cleared: ${uid}`);
     }
 
+    // Clear the active payment timer
     if (paymentTimers?.[uid]) {
       clearTimeout(paymentTimers[uid]);
       delete paymentTimers[uid];
       console.log(`💳 ⛔️ Payment timer cleared: ${uid}`);
     }
 
+    // Clear cleanup scheduled flag from user session
     if (userSessions?.[uid]?.cleanupScheduled) {
       delete userSessions[uid].cleanupScheduled;
       console.log(`🧼 cleanupScheduled flag cleared: ${uid}`);
@@ -117,6 +125,7 @@ export function unregisterUser(id) {
     const uid = safeId(id);
     if (!uid) return;
 
+    // Clear timers, messages, and reset user state
     clearTimers(uid);
     clearUserMessages(uid);
     resetUser(uid);
