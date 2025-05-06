@@ -188,20 +188,20 @@ function renderStep(bot, id, step, userMessages) {
     }
 
     if (step === 5) {
-  const qtyButtons = Object.entries(s.product?.prices || {}).map(([q, p]) => {
-    return [{ text: `${q} (${p}$)` }];
-  });
+      const qtyButtons = Object.entries(s.product?.prices || {}).map(([q, p]) => {
+        return [{ text: `${q} (${p}$)` }];
+      });
 
-  qtyButtons.push([{ text: "🔙 Back" }]);
+      qtyButtons.push([{ text: "🔙 Back" }]);
 
-  return sendKeyboard(
-    bot,
-    id,
-    "⚖️ *Select quantity:*",
-    qtyButtons,
-    userMessages
-  );
-}
+      return sendKeyboard(
+        bot,
+        id,
+        "⚖️ *Select quantity:*",
+        qtyButtons,
+        userMessages
+      );
+    }
 
     if (step === 6) {
       const networks = Object.keys(WALLETS).reduce((rows, key) => {
