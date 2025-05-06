@@ -6,21 +6,21 @@ import { sendKeyboard } from "../helpers/messageUtils.js";
 import { clearTimers, clearUserMessages } from "../state/stateManager.js";
 
 /**
- * Inicijuoja švarų užsakymo startą nuo pirmo žingsnio (miesto)
+ * Initiates a clean order start from the first step (city)
  */
 export async function startOrder(bot, id, userMsgs = {}) {
   const uid = String(id);
   if (!bot || !uid) return;
 
   try {
-    // — 1. Išvalom visą user sesiją ir žinutes
+    // — 1. Clearing the entire user session and messages
     await clearTimers(uid);
     await clearUserMessages(uid);
 
     delete userSessions[uid];
     delete userOrders[uid];
 
-    // — 2. Nauja tuščia sesija su visais laukais
+    // — 2. New empty session with all fields
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now(),
@@ -44,7 +44,7 @@ export async function startOrder(bot, id, userMsgs = {}) {
       paymentInProgress: false
     };
 
-    // — 3. Tikrinam ar miestai prieinami
+    // — 3. Checking if cities are accessible
     const validCities = Array.isArray(cities)
       ? cities.filter(c => typeof c === "string" && c.trim().length > 0)
       : [];
@@ -59,7 +59,7 @@ export async function startOrder(bot, id, userMsgs = {}) {
       );
     }
 
-    // — 4. Generuojam mygtukus ir siunčiam pasirinkimą
+    // — 4. We generate buttons and send the selection
     const keyboard = validCities.map(city => [{ text: city }]);
     keyboard.push([{ text: "🔙 Back" }]);
 
