@@ -38,7 +38,7 @@ export function registerMainHandler(bot) {
 
       // ✅ 2. Startas – paleidžia šviežią sesiją
       if (text.toLowerCase() === "/start" || text === MENU_BUTTONS.START) {
-        console.log(`🚀 /start iš ${uid}`);
+        console.log(`🚀 /start from ${uid}`);
         return await safeStart(bot, uid);
       }
 
@@ -48,7 +48,7 @@ export function registerMainHandler(bot) {
           return await handleAdminAction(bot, msg, userSessions, userOrders);
         } catch (err) {
           console.error("❌ [Admin klaida]:", err.message);
-          return await bot.sendMessage(uid, "❗️ Admin veiksmas nepavyko.");
+          return await bot.sendMessage(uid, "❗️ Admin action failed.");
         }
       }
 
@@ -79,17 +79,17 @@ export function registerMainHandler(bot) {
       if (!allowedMenu.includes(text)) {
         return await bot.sendMessage(
           uid,
-          "⚠️ *Neleistinas veiksmas.*\nNaudokitės mygtukais apačioje.",
+          "⚠️ *Illegal action.*\nUse the buttons below.",
           { parse_mode: "Markdown", ...MAIN_KEYBOARD }
         );
       }
 
     } catch (err) {
-      console.error("❌ [mainHandler fatal klaida]:", err.message || err);
+      console.error("❌ [mainHandler fatal error]:", err.message || err);
       try {
         await bot.sendMessage(
           msg.chat.id,
-          "❗️ Vidinė klaida. Bandykite dar kartą.",
+          "❗️ Internal error. Please try again..",
           { parse_mode: "Markdown", ...MAIN_KEYBOARD }
         );
       } catch {}
