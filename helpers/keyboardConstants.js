@@ -1,7 +1,7 @@
 // 📦 helpers/keyboardConstants.js | BalticPharma V2 — FINAL IMMORTAL v2025.9 LEGACY-COMPAT MAIN_KEYBOARD RESTORE
 
 /**
- * ✅ Visų meniu mygtukų tekstai
+ * ✅ Texts for all menu buttons
  */
 export const MENU_BUTTONS = {
   START: "🚀 START",
@@ -16,7 +16,7 @@ export const MENU_BUTTONS = {
 };
 
 /**
- * ✅ Pagrindinis meniu visiems (naudotas visur — išlaikytas dėl suderinamumo)
+ * ✅ Main menu for everyone (used everywhere — kept for compatibility)
  */
 export const MAIN_KEYBOARD = {
   reply_markup: {
