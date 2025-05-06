@@ -25,8 +25,8 @@ export const autodeleteEnabled = {
 //
 
 export const deliveryMethods = [
-  { label: "📍 Drop (5€)", key: "drop", fee: 5 },
-  { label: "🚚 Courier (10€)", key: "courier", fee: 10 }
+  { label: "📍 Drop (5$)", key: "drop", fee: 5 },
+  { label: "🚚 Courier (10$)", key: "courier", fee: 10 }
 ];
 
 //
