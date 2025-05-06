@@ -42,14 +42,15 @@ export async function handleStep(bot, id, text, userMessages) {
 
   // 🔙 Back logic
   if (input === "🔙 Back") {
-    if (s.step > 1) {
+    if (s.step === 1) {
+      // If we're in the first step (region selection), return to the start (greeting)
+      await resetSession(id);
+      return await safeStart(bot, id);
+    } else if (s.step > 1) {
       s.step--;
       if (s.step === 1) delete s.region;
       if (s.step === 1.2) delete s.city;
       return renderStep(bot, id, s.step, userMessages);
-    } else {
-      await resetSession(id);
-      return await safeStart(bot, id);
     }
   }
 
@@ -62,10 +63,10 @@ export async function handleStep(bot, id, text, userMessages) {
         return renderStep(bot, id, 1.2, userMessages);
 
       case 1.2:
-       if (!regionMap[s.region]?.includes(input)) return await punish(bot, id, userMessages);
-       s.city = input;
-       s.step = 2;
-       return renderStep(bot, id, 2, userMessages);
+        if (!regionMap[s.region]?.includes(input)) return await punish(bot, id, userMessages);
+        s.city = input;
+        s.step = 2;
+        return renderStep(bot, id, 2, userMessages);
 
       case 2:
         const method = deliveryMethods.find(m => m.label === input);
@@ -141,7 +142,10 @@ function renderStep(bot, id, step, userMessages) {
         bot,
         id,
         "🗺 *Select your region:*",
-        Object.keys(regionMap).map(r => [{ text: r }]),
+        [
+          ...Object.keys(regionMap).map(r => [{ text: r }]),
+          [{ text: "🔙 Back" }]  // Add "Back" button here to go back to greeting
+        ],
         userMessages
       );
     }
@@ -151,7 +155,10 @@ function renderStep(bot, id, step, userMessages) {
         bot,
         id,
         `🏙 *Select your city in ${s.region}:*`,
-        regionMap[s.region].map(c => [{ text: c }]).concat([[{ text: "🔙 Back" }]]),
+        [
+          ...regionMap[s.region].map(c => [{ text: c }]),
+          [{ text: "🔙 Back" }]
+        ],
         userMessages
       );
     }
@@ -161,7 +168,10 @@ function renderStep(bot, id, step, userMessages) {
         bot,
         id,
         "🚛 *Choose delivery method:*",
-        deliveryMethods.map(m => [{ text: m.label }]).concat([[{ text: "🔙 Back" }]]),
+        [
+          ...deliveryMethods.map(m => [{ text: m.label }]),
+          [{ text: "🔙 Back" }]
+        ],
         userMessages
       );
     }
@@ -171,7 +181,10 @@ function renderStep(bot, id, step, userMessages) {
         bot,
         id,
         "📋 *Select product category:*",
-        Object.keys(products).map(k => [{ text: k }]).concat([[{ text: "🔙 Back" }]]),
+        [
+          ...Object.keys(products).map(k => [{ text: k }]),
+          [{ text: "🔙 Back" }]
+        ],
         userMessages
       );
     }
@@ -182,7 +195,10 @@ function renderStep(bot, id, step, userMessages) {
         bot,
         id,
         "📦 *Choose a product:*",
-        cat.map(p => [{ text: p.name }]).concat([[{ text: "🔙 Back" }]]),
+        [
+          ...cat.map(p => [{ text: p.name }]),
+          [{ text: "🔙 Back" }]
+        ],
         userMessages
       );
     }
