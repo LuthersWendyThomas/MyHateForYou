@@ -60,7 +60,7 @@ export async function fetchCryptoPrice(currency) {
  * CoinGecko with 3x retry logic
  */
 async function fetchFromCoinGecko(id) {
-  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`;
+  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`;
   for (let i = 0; i < 3; i++) {
     try {
       await wait(i * 800); // gradually increasing delay
@@ -110,7 +110,7 @@ async function fetchFromCoinCap(id) {
  */
 function saveToCache(currency, rate) {
   cache[currency] = { rate, timestamp: Date.now() };
-  console.log(`✅ [fetchCryptoPrice] Cache updated: ${currency.toUpperCase()} → ${rate}€`);
+  console.log(`✅ [fetchCryptoPrice] Cache updated: ${currency.toUpperCase()} → ${rate}$`);
 }
 
 /**
