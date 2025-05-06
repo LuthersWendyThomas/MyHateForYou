@@ -43,9 +43,9 @@ export function clearAllTimers() {
     Object.keys(activeTimers).forEach((id) => delete activeTimers[id]);
     Object.keys(paymentTimers).forEach((id) => delete paymentTimers[id]);
 
-    console.log("🧨 Visi laikmačiai išvalyti (UI + mokėjimų).");
+    console.log("🧨 All timers cleaned (UI + payments).");
   } catch (err) {
-    console.error("❌ [clearAllTimers klaida]:", err.message || err);
+    console.error("❌ [clearAllTimers error]:", err.message || err);
   }
 }
 
