@@ -1,6 +1,6 @@
 services:
   - type: worker
-    name: BalticVaistineBot
+    name: BalticPharmacyBot
     env: node
     branch: main
     runtime: node
