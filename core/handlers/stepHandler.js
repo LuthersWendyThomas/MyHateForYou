@@ -9,14 +9,27 @@ import { punish } from "../../utils/punishUser.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
 import { resetSession, safeStart } from "./finalHandler.js";
 
-// 🌍 Grouped regions
+// 🌍 Grouped regions — FULL USA COVERAGE v2025.7
 const regionMap = {
-  "🗽 East Coast": ["New York", "Boston", "Philadelphia", "Baltimore", "Washington"],
-  "🌴 West Coast": ["Los Angeles", "San Diego", "San Jose", "San Francisco"],
-  "🛢️ South": ["Houston", "Dallas", "Austin", "San Antonio", "Atlanta", "Miami", "El Paso"],
-  "⛰️ Midwest": ["Chicago", "Detroit", "Indianapolis", "Columbus"],
-  "🌲 Northwest": ["Seattle", "Portland", "Denver"],
-  "🏜️ Southwest": ["Phoenix", "Las Vegas", "Oklahoma City"]
+  "🗽 East Coast": [
+    "New York", "Boston", "Philadelphia", "Baltimore", "Washington", "Charlotte"
+  ],
+  "🌴 West Coast": [
+    "Los Angeles", "San Diego", "San Jose", "San Francisco"
+  ],
+  "🛢️ South": [
+    "Houston", "Dallas", "Austin", "San Antonio", "Atlanta", "Miami", "El Paso",
+    "Jacksonville", "Fort Worth", "Nashville", "Memphis"
+  ],
+  "⛰️ Midwest": [
+    "Chicago", "Detroit", "Indianapolis", "Columbus", "Louisville"
+  ],
+  "🌲 Northwest": [
+    "Seattle", "Portland", "Denver"
+  ],
+  "🏜️ Southwest": [
+    "Phoenix", "Las Vegas", "Oklahoma City"
+  ]
 };
 
 export async function handleStep(bot, id, text, userMessages) {
