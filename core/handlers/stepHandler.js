@@ -62,9 +62,10 @@ export async function handleStep(bot, id, text, userMessages) {
         return renderStep(bot, id, 1.2, userMessages);
 
       case 1.2:
-        if (!regionMap[s.region]?.includes(input)) return await punish(bot, id, userMessages);
-        s.city = input;
-        break;
+       if (!regionMap[s.region]?.includes(input)) return await punish(bot, id, userMessages);
+       s.city = input;
+       s.step = 2;
+       return renderStep(bot, id, 2, userMessages);
 
       case 2:
         const method = deliveryMethods.find(m => m.label === input);
