@@ -8,7 +8,7 @@ import { userSessions, userOrders, paymentTimers } from "../../state/userState.j
 import { finishOrder } from "./finalHandler.js";
 
 /**
- * Žingsnis 7 — rodo QR kodą ir laukia apmokėjimo
+ * Step 7 — shows the QR code and waits for payment
  */
 export async function handlePayment(bot, id, userMessages) {
   const s = userSessions[id];
@@ -52,7 +52,7 @@ export async function handlePayment(bot, id, userMessages) {
 ⏱ Estimated delivery in ~30 minutes.
 ✅ Pay by scanning the QR or copy the wallet address.`.trim();
 
-    // 🛠️ FIXAS — žingsnis nustatomas PRIEŠ siunčiant QR, kad net jei QR siuntimas stringa — flow toliau veiktų
+    // 🛠️ FIX — the step is set BEFORE sending the QR, so that even if the QR sending is stuck — the flow continues to work
     s.step = 8;
 
     await bot.sendChatAction(id, "upload_photo").catch(() => {});
@@ -91,7 +91,7 @@ export async function handlePayment(bot, id, userMessages) {
 }
 
 /**
- * Žingsnis 9 — tikrina ar mokėjimas gautas
+ * Step 9 — verifies if the payment was received
  */
 export async function handlePaymentConfirmation(bot, id, userMessages) {
   const s = userSessions[id];
