@@ -140,6 +140,10 @@ function greetingText(count) {
 🌆 *Drop anywhere in your city* 📍
 🌆 *Courier to your agreed location* 🚚
 
+❗️ U see product button ON = IN STOCK!
+❗️ U see city button ON = THAT CITY IS ON!
+❗️ We constantly update products & cities!
+
 ❗️ *Do not speak or photograph couriers*  
 ⛔ Any violation = instant *BAN*  
 
