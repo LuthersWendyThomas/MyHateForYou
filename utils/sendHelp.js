@@ -3,30 +3,30 @@
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
 /**
- * ✅ Parodo pagalbos ir saugumo taisykles (pilnai apsaugotas)
+ * ✅ Displays help and security rules (fully protected)
  */
 export async function sendHelp(bot, id, userMessages = {}) {
   try {
     if (!bot || !id) return;
 
     const text = `
-❓ *PAGALBA IR NAUDOJIMO TAISYKLĖS:*
+❓ *HELP & SAFETY RULES:*
 
-1️⃣ *Užsakymai vykdomi tik per šį botą*  
-— Jokio susirašinėjimo atskirai. Naudokite tik mygtukus.
+1️⃣ *Orders are only processed through this bot*  
+— No private chats. Use buttons only.
 
-2️⃣ *Kurjeris / drop’as nefotografuojamas ir nešnekinamas*  
-— 📵 Visi bandymai = *BAN*.
+2️⃣ *Do not photograph or talk to courier/drop person*  
+— 📵 Any attempt = *BAN*.
 
-3️⃣ *Pristatymas vyksta per 20–30 min*  
-— Būkite pasiruošę ir laikykitės instrukcijų.
+3️⃣ *Delivery takes ~20–30 minutes*  
+— Be ready and follow all instructions.
 
-4️⃣ *Po pristatymo — jokių žinučių ar nuotraukų!*  
-— Sistema automatiškai išvalo viską.
+4️⃣ *After delivery — no messages or photos!*  
+— System will auto-clean everything.
 
-⛔ *Pažeidimai = BAN be įspėjimo*
+⛔ *Violations = instant BAN*
 
-Jei iškilo problema – naudokite */start* arba paspauskite *PAGALBA* dar kartą.
+If you encounter a problem – use */start* or tap *HELP* again.
     `.trim();
 
     await bot.sendChatAction(id, "typing").catch(() => {});
@@ -36,9 +36,9 @@ Jei iškilo problema – naudokite */start* arba paspauskite *PAGALBA* dar kart�
     }, userMessages);
 
   } catch (err) {
-    console.error("❌ [sendHelp klaida]:", err.message || err);
+    console.error("❌ [sendHelp error]:", err.message || err);
     try {
-      await bot.sendMessage(id, "⚠️ Nepavyko parodyti pagalbos informacijos. Bandykite vėliau.");
+      await bot.sendMessage(id, "⚠️ Failed to display help information. Please try again later.");
     } catch {}
   }
 }
