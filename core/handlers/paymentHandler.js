@@ -7,6 +7,18 @@ import { simulateDelivery } from "./deliveryHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { finishOrder } from "./finalHandler.js";
 
+// Helper function to handle retries for API calls
+async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
+  try {
+    return await apiCall();
+  } catch (error) {
+    if (retries === 0) throw error;
+    console.warn(`⚠️ Retry attempt failed, retrying... (${retries} left)`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return fetchWithRetry(apiCall, retries - 1, delay * 2); // Exponential backoff
+  }
+}
+
 /**
  * Step 7 — shows the QR code and waits for payment
  */
@@ -29,7 +41,8 @@ export async function handlePayment(bot, id, userMessages) {
 
     if (!hasAllData) throw new Error("Missing or invalid data for payment");
 
-    const rate = await fetchCryptoPrice(s.currency);
+    // Fetch the crypto price with retry mechanism
+    const rate = await fetchWithRetry(() => fetchCryptoPrice(s.currency), 5, 1000);
     if (!rate || isNaN(rate) || rate <= 0) throw new Error("Failed to fetch exchange rate");
 
     const amount = +(usd / rate).toFixed(6);
