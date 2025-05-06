@@ -99,7 +99,7 @@ async function fetchFromCoinCap(id) {
 
   if (!isNaN(usd) && usd > 0) {
     const eurRate = 1.07;
-    return +(usd / eurRate).toFixed(2);
+    return +usd.toFixed(2);
   }
 
   return null;
