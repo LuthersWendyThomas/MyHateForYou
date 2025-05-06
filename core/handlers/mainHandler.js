@@ -47,7 +47,7 @@ export function registerMainHandler(bot) {
         try {
           return await handleAdminAction(bot, msg, userSessions, userOrders);
         } catch (err) {
-          console.error("❌ [Admin klaida]:", err.message);
+          console.error("❌ [Admin error]:", err.message);
           return await bot.sendMessage(uid, "❗️ Admin action failed.");
         }
       }
