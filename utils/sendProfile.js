@@ -4,7 +4,7 @@ import { userSessions, userOrders } from "../state/userState.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
 /**
- * ✅ Parodo vartotojo profilio suvestinę (kulkom atspari)
+ * ✅ Displays user profile summary (bulletproof)
  */
 export async function sendProfile(bot, id, userMessages = {}) {
   try {
@@ -13,19 +13,19 @@ export async function sendProfile(bot, id, userMessages = {}) {
     const orderCount = typeof userOrders[uid] === "number" ? userOrders[uid] : 0;
 
     const chat = await bot.getChat(id);
-    const username = chat?.username ? `@${chat.username}` : "NĖRA";
+    const username = chat?.username ? `@${chat.username}` : "NONE";
 
     const status =
-      orderCount >= 10 ? "⭐️ *VIP klientas*" :
-      orderCount >= 5  ? "🔁 *Artėjate prie VIP!*" :
-                        "🚀 *Naujas vartotojas*";
+      orderCount >= 10 ? "⭐️ *VIP client*" :
+      orderCount >= 5  ? "🔁 *Approaching VIP!*" :
+                        "🚀 *New user*";
 
     const profile = `
-👤 *Jūsų profilis:*
+👤 *Your Profile:*
 
 🔗 T. Username: *${username}*
-🏷️ Statusas: ${status}
-📦 Užsakymų atlikta: *${orderCount}*
+🏷️ Status: ${status}
+📦 Orders completed: *${orderCount}*
     `.trim();
 
     return await sendAndTrack(bot, uid, profile, {
@@ -34,9 +34,9 @@ export async function sendProfile(bot, id, userMessages = {}) {
     }, userMessages);
 
   } catch (err) {
-    console.error("❌ [sendProfile klaida]:", err.message || err);
+    console.error("❌ [sendProfile error]:", err.message || err);
     try {
-      await bot.sendMessage(id, "⚠️ Nepavyko gauti profilio informacijos.");
+      await bot.sendMessage(id, "⚠️ Failed to retrieve profile information.");
     } catch {}
   }
 }
