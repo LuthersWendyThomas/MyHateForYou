@@ -74,7 +74,7 @@ export async function safeStart(bot, id) {
 }
 
 /**
- * ✅ Pristato užsakymą ir grąžina į meniu
+ * ✅ Completes the order and returns to the main menu
  */
 export async function finishOrder(bot, id) {
   const uid = String(id);
@@ -90,7 +90,7 @@ export async function finishOrder(bot, id) {
     return await sendAndTrack(
       bot,
       uid,
-      "✅ Order accepted!\nDelivery has started...\n\nYou are returning to the main menu:",
+      "✅ Order has been accepted!\n🚚 Delivery is now in progress...\n\nYou have been returned to the main menu:",
       {
         parse_mode: "Markdown",
         reply_markup: getMainMenu(uid)
@@ -111,7 +111,7 @@ export async function finishOrder(bot, id) {
 }
 
 /**
- * ✅ Išvalo naudotojo sesiją
+ * ✅ Clears the user session
  */
 export async function resetSession(id) {
   const uid = String(id);
@@ -124,7 +124,7 @@ export async function resetSession(id) {
   }
 }
 
-// — Su paveikslėliu
+// — With image
 function greetingText(count) {
   return `
 ☁️ Welcome to *BalticPharmacyBot*! ☁️
@@ -143,7 +143,7 @@ function greetingText(count) {
 👥 Active users: *${count}*`;
 }
 
-// — Fallback be paveikslėlio
+// — Fallback without image
 function fallbackText(count) {
   return `
 ✨ 3 years of experience
