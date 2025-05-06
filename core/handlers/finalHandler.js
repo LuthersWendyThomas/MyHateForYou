@@ -14,22 +14,26 @@ export async function safeStart(bot, id) {
   if (!bot || !uid) return;
 
   try {
+    // Clear any active sessions or messages
     await clearTimers(uid);
     await clearUserMessages(uid);
     await resetUser(uid);
 
+    // Initialize session for this user
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now()
     };
 
+    // Ensure the user is marked as active
     if (!activeUsers.has(uid)) {
       activeUsers.add(uid);
     }
 
-    const count = activeUsers.count;
+    const count = activeUsers.size;  // Fixed the issue with active user count (size not count)
     const greetingPath = path.join(process.cwd(), "assets", "greeting.jpg");
 
+    // Try to load the greeting image, if it exists
     try {
       const buffer = await fs.readFile(greetingPath);
       if (buffer?.length > 0) {
@@ -49,6 +53,7 @@ export async function safeStart(bot, id) {
       }
     } catch (imgErr) {
       console.warn("⚠️ greeting.jpg error:", imgErr.message);
+      // If image fails, send the fallback text
       return await sendAndTrack(
         bot,
         uid,
@@ -63,6 +68,7 @@ export async function safeStart(bot, id) {
 
   } catch (err) {
     console.error("❌ [safeStart error]:", err.message);
+    // If session setup fails, send an error message and ensure session reset
     return await sendAndTrack(
       bot,
       uid,
@@ -84,9 +90,13 @@ export async function finishOrder(bot, id) {
       throw new Error("Missing delivery information");
     }
 
+    // Trigger delivery simulation
     await simulateDelivery(bot, uid, session.deliveryMethod, userMessages);
+    
+    // Reset session once the order is processed
     await resetSession(uid);
 
+    // Inform the user that the order has been successfully accepted
     return await sendAndTrack(
       bot,
       uid,
@@ -100,6 +110,7 @@ export async function finishOrder(bot, id) {
 
   } catch (err) {
     console.error("❌ [finishOrder error]:", err.message);
+    // In case of an error, notify the user about the failure
     return await sendAndTrack(
       bot,
       uid,
