@@ -1,6 +1,6 @@
-// 📦 config/features.js | BalticPharma V2 — FINAL IMMORTAL FEATURE MIRROR 2025.3
+// 📦 config/features.js | BalticPharma V2 — FINAL IMMORTAL FEATURE MIRROR 2025.4
 
-import { FLAGS, CITIES } from "./config.js";
+import { FLAGS } from "./config.js";
 
 //
 // ===============================
@@ -30,9 +30,5 @@ export const deliveryMethods = [
 ];
 
 //
-// ===============================
-// 🌍 Available cities (used in startOrder + UI)
-// ===============================
+// ✅ No more cities[] export — cities now handled via regionMap in stepHandler
 //
-
-export const cities = CITIES.map(city => `🌍 ${city}`);
