@@ -5,10 +5,10 @@ import path from "path";
 
 const LOG_DIR = path.resolve("./logs");
 const MAX_AGE_DAYS = 3;
-const LOOP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 valandos
+const LOOP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
- * Apskaičiuoja kiek dienų senumo yra failas
+ * Calculates how old (in days) a file is based on its timestamp
  */
 function daysOld(timestamp) {
   const now = Date.now();
@@ -16,14 +16,14 @@ function daysOld(timestamp) {
 }
 
 /**
- * Valo visus logus, senesnius nei MAX_AGE_DAYS
+ * Deletes all log files older than MAX_AGE_DAYS
  */
 function cleanLogs() {
   try {
-    console.log(`🧹 Pradedamas log'ų valymas: ${new Date().toLocaleString("lt-LT")}`);
+    console.log(`🧹 Starting log cleanup: ${new Date().toLocaleString("en-GB")}`);
 
     if (!fs.existsSync(LOG_DIR)) {
-      console.warn("📁 Logs katalogas neegzistuoja. Praleidžiama.");
+      console.warn("📁 Logs directory does not exist. Skipping.");
       return;
     }
 
@@ -40,23 +40,23 @@ function cleanLogs() {
         if (age > MAX_AGE_DAYS) {
           fs.unlinkSync(filePath);
           deleted++;
-          console.log(`🗑️ Ištrintas senas log failas: ${file}`);
+          console.log(`🗑️ Deleted old log file: ${file}`);
         }
       } catch (err) {
-        console.error(`❌ Klaida trinant "${file}":`, err.message);
+        console.error(`❌ Error deleting "${file}":`, err.message);
       }
     }
 
-    console.log(`✅ Log'ų valymas baigtas. Ištrinta: ${deleted} failų.\n`);
+    console.log(`✅ Log cleanup finished. Deleted: ${deleted} files.\n`);
   } catch (err) {
-    console.error("❌ [cleanLogs klaida]:", err.message || err);
+    console.error("❌ [cleanLogs error]:", err.message || err);
   }
 }
 
-// — Paleidžiam iškart start'e
+// — Run immediately on start
 cleanLogs();
 
-// — Kartojam kas 24 valandas
+// — Repeat every 24 hours
 setInterval(() => {
   cleanLogs();
 }, LOOP_INTERVAL_MS);
