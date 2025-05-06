@@ -6,24 +6,24 @@ config();
 import TelegramBot from "node-telegram-bot-api";
 
 // ===============================
-// ✅ Griežta ENV validacija
+// ✅ Strict ENV validation
 // ===============================
 function requiredEnv(value, name) {
   if (!value || typeof value !== "string" || value.trim() === "") {
-    console.error(`❌ Trūksta arba neteisingas ENV kintamasis: ${name}`);
+    console.error(`❌ Missing or invalid ENV variable: ${name}`);
     process.exit(1);
   }
   return value.trim();
 }
 
 // ===============================
-// 🔐 Tokenai / Administratorius
+// 🔐 Tokens / Administrator
 // ===============================
 const token = requiredEnv(process.env.TELEGRAM_TOKEN, "TELEGRAM_TOKEN");
 const adminId = requiredEnv(process.env.ADMIN_ID, "ADMIN_ID");
 
 // ===============================
-// 🤖 Botas — Inicializavimas vėliau
+// 🤖 Bot — Initialized later
 // ===============================
 export const BOT = {
   TOKEN: token,
@@ -34,7 +34,7 @@ export const BOT = {
 
 export function initBotInstance() {
   if (!BOT.TOKEN) {
-    console.error("❌ TOKEN neegzistuoja paleidimo metu.");
+    console.error("❌ TOKEN is missing at startup.");
     process.exit(1);
   }
 
@@ -46,11 +46,11 @@ export function initBotInstance() {
     }
   });
 
-  console.log("✅ Telegram botas inicializuotas saugiai.");
+  console.log("✅ Telegram bot initialized securely.");
 }
 
 // ===============================
-// 💳 Kripto piniginės
+// 💳 Crypto wallets
 // ===============================
 export const WALLETS = {
   BTC: requiredEnv(process.env.BTC_WALLET, "BTC_WALLET"),
@@ -60,7 +60,7 @@ export const WALLETS = {
 };
 
 // ===============================
-// 🌐 API ir RPC adresai
+// 🌐 API and RPC URLs
 // ===============================
 export const API = {
   COINGECKO_URLS: [
@@ -73,7 +73,7 @@ export const API = {
 };
 
 // ===============================
-// ⚙️ Feature jungikliai (tik aktyvūs)
+// ⚙️ Feature flags (only active)
 // ===============================
 export const FLAGS = {
   AUTOBAN_ENABLED: ["1", "true"].includes(String(process.env.AUTOBAN_ENABLED).toLowerCase()),
@@ -81,7 +81,7 @@ export const FLAGS = {
 };
 
 // ===============================
-// 🌍 Miestų sąrašas
+// 🌍 List of available cities
 // ===============================
 export const CITIES = process.env.CITIES
   ? process.env.CITIES.split(",").map(c => c.trim()).filter(Boolean)
