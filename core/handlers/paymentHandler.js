@@ -22,11 +22,6 @@ async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
   }
 }
 
-// Preventing session duplication
-function isPaymentInProgress(s) {
-  return s && s.paymentInProgress;
-}
-
 /**
  * Step 7 — shows the QR code and waits for payment
  */
@@ -34,7 +29,7 @@ export async function handlePayment(bot, id, userMessages) {
   const s = userSessions[id];
 
   // Ensure that the payment is in the right step and no other payment is in progress
-  if (!s || s.step !== 7 || isPaymentInProgress(s)) {
+  if (!s || s.step !== 7 || s.paymentInProgress) {
     return sendAndTrack(bot, id, "⚠️ Invalid or duplicate payment attempt. Please try again.", {}, userMessages);
   }
 
@@ -146,6 +141,9 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
       console.warn("⚠️ [saveOrder error]:", err.message)
     );
 
+    // ADMIN NOTIFICATION
+    await sendAndTrack(adminBot, adminId, `✅ New successful payment from ${s.wallet}`);
+
     return await finishOrder(bot, id);
 
   } catch (err) {
@@ -167,7 +165,7 @@ export async function handlePaymentCancel(bot, id, userMessages) {
     s.step = 1; // Back to the first step, or you can use `safeStart()` to restart the process.
 
     // Notify the user that the payment process has been cancelled
-    await sendAndTrack(bot, id, "❌ Mokėjimas atšauktas. Grįžtate į pradžią.", {}, userMessages);
+    await sendAndTrack(bot, id, "❌ Payment cancelled. Returning to the start.", {}, userMessages);
 
     // Clear session and payment timers
     delete userSessions[id];
@@ -177,5 +175,5 @@ export async function handlePaymentCancel(bot, id, userMessages) {
     return await safeStart(bot, id);  // Starts fresh from step 1
   }
 
-  return sendAndTrack(bot, id, "⚠️ Mokėjimas nebuvo atšauktas, nes proceso žingsnis netinkamas.", {}, userMessages);
+  return sendAndTrack(bot, id, "⚠️ Payment was not cancelled because the process step is invalid.", {}, userMessages);
 }
