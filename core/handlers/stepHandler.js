@@ -95,7 +95,7 @@ export async function handleStep(bot, id, text, userMessages) {
     s.step++;
     return renderStep(bot, id, s.step, userMessages);
   } catch (err) {
-    console.error("❌ [handleStep klaida]:", err.message);
+    console.error("❌ [handleStep error]:", err.message);
     return await punish(bot, id, userMessages);
   }
 }
@@ -204,7 +204,7 @@ function renderStep(bot, id, step, userMessages) {
     }
 
   } catch (err) {
-    console.error("❌ [renderStep klaida]:", err.message);
+    console.error("❌ [renderStep error]:", err.message);
     return sendKeyboard(
       bot,
       id,
