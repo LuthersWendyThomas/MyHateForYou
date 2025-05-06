@@ -3,11 +3,10 @@ import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
 import { saveOrder } from "../../utils/saveOrder.js";
 import { sendAndTrack, sendKeyboard } from "../../helpers/messageUtils.js";
-import { simulateDelivery } from "./deliveryHandler.js";
-import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { finishOrder } from "./finalHandler.js";
+import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 
-// Helper function to handle retries for API calls with exponential backoff
+// Retry helper with exponential backoff
 async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
   try {
     return await apiCall();
@@ -16,41 +15,37 @@ async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
       console.error("❌ Final retry attempt failed.");
       throw error;
     }
-    console.warn(`⚠️ API request failed. Retrying... (${retries} attempts left)`);
+    console.warn(`⚠️ API error. Retrying... (${retries} left)`);
     await new Promise(resolve => setTimeout(resolve, delay));
-    return fetchWithRetry(apiCall, retries - 1, delay * 2); // Exponential backoff
+    return fetchWithRetry(apiCall, retries - 1, delay * 2);
   }
 }
 
 /**
- * Step 7 — shows the QR code and waits for payment
+ * Step 7 — Display QR and wait for payment
  */
 export async function handlePayment(bot, id, userMessages) {
   const s = userSessions[id];
 
-  // Ensure that the payment is in the right step and no other payment is in progress
   if (!s || s.step !== 7 || s.paymentInProgress) {
-    return sendAndTrack(bot, id, "⚠️ Invalid or duplicate payment attempt. Please try again.", {}, userMessages);
+    return sendAndTrack(bot, id, "⚠️ Invalid or duplicate payment attempt. Please start again.", {}, userMessages);
   }
 
-  s.paymentInProgress = true;  // Lock payment process to avoid double payments
+  s.paymentInProgress = true;
 
   try {
     const usd = parseFloat(s.totalPrice);
-    const hasAllData =
-      s.wallet && s.currency && s.product?.name && s.quantity && usd && usd > 0;
+    const hasAllData = s.wallet && s.currency && s.product?.name && s.quantity && usd > 0;
+    if (!hasAllData) throw new Error("Missing payment data");
 
-    if (!hasAllData) throw new Error("Missing or invalid data for payment");
-
-    // Fetch the crypto price with retry mechanism
-    const rate = await fetchWithRetry(() => fetchCryptoPrice(s.currency), 5, 1000);
-    if (!rate || isNaN(rate) || rate <= 0) throw new Error("Failed to fetch exchange rate");
+    const rate = await fetchWithRetry(() => fetchCryptoPrice(s.currency));
+    if (!rate || isNaN(rate) || rate <= 0) throw new Error("Invalid exchange rate");
 
     const amount = +(usd / rate).toFixed(6);
     s.expectedAmount = amount;
 
     const qr = await generateQR(s.currency, amount, s.wallet);
-    if (!qr || !(qr instanceof Buffer)) throw new Error("Failed to generate QR code");
+    if (!qr || !(qr instanceof Buffer)) throw new Error("QR generation failed");
 
     const summary = `
 💸 *Payment summary:*
@@ -63,10 +58,9 @@ export async function handlePayment(bot, id, userMessages) {
 💰 ${usd.toFixed(2)}$ ≈ ${amount} ${s.currency}
 🏦 Wallet: \`${s.wallet}\`
 
-⏱ Estimated delivery in ~30 minutes.
-✅ Pay by scanning the QR or copy the wallet address.`.trim();
+⏱ Delivery in ~30 minutes.
+✅ Scan the QR or copy the address.`.trim();
 
-    // 🛠️ FIX: Set step before sending QR to ensure flow continues if QR sending fails
     s.step = 8;
 
     await bot.sendChatAction(id, "upload_photo").catch(() => {});
@@ -75,13 +69,12 @@ export async function handlePayment(bot, id, userMessages) {
       parse_mode: "Markdown"
     });
 
-    // Clear any existing payment timers to prevent multiple payments
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
 
     const timer = setTimeout(() => {
       delete userSessions[id];
       delete paymentTimers[id];
-      console.warn(`⌛️ Payment window has ended: ${id}`);
+      console.warn(`⌛️ Payment window expired: ${id}`);
     }, 30 * 60 * 1000);
 
     s.paymentTimer = timer;
@@ -97,83 +90,72 @@ export async function handlePayment(bot, id, userMessages) {
       ],
       userMessages
     );
-
   } catch (err) {
     console.error("❌ [handlePayment error]:", err.message);
     s.paymentInProgress = false;
-    return sendAndTrack(bot, id, "❗️ Error preparing payment. Please try again.", {}, userMessages);
+    return sendAndTrack(bot, id, "❗️ Payment preparation failed. Please try again.", {}, userMessages);
   }
 }
 
 /**
- * Step 9 — verifies if the payment was received
+ * Step 9 — Verify if payment was received
  */
 export async function handlePaymentConfirmation(bot, id, userMessages) {
   const s = userSessions[id];
-  const valid =
-    s && s.step === 9 && s.wallet && s.currency && s.expectedAmount;
+  const valid = s && s.step === 9 && s.wallet && s.currency && s.expectedAmount;
 
   if (!valid) {
-    return sendAndTrack(bot, id, "⚠️ Invalid payment information. Please restart with /start.", {}, userMessages);
+    return sendAndTrack(bot, id, "⚠️ Invalid payment info. Please restart with /start.", {}, userMessages);
   }
 
   try {
-    await sendAndTrack(bot, id, "⏳ Verifying payment on the blockchain...", {}, userMessages);
+    await sendAndTrack(bot, id, "⏳ Checking blockchain for payment...", {}, userMessages);
 
     const success = await checkPayment(s.wallet, s.currency, s.expectedAmount, bot);
     if (!success) {
-      return sendAndTrack(bot, id, "❌ Payment not received yet. Please check again later.", {}, userMessages);
+      return sendAndTrack(bot, id, "❌ Payment not detected yet. Please check again later.", {}, userMessages);
     }
 
-    // Clear any existing payment timer
     if (s.paymentTimer) clearTimeout(s.paymentTimer);
     if (paymentTimers[id]) {
       clearTimeout(paymentTimers[id]);
       delete paymentTimers[id];
     }
 
-    await sendAndTrack(bot, id, "✅ Payment confirmed!\nDelivery in progress...", {}, userMessages);
+    await sendAndTrack(bot, id, "✅ Payment confirmed!\nStarting delivery...", {}, userMessages);
 
-    // Increment the user order count
     userOrders[id] = (userOrders[id] || 0) + 1;
 
     await saveOrder(id, s.city, s.product.name, s.totalPrice).catch(err =>
       console.warn("⚠️ [saveOrder error]:", err.message)
     );
 
-    // ADMIN NOTIFICATION
     await sendAndTrack(adminBot, adminId, `✅ New successful payment from ${s.wallet}`);
 
     return await finishOrder(bot, id);
-
   } catch (err) {
     console.error("❌ [handlePaymentConfirmation error]:", err.message);
-    return sendAndTrack(bot, id, "❗️ Error verifying payment. Please try again later.", {}, userMessages);
+    return sendAndTrack(bot, id, "❗️ Error checking payment. Please try again later.", {}, userMessages);
   }
 }
 
 /**
- * Step 8 — Checks for confirmation or cancel of the payment
+ * Step 8 — Cancel payment and return to safe start
  */
 export async function handlePaymentCancel(bot, id, userMessages) {
   const s = userSessions[id];
 
-  // If the user cancels the payment, reset the session
   if (s && s.step === 8 && s.paymentInProgress) {
-    // Reset the session data to allow a new payment to be started
     s.paymentInProgress = false;
-    s.step = null; // Do not set to 1, we use safeStart() to start over from greeting menu
+    s.step = null;
 
-    // Notify the user that the payment process has been cancelled
-    await sendAndTrack(bot, id, "❌ Payment canceled. You are returning to start page.", {}, userMessages);
+    await sendAndTrack(bot, id, "❌ Payment canceled. Returning to start...", {}, userMessages);
 
-    // Clear session and payment timers to ensure complete reset
     delete userSessions[id];
     delete paymentTimers[id];
 
-    // Trigger a safe start for a new payment session, ensuring all sessions and data are reset properly
-    return await safeStart(bot, id);  // Starts fresh from the greeting menu, resetting everything
+    return await safeStart(bot, id);
   }
 
-  return sendAndTrack(bot, id, "⚠️ The payment was not reversed because the process step was invalid.", {}, userMessages);
+  return sendAndTrack(bot, id, "⚠️ Payment could not be canceled due to invalid step.", {}, userMessages);
 }
