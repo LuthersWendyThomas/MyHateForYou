@@ -17,7 +17,7 @@ export async function handleStep(bot, id, text, userMessages) {
     return await punish(bot, id, userMessages);
   }
 
-  // 🔙 Back logika
+  // 🔙 Back navigation logic
   if (input === "🔙 Back") {
     if (s.step > 1) {
       s.step--;
