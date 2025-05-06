@@ -12,7 +12,7 @@ const SUPPORTED = {
 };
 
 /**
- * Grąžina valiutos EUR kursą naudodamas CoinGecko (retry) arba CoinCap fallback
+ * Returns the EUR exchange rate for a currency using CoinGecko (with retry) or CoinCap as fallback
  */
 export async function fetchCryptoPrice(currency) {
   if (!currency) return null;
@@ -20,7 +20,7 @@ export async function fetchCryptoPrice(currency) {
   const clean = String(currency).trim().toLowerCase();
   const mapped = SUPPORTED[clean];
   if (!mapped) {
-    console.warn(`⚠️ Nepalaikoma valiuta: ${currency}`);
+    console.warn(`⚠️ Unsupported currency: ${currency}`);
     return null;
   }
 
@@ -31,7 +31,7 @@ export async function fetchCryptoPrice(currency) {
     return cached.rate;
   }
 
-  // --- CoinGecko su retry bandymais
+  // --- CoinGecko with retry attempts
   try {
     const price = await fetchFromCoinGecko(mapped);
     if (price) {
@@ -39,7 +39,7 @@ export async function fetchCryptoPrice(currency) {
       return price;
     }
   } catch (err) {
-    console.warn(`⚠️ [CoinGecko klaida]: ${err.message}`);
+    console.warn(`⚠️ [CoinGecko error]: ${err.message}`);
   }
 
   // --- CoinCap fallback
@@ -50,26 +50,26 @@ export async function fetchCryptoPrice(currency) {
       return price;
     }
   } catch (err) {
-    console.warn(`⚠️ [CoinCap klaida]: ${err.message}`);
+    console.warn(`⚠️ [CoinCap error]: ${err.message}`);
   }
 
   return null;
 }
 
 /**
- * CoinGecko su retry sistema (3x)
+ * CoinGecko with 3x retry logic
  */
 async function fetchFromCoinGecko(id) {
   const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`;
   for (let i = 0; i < 3; i++) {
     try {
-      await wait(i * 800); // laipsniškai didėjantis delay
+      await wait(i * 800); // gradually increasing delay
       const res = await fetch(url, {
         headers: { Accept: "application/json" }
       });
 
       if (res.status === 429) {
-        console.warn("⏳ CoinGecko limitas – bandome dar kartą...");
+        console.warn("⏳ CoinGecko rate limit – retrying...");
         continue;
       }
 
@@ -78,7 +78,7 @@ async function fetchFromCoinGecko(id) {
       const price = parseFloat(json?.[id]?.eur);
       if (!isNaN(price) && price > 0) return price;
     } catch (e) {
-      console.warn("❌ CoinGecko retry klaida:", e.message);
+      console.warn("❌ CoinGecko retry error:", e.message);
     }
   }
   return null;
@@ -106,15 +106,15 @@ async function fetchFromCoinCap(id) {
 }
 
 /**
- * Išsaugo į atminties cache
+ * Stores result in memory cache
  */
 function saveToCache(currency, rate) {
   cache[currency] = { rate, timestamp: Date.now() };
-  console.log(`✅ [fetchCryptoPrice] Cache atnaujintas: ${currency.toUpperCase()} → ${rate}€`);
+  console.log(`✅ [fetchCryptoPrice] Cache updated: ${currency.toUpperCase()} → ${rate}€`);
 }
 
 /**
- * Async delay (naudojama retry sistemai)
+ * Async delay (used for retry logic)
  */
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
