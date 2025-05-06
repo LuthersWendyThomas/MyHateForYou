@@ -7,16 +7,16 @@ const ordersDir = path.resolve("./data");
 const ordersFile = path.join(ordersDir, "orders.json");
 const backupFile = path.join(ordersDir, "orders.bak.json");
 
-// ✅ Užtikrina, kad ./data katalogas egzistuoja
+// ✅ Ensures that the ./data directory exists
 async function ensureDataDir() {
   try {
     await fs.mkdir(ordersDir, { recursive: true });
   } catch (err) {
-    console.error("❌ [ensureDataDir klaida]:", err.message);
+    console.error("❌ [ensureDataDir error]:", err.message);
   }
 }
 
-// ✅ Saugiai išsaugo vieną užsakymą
+// ✅ Safely saves a single order
 export async function saveOrder(userId, city, product, amount) {
   try {
     await ensureDataDir();
@@ -31,18 +31,18 @@ export async function saveOrder(userId, city, product, amount) {
     };
 
     const orders = await loadOrders();
-    if (!Array.isArray(orders)) throw new Error("Neteisingas orders formatas");
+    if (!Array.isArray(orders)) throw new Error("Invalid orders format");
 
     orders.push(newOrder);
     await safeWriteJSON(ordersFile, orders);
 
-    console.log("✅ Užsakymas išsaugotas:", newOrder);
+    console.log("✅ Order saved:", newOrder);
   } catch (err) {
-    console.error("❌ [saveOrder klaida]:", err?.message || err);
+    console.error("❌ [saveOrder error]:", err?.message || err);
   }
 }
 
-// ✅ Grąžina statistiką (šiandien / savaitė / mėnuo / viso)
+// ✅ Returns statistics (today / week / month / total)
 export async function getStats(type = "admin", userId = null) {
   try {
     const orders = await loadOrders();
@@ -71,12 +71,12 @@ export async function getStats(type = "admin", userId = null) {
 
     return stats;
   } catch (err) {
-    console.error("❌ [getStats klaida]:", err?.message || err);
+    console.error("❌ [getStats error]:", err?.message || err);
     return defaultStats();
   }
 }
 
-// ✅ Įkelia visus užsakymus arba tuščią masyvą
+// ✅ Loads all orders or returns an empty array
 async function loadOrders() {
   try {
     const raw = await fs.readFile(ordersFile, "utf8");
@@ -87,7 +87,7 @@ async function loadOrders() {
   }
 }
 
-// ✅ Pašalina pavojingus simbolius
+// ✅ Removes dangerous characters
 function sanitize(str) {
   return String(str || "")
     .replace(/[\n\r\t]/g, " ")
@@ -95,24 +95,24 @@ function sanitize(str) {
     .trim();
 }
 
-// ✅ Statinių verčių bazė
+// ✅ Default statistics structure
 function defaultStats() {
   return { today: 0, week: 0, month: 0, total: 0 };
 }
 
-// ✅ Saugus JSON įrašymas + atsarginis failas
+// ✅ Safe JSON write + fallback backup file
 async function safeWriteJSON(filePath, data) {
   try {
     const json = JSON.stringify(data, null, 2);
     await fs.writeFile(filePath, json, "utf8");
   } catch (err) {
-    console.error("❌ [safeWriteJSON klaida]:", err?.message || err);
+    console.error("❌ [safeWriteJSON error]:", err?.message || err);
     try {
       const backup = JSON.stringify(data, null, 2);
       await fs.writeFile(backupFile, backup, "utf8");
-      console.log("⚠️ Įrašyta į atsarginį failą:", backupFile);
+      console.log("⚠️ Written to backup file:", backupFile);
     } catch (backupErr) {
-      console.error("❌ [backupWrite klaida]:", backupErr?.message || backupErr);
+      console.error("❌ [backupWrite error]:", backupErr?.message || backupErr);
     }
   }
 }
