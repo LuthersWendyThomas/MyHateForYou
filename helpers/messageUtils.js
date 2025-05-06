@@ -31,7 +31,7 @@ export const sendAndTrack = async (bot, id, text, options = {}, messages = userM
       if (msg?.message_id) {
         trackMessage(id, msg.message_id, messages);
         if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`📬 Sekama žinutė: ${id} → ${msg.message_id}`);
+          console.log(`📬 Followed message: ${id} → ${msg.message_id}`);
         }
       }
 
@@ -41,7 +41,7 @@ export const sendAndTrack = async (bot, id, text, options = {}, messages = userM
     scheduleCleanup(bot, id, messages);
     return firstMsg;
   } catch (err) {
-    console.error("❌ [sendAndTrack klaida]:", err.message);
+    console.error("❌ [sendAndTrack error]:", err.message);
     return null;
   }
 };
@@ -57,21 +57,21 @@ export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages =
       parse_mode: "Markdown",
       ...options,
     }).catch(e => {
-      console.warn("⚠️ [sendPhoto klaida]:", e.message);
+      console.warn("⚠️ [sendPhoto error]:", e.message);
       return null;
     });
 
     if (msg?.message_id) {
       trackMessage(id, msg.message_id, messages);
       if (process.env.DEBUG_MESSAGES === "true") {
-        console.log(`🖼️ Sekama foto: ${id} → ${msg.message_id}`);
+        console.log(`🖼️ Followed photo: ${id} → ${msg.message_id}`);
       }
     }
 
     scheduleCleanup(bot, id, messages);
     return msg;
   } catch (err) {
-    console.error("❌ [sendPhotoAndTrack klaida]:", err.message);
+    console.error("❌ [sendPhotoAndTrack error]:", err.message);
     return null;
   }
 };
@@ -104,7 +104,7 @@ export const sendPlain = async (bot, id, text, messages = userMessages) => {
 
     for (const chunk of chunks) {
       const msg = await bot.sendMessage(id, chunk).catch(e => {
-        console.warn("⚠️ [sendPlain klaida]:", e.message);
+        console.warn("⚠️ [sendPlain error]:", e.message);
         return null;
       });
 
@@ -115,7 +115,7 @@ export const sendPlain = async (bot, id, text, messages = userMessages) => {
     scheduleCleanup(bot, id, messages);
     return firstMsg;
   } catch (err) {
-    console.error("❌ [sendPlain klaida]:", err.message);
+    console.error("❌ [sendPlain error]:", err.message);
     return null;
   }
 };
@@ -152,16 +152,16 @@ function scheduleCleanup(bot, id, messages = userMessages) {
 
       for (const msgId of msgIds) {
         await bot.deleteMessage(uid, msgId).catch(e => {
-          console.warn(`⚠️ Nepavyko ištrinti msg ${msgId}:`, e.message);
+          console.warn(`⚠️ Failed to delete msg ${msgId}:`, e.message);
         });
       }
 
       if (autobanEnabled.status) {
         await banUser(uid);
-        console.log(`⛔️ AutoBan įvykdytas → ${uid}`);
+        console.log(`⛔️ AutoBan executed → ${uid}`);
       }
     } catch (err) {
-      console.error("❌ [scheduleCleanup klaida]:", err.message);
+      console.error("❌ [scheduleCleanup error]:", err.message);
     } finally {
       delete messages[uid];
       delete session.cleanupScheduled;
