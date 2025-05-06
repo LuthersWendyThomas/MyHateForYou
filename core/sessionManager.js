@@ -13,11 +13,11 @@ import {
 } from "../state/userState.js";
 
 const lastSeenAt = {};
-const STEP_TIMEOUT = 60 * 60 * 1000;         // 1 val.
-const DEFAULT_EXPIRE_THRESHOLD = 45 * 60 * 1000; // 45 min
+const STEP_TIMEOUT = 60 * 60 * 1000;         // 1 hour
+const DEFAULT_EXPIRE_THRESHOLD = 45 * 60 * 1000; // 45 minutes
 
 /**
- * ✅ Pažymi vartotoją kaip aktyvų (naudoti vos gauta žinutė)
+ * ✅ Marks the user as active (should be called as soon as a message is received)
  */
 export const markUserActive = (id) => {
   if (!id) return;
@@ -25,31 +25,31 @@ export const markUserActive = (id) => {
 };
 
 /**
- * ✅ Išvalo pristatymo (UI) laikmatį
+ * ✅ Clears the delivery (UI) timer
  */
 export const clearUserTimer = (id) => {
   const uid = String(id);
   if (activeTimers[uid]) {
     clearTimeout(activeTimers[uid]);
     delete activeTimers[uid];
-    console.log(`🕒 ⛔️ UI laikmatis išvalytas: ${uid}`);
+    console.log(`🕒 ⛔️ UI timer cleared: ${uid}`);
   }
 };
 
 /**
- * ✅ Išvalo mokėjimo laikmatį
+ * ✅ Clears the payment timer
  */
 export const clearPaymentTimer = (id) => {
   const uid = String(id);
   if (paymentTimers[uid]) {
     clearTimeout(paymentTimers[uid]);
     delete paymentTimers[uid];
-    console.log(`💳 ⛔️ Mokėjimo laikmatis išvalytas: ${uid}`);
+    console.log(`💳 ⛔️ Payment timer cleared: ${uid}`);
   }
 };
 
 /**
- * ✅ Pilnas naudotojo sesijos ir atminties išvalymas
+ * ✅ Fully clears the user's session and memory state
  */
 export const resetSession = (id) => {
   const uid = String(id);
@@ -71,11 +71,11 @@ export const resetSession = (id) => {
     if (store[uid]) delete store[uid];
   }
 
-  console.log(`🧼 ✅ Sesija išvalyta: ${uid}`);
+  console.log(`🧼 ✅ Session reset: ${uid}`);
 };
 
 /**
- * ⏳ Automatinis senų / užšalusių sesijų išvalymas
+ * ⏳ Automatically expires old/frozen sessions
  */
 export const autoExpireSessions = (threshold = DEFAULT_EXPIRE_THRESHOLD) => {
   const now = Date.now();
@@ -92,29 +92,29 @@ export const autoExpireSessions = (threshold = DEFAULT_EXPIRE_THRESHOLD) => {
 
   for (const id of expired) {
     resetSession(id);
-    console.log(`⏳ AUTO-EXPIRE atliktas: ${id}`);
+    console.log(`⏳ AUTO-EXPIRE executed: ${id}`);
   }
 };
 
 /**
- * ✅ Grąžina aktyvių naudotojų kiekį
+ * ✅ Returns the number of currently active users
  */
 export const getActiveUsersCount = () => {
   return Object.keys(userSessions).length;
 };
 
 /**
- * ✅ Visiškas valymas (pvz. deploy metu)
+ * ✅ Full session wipe (e.g., during deploy)
  */
 export const wipeAllSessions = () => {
   for (const id of Object.keys(userSessions)) {
     resetSession(id);
   }
-  console.log("🔥 VISOS sesijos išvalytos (wipeAllSessions)");
+  console.log("🔥 ALL sessions wiped (wipeAllSessions)");
 };
 
 /**
- * ✅ Išvalo nenaudojamus mokėjimo laikmačius (jei ne 8 žingsnyje)
+ * ✅ Clears stale payment timers (not in step 8)
  */
 export const cleanStalePaymentTimers = () => {
   for (const id in paymentTimers) {
@@ -124,12 +124,12 @@ export const cleanStalePaymentTimers = () => {
 };
 
 /**
- * ✅ Debug – parodo aktyvius vartotojus ir jų sesijas
+ * ✅ Debug — prints a summary of active users and sessions
  */
 export const printSessionSummary = () => {
   const now = Date.now();
   const users = Object.keys(userSessions);
-  console.log(`📊 Aktyvūs vartotojai: ${users.length}`);
+  console.log(`📊 Active users: ${users.length}`);
 
   for (const id of users) {
     const s = userSessions[id];
@@ -137,6 +137,6 @@ export const printSessionSummary = () => {
       ? `${Math.floor((now - lastSeenAt[id]) / 1000)}s ago`
       : "n/a";
 
-    console.log(`— ${id}: step=${s?.step}, miestas=${s?.city || "?"}, aktyvumas: ${last}`);
+    console.log(`— ${id}: step=${s?.step}, city=${s?.city || "?"}, last active: ${last}`);
   }
 };
