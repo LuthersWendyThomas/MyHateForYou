@@ -88,10 +88,10 @@ export async function handleAdminAction(bot, msg, userSessions, userOrders) {
       case "📆 Month": {
         const stats = await getStats("admin");
         let msg = "📊 *Statistics:*\n\n";
-        if (text === "📊 STATISTICS" || text === "📅 Today") msg += `📅 Today: *${stats.today.toFixed(2)}€*\n`;
-        if (text === "📊 STATISTICS" || text === "🗓️ Week") msg += `🗓️ Week: *${stats.week.toFixed(2)}€*\n`;
-        if (text === "📊 STATISTICS" || text === "📆 Month") msg += `📆 Month: *${stats.month.toFixed(2)}€*\n`;
-        msg += `💰 Total: *${stats.total.toFixed(2)}€*`;
+        if (text === "📊 STATISTICS" || text === "📅 Today") msg += `📅 Today: *${stats.today.toFixed(2)}$*\n`;
+        if (text === "📊 STATISTICS" || text === "🗓️ Week") msg += `🗓️ Week: *${stats.week.toFixed(2)}$*\n`;
+        if (text === "📊 STATISTICS" || text === "📆 Month") msg += `📆 Month: *${stats.month.toFixed(2)}$*\n`;
+        msg += `💰 Total: *${stats.total.toFixed(2)}$*`;
 
         return await sendAndTrack(bot, id, msg, { parse_mode: "Markdown" }, {});
       }
