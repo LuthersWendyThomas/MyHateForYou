@@ -1,13 +1,10 @@
 import { banUser } from "../../utils/bans.js";
 import { autobanEnabled, autodeleteEnabled } from "../../config/features.js";
 import { sendAndTrack } from "../../helpers/messageUtils.js";
-import {
-  userSessions,
-  userMessages,
-  activeTimers
-} from "../../state/userState.js";
+import { userSessions, userMessages, activeTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
 
+// Timeout for final session cleanup (27 minutes)
 const FINAL_CLEANUP_TIMEOUT_MS = 27 * 60 * 1000;
 
 /**
@@ -18,11 +15,10 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
     const uid = String(id);
     if (!bot || !uid) throw new Error("Missing bot or ID");
 
-    const session = userSessions[uid] ||= {
-      step: 9,
-      createdAt: Date.now()
-    };
+    // Initialize session
+    const session = userSessions[uid] ||= { step: 9, createdAt: Date.now() };
 
+    // Prevent multiple deliveries for the same user
     if (session.deliveryInProgress) return;
     session.deliveryInProgress = true;
 
@@ -41,10 +37,12 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
           ["📍 Drop placed.\nFollow the instructions you receive.", 19 * 60 * 1000]
         ];
 
+    // Schedule delivery steps
     for (const [text, delay] of steps) {
       scheduleStep(bot, uid, text, delay, userMsgs);
     }
 
+    // Set cleanup timer after delivery
     const cleanupTimer = setTimeout(() => {
       triggerFinalCleanup(bot, uid, userMsgs);
       delete activeTimers[uid];
@@ -65,6 +63,7 @@ function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
     try {
       if (!bot || !id) return;
 
+      // Simulate typing action
       await bot.sendChatAction(id, "typing").catch(() => {});
       await new Promise(res => setTimeout(res, 800));
 
@@ -76,6 +75,7 @@ function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
         userMsgs
       );
 
+      // If autodelete is enabled, delete the message after 15 seconds
       const isAdmin = BOT.ADMIN_ID && String(id) === String(BOT.ADMIN_ID);
       if (autodeleteEnabled?.status && !isAdmin && msg?.message_id) {
         setTimeout(() => {
@@ -100,13 +100,12 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
     const session = userSessions[uid];
     if (session?.cleanupScheduled) return;
 
-    userSessions[uid] = {
-      ...session,
-      cleanupScheduled: true
-    };
+    // Mark session for cleanup
+    userSessions[uid] = { ...session, cleanupScheduled: true };
 
     const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
 
+    // Delete messages if autodelete is enabled and not an admin
     if (autodeleteEnabled?.status && !isAdmin && Array.isArray(userMsgs[uid])) {
       for (const msgId of userMsgs[uid]) {
         if (typeof msgId === "number") {
@@ -116,6 +115,7 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
       delete userMessages[uid];
     }
 
+    // Ban user if autoban is enabled and not an admin
     if (autobanEnabled?.status && !isAdmin) {
       await sendAndTrack(
         bot,
@@ -128,6 +128,7 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
       console.warn(`⛔️ AutoBan executed → ${uid}`);
     }
 
+    // Clear session after cleanup
     delete userSessions[uid];
     console.log(`🧼 Session cleared: ${uid}`);
 
