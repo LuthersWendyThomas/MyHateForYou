@@ -9,7 +9,7 @@ const CLEANUP_TIMEOUT_MS = 27 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 4096;
 
 /**
- * ✅ Siunčia žinutę su stebėjimu ir automatiniu cleanup/autoban
+ * ✅ Sends a message with tracking and automatic cleanup/autoban
  */
 export const sendAndTrack = async (bot, id, text, options = {}, messages = userMessages) => {
   if (!bot || !id || !text) return null;
@@ -24,7 +24,7 @@ export const sendAndTrack = async (bot, id, text, options = {}, messages = userM
         disable_web_page_preview: true,
         ...options,
       }).catch(e => {
-        console.warn("⚠️ [sendMessage klaida]:", e.message);
+        console.warn("⚠️ [sendMessage error]:", e.message);
         return null;
       });
 
@@ -47,7 +47,7 @@ export const sendAndTrack = async (bot, id, text, options = {}, messages = userM
 };
 
 /**
- * ✅ Siunčia foto su sekimu ir cleanup logika
+ * ✅ Sends photos with tracking and cleanup logic
  */
 export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages = userMessages) => {
   if (!bot || !id || !photo) return null;
@@ -77,7 +77,7 @@ export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages =
 };
 
 /**
- * ✅ Siunčia žinutę su klaviatūra (ReplyKeyboard)
+ * ✅ Sends a message with the keyboard (ReplyKeyboard)
  */
 export const sendKeyboard = async (bot, id, text, keyboard, messages = userMessages) => {
   return await sendAndTrack(bot, id, text, {
@@ -93,7 +93,7 @@ export const sendKeyboard = async (bot, id, text, keyboard, messages = userMessa
 export const sendMessageWithTracking = sendKeyboard;
 
 /**
- * ✅ Siunčia paprastą žinutę be papildomų opcijų
+ * ✅ Sends a simple message without additional options
  */
 export const sendPlain = async (bot, id, text, messages = userMessages) => {
   if (!bot || !id || !text) return null;
@@ -121,7 +121,7 @@ export const sendPlain = async (bot, id, text, messages = userMessages) => {
 };
 
 /**
- * ✅ Užregistruoja žinutės ID naudotojo kontekste
+ * ✅ Records the message ID in the user context
  */
 function trackMessage(id, messageId, messages = userMessages) {
   const uid = String(id).trim();
@@ -132,7 +132,7 @@ function trackMessage(id, messageId, messages = userMessages) {
 }
 
 /**
- * ✅ Planuoja žinučių šalinimą ir naudotojo blokavimą
+ * ✅ Plans to delete messages and block the user
  */
 function scheduleCleanup(bot, id, messages = userMessages) {
   if (!autodeleteEnabled.status && !autobanEnabled.status) return;
@@ -170,7 +170,7 @@ function scheduleCleanup(bot, id, messages = userMessages) {
 }
 
 /**
- * ✅ Padalina ilgą tekstą į 4096 simbolių blokelius
+ * ✅ Divides long text into blocks of 4096 characters
  */
 function splitMessage(text) {
   if (!text || typeof text !== "string") return [""];
