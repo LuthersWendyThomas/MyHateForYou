@@ -1,3 +1,5 @@
+// 🧠 core/handlers/mainHandler.js | IMMORTAL REGION UI v1.0 FINAL
+
 import { BOT } from "../../config/config.js";
 import {
   userSessions,
@@ -95,4 +97,4 @@ export function registerMainHandler(bot) {
       } catch {}
     }
   });
-          }
+}
