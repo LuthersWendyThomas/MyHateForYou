@@ -4,14 +4,14 @@ import fs from "fs";
 import path from "path";
 
 // ==============================
-// 📁 Logs katalogas
+// 📁 Logs catalog
 // ==============================
 
 const logsDir = path.resolve("./logs");
 const logFile = path.join(logsDir, "events.log");
 
 /**
- * ✅ Užtikrina, kad logs katalogas egzistuoja
+ * ✅ Ensures that the logs directory exists
  */
 function ensureLogsFolder() {
   if (!fs.existsSync(logsDir)) {
@@ -20,9 +20,9 @@ function ensureLogsFolder() {
 }
 
 /**
- * ✅ Užregistruoja įvykį logs/events.log faile su data
- * @param {string} type - Įvykio tipas (pvz: ORDER, PAYMENT, ERROR)
- * @param {string} message - Žinutė
+ * ✅ Records the event in the logs/events.log file with the date
+ * @param {string} type - Event type (pvz: ORDER, PAYMENT, ERROR)
+ * @param {string} message - Message
  */
 export function logEvent(type, message) {
   try {
