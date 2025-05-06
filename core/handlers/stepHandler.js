@@ -1,6 +1,6 @@
 // 🧠 core/handlers/stepHandler.js | IMMORTAL REGION UI v1.0 FINAL
 
-import { cities, deliveryMethods } from "../../config/features.js";
+import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
 import { products } from "../../config/products.js";
 import { userSessions } from "../../state/userState.js";
