@@ -127,28 +127,32 @@ export async function resetSession(id) {
 // — With image
 function greetingText(count) {
   return `
-☁️ Welcome to *BalticPharmacyBot*! ☁️
+🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
 
-✨ 3 years of experience
-✨ Premium quality 🇩🇪 🇳🇱 🇪🇸
-✨ Discreet deliveries 24/7
-✨ Delivery within *30 minutes*
-🚚 *Courier* / *Drop* system
+💊 Operating in *30+ US cities*
+🚚 Delivery in *30 minutes or less*
+🕵️ Ultra-discreet • No questions asked
 
-❗️ *Do not take pictures or talk to the courier*
-⛔ Violation = BAN
+✨ Trusted quality since 2020
+✨ 24/7 Live Support & Automation
+✨ Drop / Courier options available
 
-❓ Questions? Click *HELP*
+❗️ *Do not speak or photograph couriers*
+⛔ Any violation = instant *BAN*
 
-👥 Active users: *${count}*`;
+👥 Active users: *${count}*
+`;
 }
 
 // — Fallback without image
 function fallbackText(count) {
   return `
-✨ 3 years of experience
-✨ Premium quality | 24/7 delivery 
-✨ *Couriers* / *Drop* system
+🇺🇸 *BalticPharmacyBot* — now live in 30+ US cities
 
-👥 Active users: *${count}*`;
+💊 Quality, Speed, Stealth
+🚚 *Courier* or *Drop* delivery in 30 min
+🔒 Fully anonymous crypto payments
+
+👥 Active users: *${count}*
+`;
 }
