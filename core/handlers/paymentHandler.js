@@ -162,18 +162,18 @@ export async function handlePaymentCancel(bot, id, userMessages) {
   if (s && s.step === 8 && s.paymentInProgress) {
     // Reset the session data to allow a new payment to be started
     s.paymentInProgress = false;
-    s.step = 1; // Back to the first step, or you can use `safeStart()` to restart the process.
+    s.step = null; // Do not set to 1, we use safeStart() to start over from greeting menu
 
     // Notify the user that the payment process has been cancelled
-    await sendAndTrack(bot, id, "❌ Payment cancelled. Returning to the start.", {}, userMessages);
+    await sendAndTrack(bot, id, "❌ Payment canceled. You are returning to start page.", {}, userMessages);
 
-    // Clear session and payment timers
+    // Clear session and payment timers to ensure complete reset
     delete userSessions[id];
     delete paymentTimers[id];
 
-    // Optionally, you can trigger a safe start for a new payment session
-    return await safeStart(bot, id);  // Starts fresh from step 1
+    // Trigger a safe start for a new payment session, ensuring all sessions and data are reset properly
+    return await safeStart(bot, id);  // Starts fresh from the greeting menu, resetting everything
   }
 
-  return sendAndTrack(bot, id, "⚠️ Payment was not cancelled because the process step is invalid.", {}, userMessages);
+  return sendAndTrack(bot, id, "⚠️ The payment was not reversed because the process step was invalid.", {}, userMessages);
 }
