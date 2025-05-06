@@ -32,7 +32,7 @@ export async function generateQR(currency, amount, overrideAddress) {
     }
 
     const formatted = parsedAmount.toFixed(6);
-    const uri = `${cleanCurrency.toLowerCase()}:${address}?amount=${formatted}&label=BalticPharmaBot&message=Order`;
+    const uri = `${cleanCurrency.toLowerCase()}:${address}?amount=${formatted}&label=BalticPharmacyBot&message=Order`;
 
     const buffer = await QRCode.toBuffer(uri, {
       type: "png",
