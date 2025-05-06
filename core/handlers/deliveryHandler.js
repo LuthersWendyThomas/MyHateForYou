@@ -26,19 +26,19 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
     if (session.deliveryInProgress) return;
     session.deliveryInProgress = true;
 
-    const isCourier = method.toLowerCase() === "kurjeris";
+    const isCourier = method.toLowerCase() === "courier";
     const steps = isCourier
       ? [
-          ["✅ Užsakymas patvirtintas!\n⏳ Ruošiame siuntą kurjeriui...", 0],
-          ["🚚 Kurjeris pajudėjo!\nNumatomas atvykimas: ~20min.", 5 * 60 * 1000],
-          ["✅ Kurjeris netoli vietos!\n⚠️ Palaukite tikslių instrukcijų.", 10 * 60 * 1000],
-          ["✅ Pristatymas beveik įvykdytas.\nPasiruoškite atsiėmimui.", 18 * 60 * 1000]
+          ["✅ Order confirmed!\n⏳ Preparing the shipment for the courier...", 0],
+          ["🚚 The courier has moved!\nEstimated arrival: ~20min.", 5 * 60 * 1000],
+          ["✅ Courier near the location!\n⚠️ Wait for precise instructions.", 10 * 60 * 1000],
+          ["✅ Delivery almost complete.\nPrepare for pickup.", 18 * 60 * 1000]
         ]
       : [
-          ["✅ Užsakymas patvirtintas!\n⏳ Drop taškas ruošiamas...", 0],
-          ["📦 Drop keliauja į vietą!\nNumatomas padėjimas: ~20min.", 5 * 60 * 1000],
-          ["✅ Drop beveik vietoje!\n⚠️ Palaukite koordinatės.", 14 * 60 * 1000],
-          ["📍 Drop padėtas.\nSekite gautus nurodymus.", 19 * 60 * 1000]
+          ["✅ Order confirmed!\n⏳ Drop point is being prepared...", 0],
+          ["📦 Drop travels to the location!\nEstimated placement: ~20min.", 5 * 60 * 1000],
+          ["✅ Drop almost on the spot!\n⚠️ Wait for coordinates.", 14 * 60 * 1000],
+          ["📍 Drop placed.\nFollow the instructions you receive.", 19 * 60 * 1000]
         ];
 
     for (const [text, delay] of steps) {
@@ -84,7 +84,7 @@ function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
       }
 
     } catch (err) {
-      console.error("❌ [scheduleStep klaida]:", err.message);
+      console.error("❌ [scheduleStep error]:", err.message);
     }
   }, delayMs);
 }
@@ -120,18 +120,18 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
       await sendAndTrack(
         bot,
         uid,
-        "⏳ *Seansas baigtas.*\n⛔️ Prieiga apribota pagal saugumo politiką.",
+        "⏳ *Session ended.*\n⛔️ Access is restricted by security policy.",
         { parse_mode: "Markdown" },
         userMsgs
       );
       await banUser(uid);
-      console.warn(`⛔️ AutoBan įvykdytas → ${uid}`);
+      console.warn(`⛔️ AutoBan executed → ${uid}`);
     }
 
     delete userSessions[uid];
-    console.log(`🧼 Sesija išvalyta: ${uid}`);
+    console.log(`🧼 Session cleared: ${uid}`);
 
   } catch (err) {
-    console.error("❌ [triggerFinalCleanup klaida]:", err.message);
+    console.error("❌ [triggerFinalCleanup error]:", err.message);
   }
 }
