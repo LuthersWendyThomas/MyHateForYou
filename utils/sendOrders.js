@@ -4,7 +4,7 @@ import { sendAndTrack } from "../helpers/messageUtils.js";
 import { userOrders } from "../state/userState.js";
 
 /**
- * ✅ Parodo naudotojui jo užsakymų statistiką
+ * ✅ Shows user their order statistics
  */
 export async function sendOrders(bot, id, userId, userMessages = {}) {
   try {
@@ -16,25 +16,25 @@ export async function sendOrders(bot, id, userId, userMessages = {}) {
 
     if (count === 0) {
       text = `
-📋 *Neturite jokių užsakymų.*
+📋 *You have no orders yet.*
 
-🛍️ Norėdami atlikti pirmą užsakymą – spauskite *PIRKTI* mygtuką apačioje.
+🛍️ To place your first order – tap the *BUY* button below.
 
-❓ Klausimai? Paspauskite *PAGALBA*.
+❓ Questions? Tap *HELP*.
       `.trim();
     } else {
       const toVip = getMilestone(count);
       const vipLine = toVip === 0
-        ? "⭐️ Jūs jau esate *VIP klientas*! Ačiū už lojalumą."
-        : `🔁 Atlikite dar *${toVip}* užsakymus iki *VIP statuso*!`;
+        ? "⭐️ You are already a *VIP client*! Thank you for your loyalty."
+        : `🔁 Place *${toVip}* more orders to reach *VIP status*!`;
 
       text = `
-📦 *Jūsų užsakymų statistika:*
+📦 *Your order statistics:*
 
-✅ Iš viso atlikta: *${count}*
+✅ Total completed: *${count}*
 ${vipLine}
 
-Ačiū, kad pasitikite *BalticPharma™*
+Thank you for choosing *BalticPharma™*
       `.trim();
     }
 
@@ -44,15 +44,15 @@ Ačiū, kad pasitikite *BalticPharma™*
     }, userMessages);
 
   } catch (err) {
-    console.error("❌ [sendOrders klaida]:", err.message || err);
+    console.error("❌ [sendOrders error]:", err.message || err);
     try {
-      await bot.sendMessage(id, "❗️ Nepavyko parodyti užsakymų. Bandykite vėliau.");
+      await bot.sendMessage(id, "❗️ Failed to fetch order history. Please try again later.");
     } catch {}
   }
 }
 
 /**
- * 🔁 Nustato kiek liko iki VIP statuso (milestone sistema)
+ * 🔁 Calculates how many orders left until VIP status (milestone system)
  */
 function getMilestone(count) {
   if (count >= 10) return 0;
