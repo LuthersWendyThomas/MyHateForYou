@@ -85,4 +85,12 @@ export const FLAGS = {
 // ===============================
 export const CITIES = process.env.CITIES
   ? process.env.CITIES.split(",").map(c => c.trim()).filter(Boolean)
-  : ["Vilnius", "Kaunas"];
+  : [
+      "New York", "Los Angeles", "Chicago", "Houston", "Phoenix",
+      "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose",
+      "Austin", "Jacksonville", "Fort Worth", "Columbus", "Charlotte",
+      "San Francisco", "Indianapolis", "Seattle", "Denver", "Washington",
+      "Boston", "Nashville", "El Paso", "Detroit", "Oklahoma City",
+      "Portland", "Las Vegas", "Memphis", "Louisville", "Baltimore",
+      "Miami", "Atlanta"
+    ];
