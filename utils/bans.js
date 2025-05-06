@@ -3,7 +3,7 @@
 import fs from "fs";
 import path from "path";
 
-// — Failų keliai
+// — File paths
 const dataDir = path.resolve("./data");
 const bansFile = path.join(dataDir, "bans.json");
 const tempBansFile = path.join(dataDir, "tempbans.json");
@@ -12,14 +12,14 @@ const bannedUserIds = new Set();
 const temporaryBans = {}; // { userId: timestamp }
 
 /**
- * Apsaugo nuo null/undefined konvertavimo į "undefined"
+ * Prevents null/undefined from becoming "undefined"
  */
 function safeString(input) {
   return typeof input === "string" ? input.trim() : String(input || "").trim();
 }
 
 /**
- * Inicijuoja banų failų sistemą su fallback'ais
+ * Initializes the ban system with fallbacks
  */
 export function initBans() {
   try {
@@ -37,21 +37,21 @@ export function initBans() {
       Object.assign(temporaryBans, tempParsed);
     }
 
-    console.log(`✅ Ban sistema paruošta: ${bannedUserIds.size} permanent | ${Object.keys(temporaryBans).length} laikini`);
+    console.log(`✅ Ban system initialized: ${bannedUserIds.size} permanent | ${Object.keys(temporaryBans).length} temporary`);
   } catch (err) {
-    console.error("❌ [initBans klaida]:", err.message);
+    console.error("❌ [initBans error]:", err.message);
   }
 }
 
-// — Automatinis inicializavimas
+// — Auto-init
 initBans();
 
-// — Failų saugojimas
+// — File saving
 function saveBans() {
   try {
     fs.writeFileSync(bansFile, JSON.stringify([...bannedUserIds], null, 2), "utf8");
   } catch (err) {
-    console.error("❌ [saveBans klaida]:", err.message);
+    console.error("❌ [saveBans error]:", err.message);
   }
 }
 
@@ -59,7 +59,7 @@ function saveTempBans() {
   try {
     fs.writeFileSync(tempBansFile, JSON.stringify(temporaryBans, null, 2), "utf8");
   } catch (err) {
-    console.error("❌ [saveTempBans klaida]:", err.message);
+    console.error("❌ [saveTempBans error]:", err.message);
   }
 }
 
@@ -80,7 +80,7 @@ export function isBanned(userId) {
 
     return bannedUserIds.has(id);
   } catch (err) {
-    console.error("❌ [isBanned klaida]:", err.message);
+    console.error("❌ [isBanned error]:", err.message);
     return false;
   }
 }
@@ -91,10 +91,10 @@ export function banUser(userId) {
     if (!bannedUserIds.has(id)) {
       bannedUserIds.add(id);
       saveBans();
-      console.log(`🚫 Užbanintas: ${id} @ ${new Date().toLocaleString("lt-LT")}`);
+      console.log(`🚫 Banned: ${id} @ ${new Date().toLocaleString("en-GB")}`);
     }
   } catch (err) {
-    console.error("❌ [banUser klaida]:", err.message);
+    console.error("❌ [banUser error]:", err.message);
   }
 }
 
@@ -104,9 +104,9 @@ export function banUserTemporary(userId, minutes = 5) {
     const until = Date.now() + minutes * 60 * 1000;
     temporaryBans[id] = until;
     saveTempBans();
-    console.log(`⏳ Laikinas banas: ${id} iki ${new Date(until).toLocaleString("lt-LT")} (${minutes} min)`);
+    console.log(`⏳ Temporary ban: ${id} until ${new Date(until).toLocaleString("en-GB")} (${minutes} min)`);
   } catch (err) {
-    console.error("❌ [banUserTemporary klaida]:", err.message);
+    console.error("❌ [banUserTemporary error]:", err.message);
   }
 }
 
@@ -128,10 +128,10 @@ export function unbanUser(userId) {
     if (changed) {
       saveBans();
       saveTempBans();
-      console.log(`✅ Atbanintas: ${id}`);
+      console.log(`✅ Unbanned: ${id}`);
     }
   } catch (err) {
-    console.error("❌ [unbanUser klaida]:", err.message);
+    console.error("❌ [unbanUser error]:", err.message);
   }
 }
 
@@ -142,7 +142,7 @@ export function listBannedUsers() {
 export function listTemporaryBans() {
   return Object.entries(temporaryBans).map(([id, until]) => ({
     userId: id,
-    until: new Date(until).toLocaleString("lt-LT")
+    until: new Date(until).toLocaleString("en-GB")
   }));
 }
 
@@ -154,9 +154,9 @@ export function clearBans() {
   try {
     bannedUserIds.clear();
     saveBans();
-    console.log("🧹 Permanent ban'ai išvalyti.");
+    console.log("🧹 Permanent bans cleared.");
   } catch (err) {
-    console.error("❌ [clearBans klaida]:", err.message);
+    console.error("❌ [clearBans error]:", err.message);
   }
 }
 
@@ -164,8 +164,8 @@ export function clearTempBans() {
   try {
     Object.keys(temporaryBans).forEach(id => delete temporaryBans[id]);
     saveTempBans();
-    console.log("🧼 Laikinai ban'ai išvalyti.");
+    console.log("🧼 Temporary bans cleared.");
   } catch (err) {
-    console.error("❌ [clearTempBans klaida]:", err.message);
+    console.error("❌ [clearTempBans error]:", err.message);
   }
 }
