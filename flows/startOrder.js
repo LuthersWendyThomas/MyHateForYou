@@ -57,6 +57,7 @@ export async function startOrder(bot, id, userMsgs = {}) {
     const keyboard = regions.map(r => [{ text: r }]);
     keyboard.push([{ text: "🔙 Back" }]);
 
+    // Enhanced flow: ensure the user is typing before we send the message.
     await bot.sendChatAction(uid, "typing").catch(() => {});
 
     return await sendKeyboard(
@@ -68,6 +69,7 @@ export async function startOrder(bot, id, userMsgs = {}) {
     );
 
   } catch (err) {
+    // Enhanced error handling and retry suggestion
     console.error("❌ [startOrder error]:", err.message || err);
 
     return await sendKeyboard(
