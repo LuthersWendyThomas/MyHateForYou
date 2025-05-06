@@ -10,23 +10,23 @@ import { userSessions } from "../state/userState.js";
 import { BOT } from "../config/config.js";
 
 /**
- * Atidaro pagrindinį admin panelės meniu su visais valdymo mygtukais
+ * Opens the main admin panel menu with all control buttons
  */
 export async function openAdminPanel(bot, id) {
   try {
     const keyboard = [
-      [{ text: "📊 STATISTIKA" }],
-      [{ text: "📅 Šiandien" }, { text: "🗓️ Savaitė" }, { text: "📆 Mėnuo" }],
-      [{ text: "🔒 BAN naudotoją" }, { text: "⏳ Temp. BAN" }],
-      [{ text: "✅ UNBAN naudotoją" }, { text: "🧹 Valyti BAN" }],
-      [{ text: "📋 BAN sąrašas" }, { text: "⏱️ Laikini BAN'ai" }],
-      [{ text: "🔙 Atgal" }]
+      [{ text: "📊 STATISTICS" }],
+      [{ text: "📅 Today" }, { text: "🗓️ Week" }, { text: "📆 Month" }],
+      [{ text: "🔒 BAN user" }, { text: "⏳ Temp. BAN" }],
+      [{ text: "✅ UNBAN user" }, { text: "🧹 Clear BANs" }],
+      [{ text: "📋 Banned list" }, { text: "⏱️ Temp bans" }],
+      [{ text: "🔙 Back" }]
     ];
 
     await sendAndTrack(
       bot,
       id,
-      "🛠️ *Admin panelė aktyvuota*\nPasirinkite veiksmą naudodamiesi mygtukais:",
+      "🛠️ *Admin panel activated*\nChoose an action using the buttons below:",
       {
         parse_mode: "Markdown",
         reply_markup: {
@@ -38,12 +38,12 @@ export async function openAdminPanel(bot, id) {
       {}
     );
   } catch (err) {
-    console.error("❌ [openAdminPanel klaida]:", err.message);
+    console.error("❌ [openAdminPanel error]:", err.message);
   }
 }
 
 /**
- * Apdoroja visus admin mygtukus ir step'inius veiksmus
+ * Handles all admin buttons and step-based actions
  */
 export async function handleAdminAction(bot, msg, userSessions, userOrders) {
   try {
@@ -54,88 +54,88 @@ export async function handleAdminAction(bot, msg, userSessions, userOrders) {
 
     const session = userSessions[id] ||= {};
 
-    // Step-based: BAN naudotojas
+    // Step-based: BAN user
     if (session.adminStep === "ban_user") {
       banUser(text);
       delete session.adminStep;
-      return await sendAndTrack(bot, id, `🚫 Užbanintas naudotojas: \`${text}\``, { parse_mode: "Markdown" }, {});
+      return await sendAndTrack(bot, id, `🚫 User banned: \`${text}\``, { parse_mode: "Markdown" }, {});
     }
 
-    // Step-based: Temp. ban
+    // Step-based: Temp. BAN
     if (session.adminStep === "temp_ban") {
       const [targetId, minutesRaw] = text.split(" ");
       const minutes = parseInt(minutesRaw);
       if (!targetId || isNaN(minutes) || minutes < 1) {
-        return await sendAndTrack(bot, id, "⚠️ Netinkamas formatas. Naudok: `123456789 10`", { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, "⚠️ Invalid format. Use: `123456789 10`", { parse_mode: "Markdown" }, {});
       }
       banUserTemporary(targetId, minutes);
       delete session.adminStep;
-      return await sendAndTrack(bot, id, `⏳ Laikinas banas: \`${targetId}\` (${minutes} min)`, { parse_mode: "Markdown" }, {});
+      return await sendAndTrack(bot, id, `⏳ Temporary ban: \`${targetId}\` (${minutes} min)`, { parse_mode: "Markdown" }, {});
     }
 
     // Step-based: UNBAN
     if (session.adminStep === "unban_user") {
       unbanUser(text);
       delete session.adminStep;
-      return await sendAndTrack(bot, id, `✅ Atbanintas naudotojas: \`${text}\``, { parse_mode: "Markdown" }, {});
+      return await sendAndTrack(bot, id, `✅ User unbanned: \`${text}\``, { parse_mode: "Markdown" }, {});
     }
 
-    // Main mygtukai
+    // Main buttons
     switch (text) {
-      case "📊 STATISTIKA":
-      case "📅 Šiandien":
-      case "🗓️ Savaitė":
-      case "📆 Mėnuo": {
+      case "📊 STATISTICS":
+      case "📅 Today":
+      case "🗓️ Week":
+      case "📆 Month": {
         const stats = await getStats("admin");
-        let msg = "📊 *Statistika:*\n\n";
-        if (text === "📊 STATISTIKA" || text === "📅 Šiandien") msg += `📅 Šiandien: *${stats.today.toFixed(2)}€*\n`;
-        if (text === "📊 STATISTIKA" || text === "🗓️ Savaitė") msg += `🗓️ Savaitė: *${stats.week.toFixed(2)}€*\n`;
-        if (text === "📊 STATISTIKA" || text === "📆 Mėnuo") msg += `📆 Mėnuo: *${stats.month.toFixed(2)}€*\n`;
-        msg += `💰 Viso: *${stats.total.toFixed(2)}€*`;
+        let msg = "📊 *Statistics:*\n\n";
+        if (text === "📊 STATISTICS" || text === "📅 Today") msg += `📅 Today: *${stats.today.toFixed(2)}€*\n`;
+        if (text === "📊 STATISTICS" || text === "🗓️ Week") msg += `🗓️ Week: *${stats.week.toFixed(2)}€*\n`;
+        if (text === "📊 STATISTICS" || text === "📆 Month") msg += `📆 Month: *${stats.month.toFixed(2)}€*\n`;
+        msg += `💰 Total: *${stats.total.toFixed(2)}€*`;
 
         return await sendAndTrack(bot, id, msg, { parse_mode: "Markdown" }, {});
       }
 
-      case "🔒 BAN naudotoją":
+      case "🔒 BAN user":
         session.adminStep = "ban_user";
-        return await sendAndTrack(bot, id, "🔒 Įveskite naudotojo ID kurį norite *užbaninti*:", { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, "🔒 Enter the user ID to *ban*:", { parse_mode: "Markdown" }, {});
 
       case "⏳ Temp. BAN":
         session.adminStep = "temp_ban";
-        return await sendAndTrack(bot, id, "⏳ Įveskite naudotojo ID ir trukmę minutėmis (pvz: `123456789 10`):", { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, "⏳ Enter user ID and duration in minutes (e.g. `123456789 10`):", { parse_mode: "Markdown" }, {});
 
-      case "✅ UNBAN naudotoją":
+      case "✅ UNBAN user":
         session.adminStep = "unban_user";
-        return await sendAndTrack(bot, id, "✅ Įveskite naudotojo ID kurį norite *atbaninti*:", { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, "✅ Enter the user ID to *unban*:", { parse_mode: "Markdown" }, {});
 
-      case "🧹 Valyti BAN":
+      case "🧹 Clear BANs":
         clearBans();
-        return await sendAndTrack(bot, id, "🧹 *Visi permanent ban'ai pašalinti.*", { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, "🧹 *All permanent bans cleared.*", { parse_mode: "Markdown" }, {});
 
-      case "📋 BAN sąrašas": {
+      case "📋 Banned list": {
         const list = listBannedUsers();
         const formatted = list.length
           ? list.map(id => `- \`${id}\``).join("\n")
-          : "_(Tuščia)_";
-        return await sendAndTrack(bot, id, `📋 *Užblokuoti naudotojai:*\n${formatted}`, { parse_mode: "Markdown" }, {});
+          : "_(Empty)_";
+        return await sendAndTrack(bot, id, `📋 *Banned users:*\n${formatted}`, { parse_mode: "Markdown" }, {});
       }
 
-      case "⏱️ Laikini BAN'ai": {
+      case "⏱️ Temp bans": {
         const list = listTemporaryBans();
         const formatted = list.length
-          ? list.map(b => `- \`${b.userId}\` iki ${b.until}`).join("\n")
-          : "_(Tuščia)_";
-        return await sendAndTrack(bot, id, `⏱️ *Laikinai užblokuoti:*\n${formatted}`, { parse_mode: "Markdown" }, {});
+          ? list.map(b => `- \`${b.userId}\` until ${b.until}`).join("\n")
+          : "_(Empty)_";
+        return await sendAndTrack(bot, id, `⏱️ *Temporarily banned:*\n${formatted}`, { parse_mode: "Markdown" }, {});
       }
 
-      case "🔙 Atgal":
+      case "🔙 Back":
         delete session.adminStep;
-        return await sendAndTrack(bot, id, "🔙 Grįžote į pagrindinį meniu.", { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, "🔙 Returned to main menu.", { parse_mode: "Markdown" }, {});
     }
   } catch (err) {
-    console.error("❌ [handleAdminAction klaida]:", err.message || err);
+    console.error("❌ [handleAdminAction error]:", err.message || err);
     if (msg?.chat?.id) {
-      await sendAndTrack(bot, msg.chat.id, "❗️ Klaida apdorojant veiksmą. Bandykite dar kartą.", {}, {});
+      await sendAndTrack(bot, msg.chat.id, "❗️ Action processing error. Please try again.", {}, {});
     }
   }
 }
