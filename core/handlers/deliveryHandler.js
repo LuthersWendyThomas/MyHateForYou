@@ -58,7 +58,7 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
 }
 
 /**
- * Vykdo pavėluotą žingsnio pranešimą su galimu delete
+ * Schedules a delayed delivery message with optional deletion
  */
 function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
   setTimeout(async () => {
@@ -90,7 +90,7 @@ function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
 }
 
 /**
- * Galutinis išvalymas po pristatymo: žinutės, ban, sesija
+ * Final cleanup after delivery: deletes messages, bans user, and clears session
  */
 async function triggerFinalCleanup(bot, id, userMsgs = {}) {
   try {
@@ -120,7 +120,7 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
       await sendAndTrack(
         bot,
         uid,
-        "⏳ *Session ended.*\n⛔️ Access is restricted by security policy.",
+        "⏳ *Session closed.*\n⛔️ Access has been restricted for security reasons.",
         { parse_mode: "Markdown" },
         userMsgs
       );
