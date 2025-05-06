@@ -3,40 +3,40 @@
 import { BOT } from "../config/config.js";
 
 /**
- * ✅ Sugeneruoja pagrindinį UX meniu Telegram botui:
+ * ✅ Generates the main UX menu for the Telegram bot:
  * 
- * — Vartotojui:
+ * — For User:
  *   • 🛒 BUY
  *   • 👤 PROFILE
  *   • 📋 MY ORDERS
  *   • ❓ HELP
  * 
- * — Adminui papildomai:
+ * — For Admin Extra:
  *   • 📊 STATISTICS
  *   • 🔧 ADMIN PANEL
  * 
- * @param {number|string} id - Telegram vartotojo ID
- * @returns {Object} reply_markup objektas su mygtukais
+ * @param {number|string} id - Telegram User ID
+ * @returns {Object} reply_markup object with buttons
  */
 export function getMainMenu(id) {
   const uid = String(id || "").trim();
   const adminId = String(BOT?.ADMIN_ID || "").trim();
 
-  // ✅ Ar user yra admin
+  // ✅ Is the user an admin?
   const isAdmin = uid && adminId && uid === adminId;
 
-  // ✅ Pagrindiniai mygtukai visiems
+  // ✅ Basic buttons for everyone
   const userMenu = [
     [{ text: "🛒 BUY" }, { text: "👤 PROFILE" }],
     [{ text: "📋 MY ORDERS" }, { text: "❓ HELP" }]
   ];
 
-  // ✅ Admin priedai
+  // ✅ Admin accessories
   const adminMenu = [
     [{ text: "📊 STATISTICS" }, { text: "🔧 ADMIN PANEL" }]
   ];
 
-  // ✅ Return teisingą meniu
+  // ✅ Return to the correct menu
   return {
     keyboard: isAdmin ? [...userMenu, ...adminMenu] : userMenu,
     resize_keyboard: true,
