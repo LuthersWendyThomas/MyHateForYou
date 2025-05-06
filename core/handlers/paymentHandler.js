@@ -7,16 +7,24 @@ import { simulateDelivery } from "./deliveryHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { finishOrder } from "./finalHandler.js";
 
-// Helper function to handle retries for API calls
+// Helper function to handle retries for API calls with exponential backoff
 async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
   try {
     return await apiCall();
   } catch (error) {
-    if (retries === 0) throw error;
-    console.warn(`⚠️ Retry attempt failed, retrying... (${retries} left)`);
+    if (retries === 0) {
+      console.error("❌ Final retry attempt failed.");
+      throw error;
+    }
+    console.warn(`⚠️ API request failed. Retrying... (${retries} attempts left)`);
     await new Promise(resolve => setTimeout(resolve, delay));
     return fetchWithRetry(apiCall, retries - 1, delay * 2); // Exponential backoff
   }
+}
+
+// Preventing session duplication
+function isPaymentInProgress(s) {
+  return s && s.paymentInProgress;
 }
 
 /**
@@ -24,15 +32,13 @@ async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
  */
 export async function handlePayment(bot, id, userMessages) {
   const s = userSessions[id];
-  if (!s || s.step !== 7) {
-    return sendAndTrack(bot, id, "⚠️ Invalid step. Please try again.", {}, userMessages);
+
+  // Ensure that the payment is in the right step and no other payment is in progress
+  if (!s || s.step !== 7 || isPaymentInProgress(s)) {
+    return sendAndTrack(bot, id, "⚠️ Invalid or duplicate payment attempt. Please try again.", {}, userMessages);
   }
 
-  if (s.paymentInProgress) {
-    return sendAndTrack(bot, id, "⚠️ Payment is already in progress. Please wait...", {}, userMessages);
-  }
-
-  s.paymentInProgress = true;
+  s.paymentInProgress = true;  // Lock payment process to avoid double payments
 
   try {
     const usd = parseFloat(s.totalPrice);
@@ -74,7 +80,7 @@ export async function handlePayment(bot, id, userMessages) {
       parse_mode: "Markdown"
     });
 
-    // Clear any existing payment timers
+    // Clear any existing payment timers to prevent multiple payments
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
 
     const timer = setTimeout(() => {
@@ -146,4 +152,30 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
     console.error("❌ [handlePaymentConfirmation error]:", err.message);
     return sendAndTrack(bot, id, "❗️ Error verifying payment. Please try again later.", {}, userMessages);
   }
+}
+
+/**
+ * Step 8 — Checks for confirmation or cancel of the payment
+ */
+export async function handlePaymentCancel(bot, id, userMessages) {
+  const s = userSessions[id];
+
+  // If the user cancels the payment, reset the session
+  if (s && s.step === 8 && s.paymentInProgress) {
+    // Reset the session data to allow a new payment to be started
+    s.paymentInProgress = false;
+    s.step = 1; // Back to the first step, or you can use `safeStart()` to restart the process.
+
+    // Notify the user that the payment process has been cancelled
+    await sendAndTrack(bot, id, "❌ Mokėjimas atšauktas. Grįžtate į pradžią.", {}, userMessages);
+
+    // Clear session and payment timers
+    delete userSessions[id];
+    delete paymentTimers[id];
+
+    // Optionally, you can trigger a safe start for a new payment session
+    return await safeStart(bot, id);  // Starts fresh from step 1
+  }
+
+  return sendAndTrack(bot, id, "⚠️ Mokėjimas nebuvo atšauktas, nes proceso žingsnis netinkamas.", {}, userMessages);
 }
