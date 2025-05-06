@@ -4,16 +4,16 @@ import QRCode from "qrcode";
 import { WALLETS } from "../config/config.js";
 
 /**
- * Generuoja QR paveikslėlį kripto mokėjimui
- * @param {string} currency - pvz. BTC, ETH, SOL, MATIC
- * @param {string|number} amount - pvz. 0.0134
- * @param {string=} overrideAddress - galima nurodyti savo adresą
+ * Generates a QR image for crypto payment
+ * @param {string} currency - e.g. BTC, ETH, SOL, MATIC
+ * @param {string|number} amount - e.g. 0.0134
+ * @param {string=} overrideAddress - optionally provide a custom address
  * @returns {Promise<Buffer|null>}
  */
 export async function generateQR(currency, amount, overrideAddress) {
   try {
     if (!currency || amount === undefined || amount === null) {
-      console.warn("⚠️ [generateQR] Trūksta valiutos arba sumos.");
+      console.warn("⚠️ [generateQR] Missing currency or amount.");
       return null;
     }
 
@@ -22,21 +22,21 @@ export async function generateQR(currency, amount, overrideAddress) {
     const parsedAmount = parseFloat(amount);
 
     if (!address || address.length < 8 || !isValidAddress(address)) {
-      console.warn(`[generateQR] Neteisingas arba tuščias adresas: "${address}"`);
+      console.warn(`[generateQR] Invalid or empty address: "${address}"`);
       return null;
     }
 
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      console.warn(`[generateQR] Neteisinga suma: ${amount}`);
+      console.warn(`[generateQR] Invalid amount: ${amount}`);
       return null;
     }
 
     const formatted = parsedAmount.toFixed(6);
-    const uri = `${cleanCurrency.toLowerCase()}:${address}?amount=${formatted}&label=BalticPharmaBot&message=Užsakymas`;
+    const uri = `${cleanCurrency.toLowerCase()}:${address}?amount=${formatted}&label=BalticPharmaBot&message=Order`;
 
     const buffer = await QRCode.toBuffer(uri, {
       type: "png",
-      width: 180, // Mažas dydis Telegram mobiliai
+      width: 180, // Small size for Telegram mobile
       margin: 1,
       errorCorrectionLevel: "H",
       color: {
@@ -46,19 +46,19 @@ export async function generateQR(currency, amount, overrideAddress) {
     });
 
     if (!buffer || !(buffer instanceof Buffer)) {
-      throw new Error("QR sugeneruotas blogu formatu");
+      throw new Error("QR generated in incorrect format");
     }
 
     return buffer;
 
   } catch (err) {
-    console.error("❌ [generateQR klaida]:", err.message || err);
+    console.error("❌ [generateQR error]:", err.message || err);
     return null;
   }
 }
 
 /**
- * Grąžina UX-friendly žinutę su kopijavimo mygtuku
+ * Returns a UX-friendly message with a copy button
  */
 export function generatePaymentMessageWithButton(currency, amount, address) {
   const cleanCurrency = String(currency || "").toUpperCase() || "???";
@@ -69,28 +69,28 @@ export function generatePaymentMessageWithButton(currency, amount, address) {
 
   const cleanAddress = String(address || "").trim();
   const text = `
-💳 *Mokėjimo informacija:*
+💳 *Payment details:*
 
-• Tinklas: *${cleanCurrency}*
-• Suma: *${formattedAmount} ${cleanCurrency}*
-• Adresas: \`${cleanAddress}\`
+• Network: *${cleanCurrency}*
+• Amount: *${formattedAmount} ${cleanCurrency}*
+• Address: \`${cleanAddress}\`
 
-⏱️ *Laukiamas apmokėjimas per 30 min.*
-✅ Naudokite QR arba kopijuokite adresą.
+⏱️ *Expected payment within 30 minutes.*
+✅ Use the QR code or copy the address.
   `.trim();
 
   return {
     message: text,
     reply_markup: {
       inline_keyboard: [
-        [{ text: "📋 Kopijuoti adresą", callback_data: `copy:${cleanAddress}` }]
+        [{ text: "📋 Copy address", callback_data: `copy:${cleanAddress}` }]
       ]
     }
   };
 }
 
 /**
- * Paprasta adreso validacija (leidžia įvairias kripto adresų formas)
+ * Simple address validation (accepts various crypto formats)
  */
 function isValidAddress(addr) {
   return typeof addr === "string" &&
