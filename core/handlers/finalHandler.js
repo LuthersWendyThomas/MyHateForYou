@@ -45,14 +45,14 @@ export async function safeStart(bot, id) {
           userMessages
         );
       } else {
-        throw new Error("Tuščias paveikslėlis");
+        throw new Error("No Picture");
       }
     } catch (imgErr) {
-      console.warn("⚠️ greeting.jpg klaida:", imgErr.message);
+      console.warn("⚠️ greeting.jpg error:", imgErr.message);
       return await sendAndTrack(
         bot,
         uid,
-        `✅ Sveiki atvykę į *BalticVaistineBot*!\n\n${fallbackText(count)}`,
+        `✅ Welcome to *BalticPharmacyBot*!\n\n${fallbackText(count)}`,
         {
           parse_mode: "Markdown",
           reply_markup: getMainMenu(uid)
@@ -62,11 +62,11 @@ export async function safeStart(bot, id) {
     }
 
   } catch (err) {
-    console.error("❌ [safeStart klaida]:", err.message);
+    console.error("❌ [safeStart error]:", err.message);
     return await sendAndTrack(
       bot,
       uid,
-      "⚠️ Nepavyko paleisti sesijos. Bandykite dar kartą su /start.",
+      "⚠️ Failed to start session. Please try again with /start.",
       {},
       userMessages
     );
@@ -81,7 +81,7 @@ export async function finishOrder(bot, id) {
   try {
     const session = userSessions[uid];
     if (!session || !session.deliveryMethod) {
-      throw new Error("Trūksta pristatymo informacijos");
+      throw new Error("Missing delivery information");
     }
 
     await simulateDelivery(bot, uid, session.deliveryMethod, userMessages);
@@ -90,7 +90,7 @@ export async function finishOrder(bot, id) {
     return await sendAndTrack(
       bot,
       uid,
-      "✅ Užsakymas priimtas!\nPristatymas pradėtas...\n\nGrįžtate į pagrindinį meniu:",
+      "✅ Order accepted!\nDelivery has started...\n\nYou are returning to the main menu:",
       {
         parse_mode: "Markdown",
         reply_markup: getMainMenu(uid)
@@ -99,11 +99,11 @@ export async function finishOrder(bot, id) {
     );
 
   } catch (err) {
-    console.error("❌ [finishOrder klaida]:", err.message);
+    console.error("❌ [finishOrder error]:", err.message);
     return await sendAndTrack(
       bot,
       uid,
-      "❗️ Klaida vykdant pristatymą. Bandykite vėliau.",
+      "❗️ Error while delivering. Please try again later.",
       {},
       userMessages
     );
@@ -120,35 +120,35 @@ export async function resetSession(id) {
     await clearUserMessages(uid);
     await resetUser(uid);
   } catch (err) {
-    console.error("❌ [resetSession klaida]:", err.message);
+    console.error("❌ [resetSession error]:", err.message);
   }
 }
 
 // — Su paveikslėliu
 function greetingText(count) {
   return `
-☁️ Sveiki atvykę į *BalticVaistineBot*! ☁️
+☁️ Welcome to *BalticPharmacyBot*! ☁️
 
-✨ 3 metų patirtis  
-✨ Premium kokybė 🇩🇪 🇳🇱 🇪🇸  
-✨ Diskretiški pristatymai 24/7  
-✨ Pristatymas per *30 minučių*  
-🚚 *Kurjeris* / *Drop* sistema  
+✨ 3 years of experience
+✨ Premium quality 🇩🇪 🇳🇱 🇪🇸
+✨ Discreet deliveries 24/7
+✨ Delivery within *30 minutes*
+🚚 *Courier* / *Drop* system
 
-❗️ *Nefotografuoti ir nešnekinėti kurjerio*  
-⛔ Pažeidimas = BAN  
+❗️ *Do not take pictures or talk to the courier*
+⛔ Violation = BAN
 
-❓ Klausimai? Spauskite *PAGALBA*  
+❓ Questions? Click *HELP*
 
-👥 Aktyvūs vartotojai: *${count}*`;
+👥 Active users: *${count}*`;
 }
 
 // — Fallback be paveikslėlio
 function fallbackText(count) {
   return `
-✨ 3 metų patirtis  
-✨ Premium kokybė | 24/7 pristatymas  
-✨ *Kurjeriai* / *Drop* sistema  
+✨ 3 years of experience
+✨ Premium quality | 24/7 delivery 
+✨ *Couriers* / *Drop* system
 
-👥 Aktyvūs vartotojai: *${count}*`;
+👥 Active users: *${count}*`;
 }
