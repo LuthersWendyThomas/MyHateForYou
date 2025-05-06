@@ -8,7 +8,7 @@ import { API, BOT } from "../config/config.js";
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
 /**
- * Tikrina ar wallet'e atsirado lėšų (tikėtina suma)
+ * Checks if the wallet has received the expected amount (or more)
  */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
   try {
@@ -46,17 +46,17 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
     log(wallet, currency, amount, result ? "PAID" : "NOT PAID");
 
     if (result && bot && BOT.ADMIN_ID) {
-      const time = new Date().toLocaleString("lt-LT");
+      const time = new Date().toLocaleString("en-GB");
       bot.sendMessage(
         BOT.ADMIN_ID,
-        `✅ *Mokėjimas patvirtintas*\n\n• Valiuta: *${cur}*\n• Suma: *${amount}*\n• Piniginė: \\\`${wallet}\\\`\n• Laikas: ${time}`,
+        `✅ *Payment confirmed*\n\n• Currency: *${cur}*\n• Amount: *${amount}*\n• Wallet: \\\`${wallet}\\\`\n• Time: ${time}`,
         { parse_mode: "Markdown" }
       ).catch(() => {});
     }
 
     return result;
   } catch (err) {
-    console.error(`❌ [checkPayment klaida → ${currency}]:`, err.message || err);
+    console.error(`❌ [checkPayment error → ${currency}]:`, err.message || err);
     log(wallet, currency, expectedAmount, "ERROR");
     return false;
   }
@@ -71,7 +71,7 @@ function log(wallet, currency, amount, status) {
     const logLine = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
     fs.appendFileSync(logPath, logLine, "utf8");
   } catch (err) {
-    console.warn("⚠️ [Log klaida]:", err.message || err);
+    console.warn("⚠️ [Log error]:", err.message || err);
   }
 }
 
@@ -87,7 +87,7 @@ async function checkBTC(address, expected) {
     const satoshis = parseInt(text);
     return Number.isFinite(satoshis) && (satoshis / 1e8) >= expected;
   } catch (err) {
-    console.error("❌ [BTC klaida]:", err.message || err);
+    console.error("❌ [BTC error]:", err.message || err);
     return false;
   }
 }
@@ -118,7 +118,7 @@ async function checkEVM(address, expected, rpcUrl, label) {
     const wei = parseInt(hex, 16);
     return Number.isFinite(wei) && (wei / 1e18) >= expected;
   } catch (err) {
-    console.error(`❌ [${label} klaida]:`, err.message || err);
+    console.error(`❌ [${label} error]:`, err.message || err);
     return false;
   }
 }
@@ -145,7 +145,7 @@ async function checkSOL(address, expected) {
     const lamports = data?.result?.value;
     return Number.isFinite(lamports) && (lamports / 1e9) >= expected;
   } catch (err) {
-    console.error("❌ [SOL klaida]:", err.message || err);
+    console.error("❌ [SOL error]:", err.message || err);
     return false;
   }
 }
