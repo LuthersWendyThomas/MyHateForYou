@@ -1,4 +1,4 @@
-// 📦 config/config.js — FINAL IMMORTAL MIRROR-SAFE VERSION v2025.3
+// 📦 config/config.js — FINAL IMMORTAL MIRROR-SAFE VERSION v2025.4
 
 import { config } from "dotenv";
 config();
@@ -28,7 +28,7 @@ const adminId = requiredEnv(process.env.ADMIN_ID, "ADMIN_ID");
 export const BOT = {
   TOKEN: token,
   ADMIN_ID: adminId,
-  VERSION: "v2025.3",
+  VERSION: "v2025.4",
   INSTANCE: null
 };
 
@@ -79,18 +79,3 @@ export const FLAGS = {
   AUTOBAN_ENABLED: ["1", "true"].includes(String(process.env.AUTOBAN_ENABLED).toLowerCase()),
   AUTODELETE_ENABLED: ["1", "true"].includes(String(process.env.AUTODELETE_ENABLED).toLowerCase())
 };
-
-// ===============================
-// 🌍 List of available cities
-// ===============================
-export const CITIES = process.env.CITIES
-  ? process.env.CITIES.split(",").map(c => c.trim()).filter(Boolean)
-  : [
-      "New York", "Los Angeles", "Chicago", "Houston", "Phoenix",
-      "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose",
-      "Austin", "Jacksonville", "Fort Worth", "Columbus", "Charlotte",
-      "San Francisco", "Indianapolis", "Seattle", "Denver", "Washington",
-      "Boston", "Nashville", "El Paso", "Detroit", "Oklahoma City",
-      "Portland", "Las Vegas", "Memphis", "Louisville", "Baltimore",
-      "Miami", "Atlanta"
-    ];
