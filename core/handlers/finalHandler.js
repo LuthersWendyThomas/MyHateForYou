@@ -130,15 +130,15 @@ function greetingText(count) {
 🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
 
 💊 Operating in *30+ US cities*  
-🚚 Delivery in *30 minutes or less*  
+🚚 Delivery in *45 minutes or less*  
 🕵️ Ultra-discreet • No questions asked  
 
-✨ Trusted Quality Since 2020
-✨ 24/7 Live Support & Fully Automated Service
+✨ Trusted Quality *Since 2020*
+✨ *24/7* Live Support & Fully Automated Service
 ✨ *Drop / Courier Options Available*
 
-🌆 *Drop anywhere in your city* 
-🚚 *Courier to your agreed location*  
+🌆 *Drop anywhere in your city* 📍
+🌆 *Courier to your agreed location* 🚚
 
 ❗️ *Do not speak or photograph couriers*  
 ⛔ Any violation = instant *BAN*  
@@ -153,7 +153,7 @@ function fallbackText(count) {
 🇺🇸 *BalticPharmacyBot* — now live in 30+ US cities  
 
 💊 Quality, Speed, Stealth  
-🚚 *Courier* or *Drop* delivery in 30 min  
+🚚 *Courier* or *Drop* delivery in 45 min  
 🔒 Fully anonymous crypto payments  
 
 👥 Active users: *${count}*  
