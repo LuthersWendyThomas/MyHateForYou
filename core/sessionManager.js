@@ -140,3 +140,4 @@ export const printSessionSummary = () => {
     console.log(`— ${id}: step=${s?.step}, city=${s?.city || "?"}, last active: ${last}`);
   }
 };
+
