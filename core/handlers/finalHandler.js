@@ -129,33 +129,33 @@ function greetingText(count) {
   return `
 🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
 
-💊 Operating in *30+ US cities*
-🚚 Delivery in *30 minutes or less*
-🕵️ Ultra-discreet • No questions asked
+💊 Operating in *30+ US cities*  
+🚚 Delivery in *30 minutes or less*  
+🕵️ Ultra-discreet • No questions asked  
 
-✨ Trusted Quality Since 2020 🔥
-✨ 24/7 Live Support & Fully Automated Service 🤖
-✨ Drop / Courier Options Available* 🚚
+✨ Trusted Quality Since 2020 🔥  
+✨ 24/7 Live Support & Fully Automated Service 🤖  
+✨ Drop / Courier Options Available* 🚚  
 
-📍 *Drop anywhere in your city 🌆
-📍 *Courier to your agreed location 🚚
+📍 *Drop anywhere in your city* 🌆  
+📍 *Courier to your agreed location* 🚚  
 
-❗️ *Do not speak or photograph couriers*
-⛔ Any violation = instant *BAN*
+❗️ *Do not speak or photograph couriers*  
+⛔ Any violation = instant *BAN*  
 
-👥 Active users: *${count}*
+👥 Active users: *${count}*  
 `;
 }
 
 // — Fallback without image
 function fallbackText(count) {
   return `
-🇺🇸 *BalticPharmacyBot* — now live in 30+ US cities
+🇺🇸 *BalticPharmacyBot* — now live in 30+ US cities  
 
-💊 Quality, Speed, Stealth
-🚚 *Courier* or *Drop* delivery in 30 min
-🔒 Fully anonymous crypto payments
+💊 Quality, Speed, Stealth  
+🚚 *Courier* or *Drop* delivery in 30 min  
+🔒 Fully anonymous crypto payments  
 
-👥 Active users: *${count}*
+👥 Active users: *${count}*  
 `;
 }
