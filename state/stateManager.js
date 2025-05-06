@@ -14,7 +14,7 @@ import {
 } from "./userState.js";
 
 /**
- * ✅ Pilnas naudotojo duomenų ir laikmačių išvalymas
+ * ✅ Complete clearing of user data and timers
  */
 export function resetUser(id) {
   const uid = safeId(id);
@@ -47,7 +47,7 @@ export function resetUser(id) {
 }
 
 /**
- * ✅ Išvalo veiklos logiką (spam, flood, žinutės), bet palieka sesiją
+ * ✅ Clears activity logic (spam, flood, messages), but leaves the session
  */
 export function clearUserActivity(id) {
   const uid = safeId(id);
@@ -67,7 +67,7 @@ export function clearUserActivity(id) {
 }
 
 /**
- * ✅ Išvalo tik naudotojo žinučių ID sąrašą (naudojama autodelete logic)
+ * ✅ Clears only the user's message ID list (uses autodelete logic)
  */
 export function clearUserMessages(id) {
   const uid = safeId(id);
@@ -81,7 +81,7 @@ export function clearUserMessages(id) {
 }
 
 /**
- * ✅ Išvalo naudotojo pristatymo ir mokėjimo laikmačius
+ * ✅ Clears the user's delivery and payment timers
  */
 export function clearTimers(id) {
   const uid = safeId(id);
@@ -110,7 +110,7 @@ export function clearTimers(id) {
 }
 
 /**
- * ✅ Visiškas vartotojo pašalinimas iš visos sistemos
+ * ✅ Complete removal of a user from the entire system
  */
 export function unregisterUser(id) {
   try {
@@ -126,7 +126,7 @@ export function unregisterUser(id) {
 }
 
 /**
- * ✅ Užtikrina, kad ID visada yra saugus ir string tipo
+ * ✅ Ensures that the ID is always safe and of type string
  */
 function safeId(id) {
   const uid = String(id || "").trim();
