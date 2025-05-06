@@ -8,6 +8,7 @@ import { sendKeyboard, sendAndTrack } from "../../helpers/messageUtils.js";
 import { punish } from "../../utils/punishUser.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
 import { resetSession, safeStart } from "./finalHandler.js";
+import { simulateDelivery } from "./deliveryHandler.js";
 
 // 🌍 Grouped regions — FULL USA COVERAGE v2025.7
 const regionMap = {
