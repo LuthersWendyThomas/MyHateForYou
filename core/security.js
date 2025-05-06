@@ -9,7 +9,7 @@ import {
 } from "../state/userState.js";
 import { BOT } from "../config/config.js";
 
-// — Konfigūracija
+// — Configuration
 const SPAM_INTERVAL_MS = 3300;
 const FLOOD_LIMIT = 6;
 const FLOOD_WINDOW_MS = 11000;
@@ -24,7 +24,7 @@ function isAdmin(id) {
 }
 
 /**
- * ✅ Apsauga nuo spaminimo (laiko tarpas tarp žinučių)
+ * ✅ Spam protection (time interval between messages)
  */
 export function isSpamming(id) {
   if (!id || isAdmin(id)) return false;
@@ -37,7 +37,7 @@ export function isSpamming(id) {
 }
 
 /**
- * ✅ Apsauga nuo flood'inimo (per daug veiksmų per trumpą laiką)
+ * ✅ Flood protection (too many actions in a short time)
  */
 export async function handleFlood(id, bot) {
   if (!id || isAdmin(id)) return false;
@@ -60,7 +60,7 @@ export async function handleFlood(id, bot) {
       await sendAndTrack(
         bot,
         id,
-        "⛔ *Per daug veiksmų!* Paskyra laikinai apribota *4 minutėms*.",
+        "⛔ *Too many actions!* Your account has been temporarily muted for *4 minutes*.",
         { parse_mode: "Markdown" }
       );
       return true;
@@ -73,7 +73,7 @@ export async function handleFlood(id, bot) {
 }
 
 /**
- * ✅ Tikrina ar naudotojas šiuo metu užtildytas (laikinas banas)
+ * ✅ Checks whether a user is currently muted (temporary ban)
  */
 export function isMuted(id) {
   if (!id || isAdmin(id)) return false;
@@ -91,7 +91,7 @@ export function isMuted(id) {
 }
 
 /**
- * ✅ Tikrina ar žinutė pavojinga (per ilga, pasikartojanti)
+ * ✅ Detects dangerous messages (too long or repeated)
  */
 function isMessageDangerous(id, text) {
   if (!id || isAdmin(id)) return false;
@@ -108,7 +108,7 @@ function isMessageDangerous(id, text) {
 }
 
 /**
- * ✅ Pagrindinis apsaugos filtras — leidžia vykdyti veiksmą tik jei viskas OK
+ * ✅ Main security filter — allows action only if all checks pass
  */
 export async function canProceed(id, bot, text = "") {
   try {
@@ -122,7 +122,7 @@ export async function canProceed(id, bot, text = "") {
 
     return true;
   } catch (err) {
-    console.error("❌ [canProceed klaida]:", err.message || err);
+    console.error("❌ [canProceed error]:", err.message || err);
     return false;
   }
 }
