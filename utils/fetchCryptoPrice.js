@@ -1,4 +1,4 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL v3.2 BULLETPROOF RETRY + CACHE FIXED
+// 📦 utils/fetchCryptoPrice.js | IMMORTAL v3.3 FINAL USA MARKET BULLETPROOF
 
 import fetch from "node-fetch";
 
@@ -12,7 +12,7 @@ const SUPPORTED = {
 };
 
 /**
- * Returns the EUR exchange rate for a currency using CoinGecko (with retry) or CoinCap as fallback
+ * Returns the USD exchange rate for a currency using CoinGecko (with retry) or CoinCap as fallback
  */
 export async function fetchCryptoPrice(currency) {
   if (!currency) return null;
@@ -57,13 +57,13 @@ export async function fetchCryptoPrice(currency) {
 }
 
 /**
- * CoinGecko with 3x retry logic
+ * CoinGecko with 3x retry logic (USD only)
  */
 async function fetchFromCoinGecko(id) {
   const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`;
   for (let i = 0; i < 3; i++) {
     try {
-      await wait(i * 800); // gradually increasing delay
+      await wait(i * 800);
       const res = await fetch(url, {
         headers: { Accept: "application/json" }
       });
@@ -75,7 +75,7 @@ async function fetchFromCoinGecko(id) {
 
       if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
       const json = await res.json();
-      const price = parseFloat(json?.[id]?.eur);
+      const price = parseFloat(json?.[id]?.usd);
       if (!isNaN(price) && price > 0) return price;
     } catch (e) {
       console.warn("❌ CoinGecko retry error:", e.message);
@@ -85,7 +85,7 @@ async function fetchFromCoinGecko(id) {
 }
 
 /**
- * CoinCap fallback
+ * CoinCap fallback (USD only)
  */
 async function fetchFromCoinCap(id) {
   const url = `https://api.coincap.io/v2/assets/${id}`;
@@ -98,7 +98,6 @@ async function fetchFromCoinCap(id) {
   const usd = parseFloat(json?.data?.priceUsd);
 
   if (!isNaN(usd) && usd > 0) {
-    const eurRate = 1.07;
     return +usd.toFixed(2);
   }
 
@@ -110,7 +109,7 @@ async function fetchFromCoinCap(id) {
  */
 function saveToCache(currency, rate) {
   cache[currency] = { rate, timestamp: Date.now() };
-  console.log(`✅ [fetchCryptoPrice] Cache updated: ${currency.toUpperCase()} → ${rate}$`);
+  console.log(`✅ [fetchCryptoPrice] Cache updated: ${currency.toUpperCase()} → $${rate}`);
 }
 
 /**
