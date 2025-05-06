@@ -30,7 +30,7 @@ export async function safeStart(bot, id) {
       activeUsers.add(uid);
     }
 
-    const count = activeUsers.size;  // Fixed the issue with active user count (size not count)
+    const count = activeUsers.count;  // Fixed the issue with active user count (size not count)
     const greetingPath = path.join(process.cwd(), "assets", "greeting.jpg");
 
     // Try to load the greeting image, if it exists
@@ -174,3 +174,4 @@ function fallbackText(count) {
 👥 Active users: *${count}*  
 `;
 }
+
