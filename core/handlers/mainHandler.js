@@ -27,7 +27,7 @@ export function registerMainHandler(bot) {
       const uid = String(id);
       text = text.trim();
 
-      // ✅ Užtikrinam aktyvumą ir sesijos inicijavimą
+      // ✅ Ensure user is marked active and session is initialized
       markUserActive(uid);
       const session = userSessions[uid] ||= { step: 1, createdAt: Date.now() };
       const isAdmin = uid === String(BOT.ADMIN_ID);
@@ -36,13 +36,13 @@ export function registerMainHandler(bot) {
       // ✅ 1. Anti-spam / flood / ban
       if (!(await canProceed(uid, bot, text))) return;
 
-      // ✅ 2. Startas – paleidžia šviežią sesiją
+      // ✅ 2. Start – starts a fresh session
       if (text.toLowerCase() === "/start" || text === MENU_BUTTONS.START) {
         console.log(`🚀 /start from ${uid}`);
         return await safeStart(bot, uid);
       }
 
-      // ✅ 3. Admin srautas
+      // ✅ 3. Admin flow
       if (session.adminStep) {
         try {
           return await handleAdminAction(bot, msg, userSessions, userOrders);
@@ -52,7 +52,7 @@ export function registerMainHandler(bot) {
         }
       }
 
-      // ✅ 4. Meniu pasirinkimai
+      // ✅ 4. Menu options
       switch (text) {
         case MENU_BUTTONS.BUY:
           return await startOrder(bot, uid, userMessages);
@@ -70,12 +70,12 @@ export function registerMainHandler(bot) {
           break;
       }
 
-      // ✅ 5. Jei aktyvus step flow
+      // ✅ 5. If step flow is active
       if (typeof session.step === "number" && session.step >= 1 && session.step <= 9) {
         return await handleStep(bot, uid, text, userMessages);
       }
 
-      // ✅ 6. Neleistinas tekstas
+      // ✅ 6. Unrecognized or unauthorized input
       if (!allowedMenu.includes(text)) {
         return await bot.sendMessage(
           uid,
