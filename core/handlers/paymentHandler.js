@@ -3,22 +3,23 @@ import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
 import { saveOrder } from "../../utils/saveOrder.js";
 import { sendAndTrack, sendKeyboard } from "../../helpers/messageUtils.js";
-import { finishOrder, safeStart } from "./finalHandler.js";
+import { simulateDelivery } from "./deliveryHandler.js";
+import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 
-// Retry with exponential backoff
+// Retry helper with exponential backoff
 async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
   try {
     return await apiCall();
   } catch (error) {
     if (retries === 0) throw error;
-    await new Promise(r => setTimeout(r, delay));
+    await new Promise(resolve => setTimeout(resolve, delay));
     return fetchWithRetry(apiCall, retries - 1, delay * 2);
   }
 }
 
 /**
- * Step 7 — Show QR and wait for payment
+ * Step 7 — Show QR code and wait for payment
  */
 export async function handlePayment(bot, id, userMessages) {
   const s = userSessions[id];
@@ -78,16 +79,15 @@ export async function handlePayment(bot, id, userMessages) {
   } catch (err) {
     console.error("❌ [handlePayment]:", err.message);
     s.paymentInProgress = false;
-    return sendAndTrack(bot, id, "❗️ Payment preparation failed. Try again.", {}, userMessages);
+    return sendAndTrack(bot, id, "❗️ Payment setup failed. Try again.", {}, userMessages);
   }
 }
 
 /**
- * Step 8 — Cancel at any point (guaranteed safe reset)
+ * Step 8 — Cancel at any point (safe fallback)
  */
 export async function handlePaymentCancel(bot, id, userMessages) {
   const s = userSessions[id];
-
   if (s && s.step === 8 && s.paymentInProgress) {
     try {
       s.paymentInProgress = false;
@@ -128,7 +128,7 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
     const success = await checkPayment(s.wallet, s.currency, s.expectedAmount, bot);
 
     if (!success) {
-      return sendKeyboard(bot, id, "❌ Payment not detected yet.\nCheck again or cancel.", [
+      return sendKeyboard(bot, id, "❌ Payment not detected yet.\nYou can check again or cancel.", [
         [{ text: "✅ CONFIRM" }],
         [{ text: "❌ Cancel payment" }]
       ], userMessages);
@@ -148,7 +148,8 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
     );
 
     await sendAndTrack(adminBot, adminId, `✅ New successful payment from ${s.wallet}`);
-    return await finishOrder(bot, id);
+
+    return await simulateDelivery(bot, id);
   } catch (err) {
     console.error("❌ [handlePaymentConfirmation]:", err.message);
     return sendAndTrack(bot, id, "❗️ Error verifying payment. Try again later.", {}, userMessages);
