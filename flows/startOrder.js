@@ -53,34 +53,34 @@ export async function startOrder(bot, id, userMsgs = {}) {
       return await sendKeyboard(
         bot,
         uid,
-        "⚠️ Miestų sąrašas šiuo metu nepasiekiamas.",
-        [[{ text: "🔁 Bandyti iš naujo" }]],
+        "⚠️ The list of cities is currently unavailable..",
+        [[{ text: "🔁 Try again" }]],
         userMsgs
       );
     }
 
     // — 4. Generuojam mygtukus ir siunčiam pasirinkimą
     const keyboard = validCities.map(city => [{ text: city }]);
-    keyboard.push([{ text: "🔙 Atgal" }]);
+    keyboard.push([{ text: "🔙 Back" }]);
 
     await bot.sendChatAction(uid, "typing").catch(() => {});
 
     return await sendKeyboard(
       bot,
       uid,
-      "🌍 *Pasirinkite miestą*, kuriame norite gauti siuntą:",
+      "🌍 *Select the city* where you want to receive the shipment:",
       keyboard,
       userMsgs
     );
 
   } catch (err) {
-    console.error("❌ [startOrder klaida]:", err.message || err);
+    console.error("❌ [startOrder error]:", err.message || err);
 
     return await sendKeyboard(
       bot,
       uid,
-      "❗️ Klaida pradedant užsakymą. Bandykite dar kartą.",
-      [[{ text: "🔁 Bandyti iš naujo" }]],
+      "❗️ Error starting order. Please try again.",
+      [[{ text: "🔁 Try again" }]],
       userMsgs
     );
   }
