@@ -1,7 +1,7 @@
 {
-  "name": "BalticVaistineBot",
-  "version": "2.0.1",
-  "description": "Baltic Vaistinė — Telegram bot sistema su Crypto mokėjimais ir Auto-Delivery funkcionalumu.",
+  "name": "BalticPharmacyBot",
+  "version": "1.0.1",
+  "description": "BalticPharmacyBot — Telegram bot system with Crypto payments and Auto-Delivery functionality.",
   "main": "index.js",
   "type": "module",
   "scripts": {
