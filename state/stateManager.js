@@ -40,9 +40,9 @@ export function resetUser(id) {
     }
 
     activeUsers.remove(uid);
-    console.log(`🧼 Vartotojo ${uid} pilna būsena išvalyta.`);
+    console.log(`🧼 Users ${uid} full state cleared.`);
   } catch (err) {
-    console.error("❌ [resetUser klaida]:", err.message);
+    console.error("❌ [resetUser error]:", err.message);
   }
 }
 
@@ -60,9 +60,9 @@ export function clearUserActivity(id) {
     delete antiFlood[uid];
 
     activeUsers.remove(uid);
-    console.log(`🧹 Išvalyta veikla (be sesijos): ${uid}`);
+    console.log(`🧹 Cleared activity (without session): ${uid}`);
   } catch (err) {
-    console.error("❌ [clearUserActivity klaida]:", err.message);
+    console.error("❌ [clearUserActivity error]:", err.message);
   }
 }
 
@@ -76,7 +76,7 @@ export function clearUserMessages(id) {
   try {
     delete userMessages[uid];
   } catch (err) {
-    console.error("❌ [clearUserMessages klaida]:", err.message);
+    console.error("❌ [clearUserMessages error]:", err.message);
   }
 }
 
@@ -91,21 +91,21 @@ export function clearTimers(id) {
     if (activeTimers?.[uid]) {
       clearTimeout(activeTimers[uid]);
       delete activeTimers[uid];
-      console.log(`🕒 ⛔️ Pristatymo laikmatis išvalytas: ${uid}`);
+      console.log(`🕒 ⛔️ Delivery timer cleared: ${uid}`);
     }
 
     if (paymentTimers?.[uid]) {
       clearTimeout(paymentTimers[uid]);
       delete paymentTimers[uid];
-      console.log(`💳 ⛔️ Mokėjimo laikmatis išvalytas: ${uid}`);
+      console.log(`💳 ⛔️ Payment timer cleared: ${uid}`);
     }
 
     if (userSessions?.[uid]?.cleanupScheduled) {
       delete userSessions[uid].cleanupScheduled;
-      console.log(`🧼 cleanupScheduled flag'as pašalintas: ${uid}`);
+      console.log(`🧼 cleanupScheduled flag cleared: ${uid}`);
     }
   } catch (err) {
-    console.error("❌ [clearTimers klaida]:", err.message);
+    console.error("❌ [clearTimers error]:", err.message);
   }
 }
 
@@ -121,7 +121,7 @@ export function unregisterUser(id) {
     clearUserMessages(uid);
     resetUser(uid);
   } catch (err) {
-    console.error("❌ [unregisterUser klaida]:", err.message);
+    console.error("❌ [unregisterUser error]:", err.message);
   }
 }
 
