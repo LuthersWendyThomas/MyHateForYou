@@ -19,7 +19,10 @@ export const paymentTimers = {};
  */
 export function setActiveTimer(id, timerId) {
   const uid = safeId(id);
-  if (uid && timerId) activeTimers[uid] = timerId;
+  if (uid && timerId) {
+    activeTimers[uid] = timerId;
+    console.log(`🕒 Active timer set for ${uid}`);
+  }
 }
 
 /**
@@ -29,7 +32,10 @@ export function setActiveTimer(id, timerId) {
  */
 export function setPaymentTimer(id, timerId) {
   const uid = safeId(id);
-  if (uid && timerId) paymentTimers[uid] = timerId;
+  if (uid && timerId) {
+    paymentTimers[uid] = timerId;
+    console.log(`💳 Payment timer set for ${uid}`);
+  }
 }
 
 /**
@@ -37,9 +43,11 @@ export function setPaymentTimer(id, timerId) {
  */
 export function clearAllTimers() {
   try {
+    // Clear all active timers for delivery and payment
     for (const t of Object.values(activeTimers)) clearTimeout(t);
     for (const t of Object.values(paymentTimers)) clearTimeout(t);
 
+    // Clean up the timer objects
     Object.keys(activeTimers).forEach((id) => delete activeTimers[id]);
     Object.keys(paymentTimers).forEach((id) => delete paymentTimers[id]);
 
@@ -50,7 +58,9 @@ export function clearAllTimers() {
 }
 
 /**
- * ✅ Safely converts ID to string
+ * ✅ Safely converts ID to string, used for ID-based storage
+ * @param {string|number} id - User ID
+ * @returns {string|null} - Safe string ID or null if invalid
  */
 function safeId(id) {
   if (id === undefined || id === null) return null;
