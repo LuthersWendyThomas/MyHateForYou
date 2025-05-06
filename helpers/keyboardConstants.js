@@ -5,13 +5,13 @@
  */
 export const MENU_BUTTONS = {
   START: "🚀 START",
-  BUY: "🛒 PIRKTI",
-  PROFILE: "👤 PROFILIS",
-  ORDERS: "📋 MANO UŽSAKYMAI",
-  HELP: "❓ PAGALBA",
+  BUY: "🛒 BUY",
+  PROFILE: "👤 PROFILE",
+  ORDERS: "📋 MY ORDERS",
+  HELP: "❓ HELP",
 
   // Admin only
-  STATS: "📊 STATISTIKA",
+  STATS: "📊 STATISTICS",
   ADMIN: "🔧 ADMIN PANEL"
 };
 
