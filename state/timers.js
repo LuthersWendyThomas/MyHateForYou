@@ -1,21 +1,21 @@
 // 📦 state/timers.js | BalticPharma V2 — FINAL v2025.6 TITAN CLOCK SHIELD MIRROR EDITION
 
 /**
- * Aktyvūs pristatymo ar žingsnių laikmačiai
- * Formatas: { [userId]: Timeout }
+ * Active delivery or step timers
+ * Format: { [userId]: Timeout }
  */
 export const activeTimers = {};
 
 /**
- * Mokėjimo žingsnio (step 8) laikmačiai
- * Formatas: { [userId]: Timeout }
+ * Payment step (step 8) timers
+ * Format: { [userId]: Timeout }
  */
 export const paymentTimers = {};
 
 /**
- * ✅ Priskiria UI (pristatymo) laikmatį vartotojui
- * @param {string|number} id - vartotojo ID
- * @param {Timeout} timerId - setTimeout grąžintas ID
+ * ✅ Assigns a UI (delivery) timer to the user
+ * @param {string|number} id - user ID
+ * @param {Timeout} timerId - setTimeout returned ID
  */
 export function setActiveTimer(id, timerId) {
   const uid = safeId(id);
@@ -23,9 +23,9 @@ export function setActiveTimer(id, timerId) {
 }
 
 /**
- * ✅ Priskiria mokėjimo žingsnio laikmatį vartotojui
- * @param {string|number} id - vartotojo ID
- * @param {Timeout} timerId - setTimeout grąžintas ID
+ * ✅ Assigns a payment step timer to a user
+ * @param {string|number} id - user ID
+ * @param {Timeout} timerId - setTimeout returned ID
  */
 export function setPaymentTimer(id, timerId) {
   const uid = safeId(id);
@@ -33,7 +33,7 @@ export function setPaymentTimer(id, timerId) {
 }
 
 /**
- * ✅ Išvalo visus laikmačius (deploy metu arba force stop)
+ * ✅ Clears all timers (during deployment or force stop)
  */
 export function clearAllTimers() {
   try {
@@ -50,7 +50,7 @@ export function clearAllTimers() {
 }
 
 /**
- * ✅ Saugiai konvertuoja ID į string
+ * ✅ Safely converts ID to string
  */
 function safeId(id) {
   if (id === undefined || id === null) return null;
