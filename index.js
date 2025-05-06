@@ -30,7 +30,7 @@ setInterval(() => {
 
     const me = await BOT.INSTANCE.getMe();
     const version = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"))?.version || "1.0.0";
-    const now = new Date().toLocaleString("lt-LT");
+    const now = new Date().toLocaleString("en-GB");
 
     console.log(`
 ╔═══════════════════════════════╗
