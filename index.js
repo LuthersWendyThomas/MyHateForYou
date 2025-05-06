@@ -19,14 +19,14 @@ setInterval(() => {
   try {
     autoExpireSessions();
   } catch (err) {
-    console.error("❌ [autoExpireSessions klaida]:", err.message);
+    console.error("❌ [autoExpireSessions error]:", err.message);
   }
 }, 10 * 60 * 1000);
 
 // — Paleidimo informacija + žinutė adminui
 (async () => {
   try {
-    if (!BOT.INSTANCE?.getMe) throw new Error("BOT.INSTANCE nenurodytas arba netinkamas.");
+    if (!BOT.INSTANCE?.getMe) throw new Error("BOT.INSTANCE unknown or wrong.");
 
     const me = await BOT.INSTANCE.getMe();
     const version = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"))?.version || "1.0.0";
@@ -34,7 +34,7 @@ setInterval(() => {
 
     console.log(`
 ╔═══════════════════════════════╗
-║  ✅ BALTICVAISTINE_BOT paleistas  ║
+║ ✅ BALTICPHARMACY HAD STARTED ║
 ╚═══════════════════════════════╝
 v${version} — ${now}
 Prisijungta kaip: @${me.username} (${me.first_name})
@@ -43,21 +43,21 @@ Prisijungta kaip: @${me.username} (${me.first_name})
     if (BOT.ADMIN_ID && !isNaN(BOT.ADMIN_ID)) {
       await BOT.INSTANCE.sendMessage(
         BOT.ADMIN_ID,
-        `✅ *BALTICVAISTINE_BOT v${version}* sėkmingai paleistas!\n🕒 Laikas: *${now}*`,
+        `✅ *BALTICPHARMACYBOT v${version}* successfully launched!\n🕒 Time: *${now}*`,
         { parse_mode: "Markdown" }
       ).catch((e) => {
-        console.warn("⚠️ Nepavyko nusiųsti admin žinutės:", e.message);
+        console.warn("⚠️ Failed to send admin message:", e.message);
       });
     }
 
   } catch (err) {
-    console.error("❌ Paleidimo klaida:", err.message || err);
+    console.error("❌ Start error:", err.message || err);
 
     if (BOT.ADMIN_ID && !isNaN(BOT.ADMIN_ID)) {
       try {
         await BOT.INSTANCE?.sendMessage(
           BOT.ADMIN_ID,
-          `❗️ *Botas nulūžo per paleidimą!*\n\n🕒 Klaidos laikas: *${new Date().toLocaleString("lt-LT")}*`,
+          `❗️ *Bot broke during launch!*\n\n🕒 Error Time: *${new Date().toLocaleString("lt-LT")}*`,
           { parse_mode: "Markdown" }
         );
       } catch {}
@@ -69,12 +69,12 @@ Prisijungta kaip: @${me.username} (${me.first_name})
 
 // — Gaudo fatalius nulūžimus
 process.on("uncaughtException", async (err) => {
-  console.error("❌ Fatal klaida (exception):", err);
+  console.error("❌ Fatal error (exception):", err);
   if (BOT.ADMIN_ID && !isNaN(BOT.ADMIN_ID)) {
     try {
       await BOT.INSTANCE?.sendMessage(
         BOT.ADMIN_ID,
-        `❗️ *BOTAS NULŪŽO!*\n\n💥 Klaida: \`${err.message || "Nežinoma"}\``,
+        `❗️ *BOT IS BROKEN DOWN!*\n\n💥 Error: \`${err.message || "Unknown"}\``,
         { parse_mode: "Markdown" }
       );
     } catch {}
@@ -83,12 +83,12 @@ process.on("uncaughtException", async (err) => {
 });
 
 process.on("unhandledRejection", async (reason) => {
-  console.error("❌ Neapdorota klaida (promise):", reason);
+  console.error("❌ Unhandled error (promise):", reason);
   if (BOT.ADMIN_ID && !isNaN(BOT.ADMIN_ID)) {
     try {
       await BOT.INSTANCE?.sendMessage(
         BOT.ADMIN_ID,
-        `❗️ *BOTAS NULŪŽO!*\n\n💥 Neapdorota klaida: \`${reason?.message || reason}\``,
+        `❗️ *BOT IS BROKEN DOWN!*\n\n💥 Unhandled error: \`${reason?.message || reason}\``,
         { parse_mode: "Markdown" }
       );
     } catch {}
@@ -99,15 +99,15 @@ process.on("unhandledRejection", async (reason) => {
 // — Gaudo shutdown signalus (tyli mirtis)
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach((sig) => {
   process.on(sig, async () => {
-    console.log(`\n🛑 Gauta ${sig}, stabdom botą...`);
+    console.log(`\n🛑 Received ${sig}, stopping the bot...`);
     try {
       await BOT.INSTANCE?.stopPolling();
-      console.log("✅ Botas sėkmingai sustabdytas.");
+      console.log("✅ Bot successfully stopped.");
     } catch (e) {
-      console.warn("⚠️ Klaida stabdant botą:", e.message);
+      console.warn("⚠️ Error while stopping the bot:", e.message);
     }
     process.exit(0);
   });
 });
 
-console.log("✅ BALTICVAISTINE_BOT — READY & BULLETPROOF RUNNING");
+console.log("✅ BALTICPHARMACYBOT — READY & BULLETPROOF RUNNING");
