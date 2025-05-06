@@ -46,7 +46,7 @@ export async function handlePayment(bot, id, userMessages) {
 • Delivery: ${s.deliveryMethod} (${s.deliveryFee}€)
 • Location: ${s.city}
 
-💰 ${eur.toFixed(2)}€ ≈ ${amount} ${s.currency}
+💰 ${eur.toFixed(2)}$ ≈ ${amount} ${s.currency}
 🏦 Wallet: \`${s.wallet}\`
 
 ⏱ Estimated delivery in ~30 minutes.
