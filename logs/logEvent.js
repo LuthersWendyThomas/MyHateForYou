@@ -31,6 +31,6 @@ export function logEvent(type, message) {
     const line = `[${timestamp}] [${type}] ${message}\n`;
     fs.appendFileSync(logFile, line);
   } catch (e) {
-    console.error("❌ Nepavyko įrašyti log įrašo:", e);
+    console.error("❌ Failed to write log entry:", e);
   }
 }
