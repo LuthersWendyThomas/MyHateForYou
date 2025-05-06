@@ -5,7 +5,7 @@ import { sendAndTrack } from "../helpers/messageUtils.js";
 import { BOT } from "../config/config.js";
 
 /**
- * ✅ Parodo statistiką (admin arba naudotojui)
+ * ✅ Displays statistics (admin or user)
  */
 export async function sendStats(bot, id, userMessages = {}) {
   try {
@@ -19,19 +19,19 @@ export async function sendStats(bot, id, userMessages = {}) {
       );
       const activeCount = Number(activeUsers?.count) || totalUsers;
 
-      const now = new Date().toLocaleString("lt-LT", {
+      const now = new Date().toLocaleString("en-GB", {
         hour: "2-digit",
         minute: "2-digit"
       });
 
       const adminStats = `
-📊 *ADMIN Statistika:*
+📊 *ADMIN Statistics:*
 
-👤 *Aktyvūs naudotojai:* ${activeCount}
-📦 *Užsakymų atlikta:* ${totalOrders}
-🧠 *Aktyvios sesijos:* ${totalUsers}
+👤 *Active users:* ${activeCount}
+📦 *Total orders:* ${totalOrders}
+🧠 *Active sessions:* ${totalUsers}
 
-⏱ *Atnaujinta:* ${now}
+⏱ *Updated at:* ${now}
       `.trim();
 
       return await sendAndTrack(bot, id, adminStats, {
@@ -43,12 +43,12 @@ export async function sendStats(bot, id, userMessages = {}) {
     const userOrderCount = Number(userOrders[uid]) || 0;
 
     const userStats = `
-📦 *Jūsų statistika:*
+📦 *Your Statistics:*
 
-✅ Įvykdytų užsakymų: *${userOrderCount}*
-⏱ Stebėjimas aktyvus nuo pirmo užsakymo.
+✅ Orders completed: *${userOrderCount}*
+⏱ Tracking active since your first order.
 
-🔒 Visi duomenys laikomi tik lokaliai — *jokių asmens duomenų nesaugoma*.
+🔒 All data is stored locally — *no personal data is saved*.
     `.trim();
 
     return await sendAndTrack(bot, id, userStats, {
@@ -57,7 +57,7 @@ export async function sendStats(bot, id, userMessages = {}) {
     }, userMessages);
 
   } catch (err) {
-    console.error("❌ [sendStats klaida]:", err.message || err);
-    return await sendAndTrack(bot, id, "⚠️ Nepavyko gauti statistikos.", {}, userMessages);
+    console.error("❌ [sendStats error]:", err.message || err);
+    return await sendAndTrack(bot, id, "⚠️ Failed to fetch statistics.", {}, userMessages);
   }
 }
