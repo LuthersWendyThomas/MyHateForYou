@@ -8,13 +8,13 @@ import { initBotInstance, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions } from "./core/sessionManager.js";
 
-// — Inicializuojam bot instanciją
+// — Initializing the bot instance
 initBotInstance();
 
-// — Registruojam pagrindinį handlerį
+// — Registering the main handler
 registerMainHandler(BOT.INSTANCE);
 
-// — Periodinis session cleanup kas 10 min.
+// — Periodic session cleanup every 10 minutes.
 setInterval(() => {
   try {
     autoExpireSessions();
@@ -23,7 +23,7 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
-// — Paleidimo informacija + žinutė adminui
+// — Launch information + message to admin
 (async () => {
   try {
     if (!BOT.INSTANCE?.getMe) throw new Error("BOT.INSTANCE unknown or wrong.");
@@ -57,7 +57,7 @@ Prisijungta kaip: @${me.username} (${me.first_name})
       try {
         await BOT.INSTANCE?.sendMessage(
           BOT.ADMIN_ID,
-          `❗️ *Bot broke during launch!*\n\n🕒 Error Time: *${new Date().toLocaleString("lt-LT")}*`,
+          `❗️ *Bot broke during launch!*\n\n🕒 Error Time: *${new Date().toLocaleString("en-GB")}*`,
           { parse_mode: "Markdown" }
         );
       } catch {}
@@ -67,7 +67,7 @@ Prisijungta kaip: @${me.username} (${me.first_name})
   }
 })();
 
-// — Gaudo fatalius nulūžimus
+// — Suffers fatal fractures
 process.on("uncaughtException", async (err) => {
   console.error("❌ Fatal error (exception):", err);
   if (BOT.ADMIN_ID && !isNaN(BOT.ADMIN_ID)) {
@@ -96,7 +96,7 @@ process.on("unhandledRejection", async (reason) => {
   process.exit(1);
 });
 
-// — Gaudo shutdown signalus (tyli mirtis)
+// — Receiving shutdown signals (silent death)
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach((sig) => {
   process.on(sig, async () => {
     console.log(`\n🛑 Received ${sig}, stopping the bot...`);
