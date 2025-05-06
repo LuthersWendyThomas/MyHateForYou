@@ -2,11 +2,7 @@
 
 import { isBanned, banUser } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
-import {
-  antiSpam,
-  antiFlood,
-  bannedUntil
-} from "../state/userState.js";
+import { antiSpam, antiFlood, bannedUntil } from "../state/userState.js";
 import { BOT } from "../config/config.js";
 
 // — Configuration
@@ -123,6 +119,7 @@ export async function canProceed(id, bot, text = "") {
     return true;
   } catch (err) {
     console.error("❌ [canProceed error]:", err.message || err);
+    // Improved error handling
     return false;
   }
 }
