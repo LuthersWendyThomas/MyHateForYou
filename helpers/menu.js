@@ -6,13 +6,13 @@ import { BOT } from "../config/config.js";
  * ✅ Sugeneruoja pagrindinį UX meniu Telegram botui:
  * 
  * — Vartotojui:
- *   • 🛒 PIRKTI
- *   • 👤 PROFILIS
- *   • 📋 MANO UŽSAKYMAI
- *   • ❓ PAGALBA
+ *   • 🛒 BUY
+ *   • 👤 PROFILE
+ *   • 📋 MY ORDERS
+ *   • ❓ HELP
  * 
  * — Adminui papildomai:
- *   • 📊 STATISTIKA
+ *   • 📊 STATISTICS
  *   • 🔧 ADMIN PANEL
  * 
  * @param {number|string} id - Telegram vartotojo ID
@@ -27,13 +27,13 @@ export function getMainMenu(id) {
 
   // ✅ Pagrindiniai mygtukai visiems
   const userMenu = [
-    [{ text: "🛒 PIRKTI" }, { text: "👤 PROFILIS" }],
-    [{ text: "📋 MANO UŽSAKYMAI" }, { text: "❓ PAGALBA" }]
+    [{ text: "🛒 BUY" }, { text: "👤 PROFILE" }],
+    [{ text: "📋 MY ORDERS" }, { text: "❓ HELP" }]
   ];
 
   // ✅ Admin priedai
   const adminMenu = [
-    [{ text: "📊 STATISTIKA" }, { text: "🔧 ADMIN PANEL" }]
+    [{ text: "📊 STATISTICS" }, { text: "🔧 ADMIN PANEL" }]
   ];
 
   // ✅ Return teisingą meniu
