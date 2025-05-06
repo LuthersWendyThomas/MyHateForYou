@@ -1,30 +1,30 @@
-// 📦 flows/startOrder.js | BalticPharma V2 — IMMORTAL v2.6.1 TITAN-GRADE SHINE POLISH
+// 📦 flows/startOrder.js | BalticPharma V2 — REGION-MODE FINAL v2.6.9
 
 import { userSessions, userMessages, userOrders } from "../state/userState.js";
-import { cities } from "../config/features.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
 import { clearTimers, clearUserMessages } from "../state/stateManager.js";
 
 /**
- * Initiates a clean order start from the first step (city)
+ * Initiates a clean order start from the first step (region selection)
  */
 export async function startOrder(bot, id, userMsgs = {}) {
   const uid = String(id);
   if (!bot || !uid) return;
 
   try {
-    // — 1. Clearing the entire user session and messages
+    // — 1. Full cleanup
     await clearTimers(uid);
     await clearUserMessages(uid);
 
     delete userSessions[uid];
     delete userOrders[uid];
 
-    // — 2. New empty session with all fields
+    // — 2. New blank session
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now(),
 
+      region: null,
       city: null,
       deliveryMethod: null,
       deliveryFee: 0,
@@ -44,23 +44,17 @@ export async function startOrder(bot, id, userMsgs = {}) {
       paymentInProgress: false
     };
 
-    // — 3. Checking if cities are accessible
-    const validCities = Array.isArray(cities)
-      ? cities.filter(c => typeof c === "string" && c.trim().length > 0)
-      : [];
+    // — 3. Define static region list (synced with stepHandler)
+    const regions = [
+      "🗽 East Coast",
+      "🌴 West Coast",
+      "🛢️ South",
+      "⛰️ Midwest",
+      "🌲 Northwest",
+      "🏜️ Southwest"
+    ];
 
-    if (validCities.length === 0) {
-      return await sendKeyboard(
-        bot,
-        uid,
-        "⚠️ The list of cities is currently unavailable..",
-        [[{ text: "🔁 Try again" }]],
-        userMsgs
-      );
-    }
-
-    // — 4. We generate buttons and send the selection
-    const keyboard = validCities.map(city => [{ text: city }]);
+    const keyboard = regions.map(r => [{ text: r }]);
     keyboard.push([{ text: "🔙 Back" }]);
 
     await bot.sendChatAction(uid, "typing").catch(() => {});
@@ -68,7 +62,7 @@ export async function startOrder(bot, id, userMsgs = {}) {
     return await sendKeyboard(
       bot,
       uid,
-      "🌍 *Select the city* where you want to receive the shipment:",
+      "🗺 *Select the region* where you want to receive the shipment:",
       keyboard,
       userMsgs
     );
