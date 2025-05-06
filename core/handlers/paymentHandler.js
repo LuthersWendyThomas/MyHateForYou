@@ -66,7 +66,7 @@ export async function handlePayment(bot, id, userMessages) {
     const timer = setTimeout(() => {
       delete userSessions[id];
       delete paymentTimers[id];
-      console.warn(`⌛️ Mokėjimo langas baigėsi: ${id}`);
+      console.warn(`⌛️ Payment window has ended: ${id}`);
     }, 30 * 60 * 1000);
 
     s.paymentTimer = timer;
@@ -84,7 +84,7 @@ export async function handlePayment(bot, id, userMessages) {
     );
 
   } catch (err) {
-    console.error("❌ [handlePayment klaida]:", err.message);
+    console.error("❌ [handlePayment error]:", err.message);
     s.paymentInProgress = false;
     return sendAndTrack(bot, id, "❗️ Error preparing payment. Please try again.", {}, userMessages);
   }
@@ -116,18 +116,18 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
       delete paymentTimers[id];
     }
 
-    await sendAndTrack(bot, id, "✅ Mokėjimas patvirtintas!\nPristatymas vykdomas...", {}, userMessages);
+    await sendAndTrack(bot, id, "✅ Payment confirmed!\nDelivery in progress...", {}, userMessages);
 
     userOrders[id] = (userOrders[id] || 0) + 1;
 
     await saveOrder(id, s.city, s.product.name, s.totalPrice).catch(err =>
-      console.warn("⚠️ [saveOrder klaida]:", err.message)
+      console.warn("⚠️ [saveOrder error]:", err.message)
     );
 
     return await finishOrder(bot, id);
 
   } catch (err) {
-    console.error("❌ [handlePaymentConfirmation klaida]:", err.message);
+    console.error("❌ [handlePaymentConfirmation error]:", err.message);
     return sendAndTrack(bot, id, "❗️ Error verifying payment. Please try again later.", {}, userMessages);
   }
 }
