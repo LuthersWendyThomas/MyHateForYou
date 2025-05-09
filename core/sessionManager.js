@@ -1,4 +1,4 @@
-// 🧠 core/sessionManager.js | BalticPharma V2 — IMMORTAL v2025.6 TITANLOCK SYNC EDITION
+// 🧠 core/sessionManager.js | FINAL BULLETPROOF v2.0 — TITANLOCK SYNC+ EDITION
 
 import {
   activeTimers,
@@ -12,47 +12,53 @@ import {
   userOrders
 } from "../state/userState.js";
 
+// 🕓 Activity timestamps
 const lastSeenAt = {};
-const STEP_TIMEOUT = 60 * 60 * 1000;         // 1 hour
-const DEFAULT_EXPIRE_THRESHOLD = 45 * 60 * 1000; // 45 minutes
+
+// ⏰ Session aging configuration
+const STEP_TIMEOUT = 60 * 60 * 1000;            // 1h — zombie session kill
+const DEFAULT_EXPIRE_THRESHOLD = 45 * 60 * 1000; // 45min — idle session kill
 
 /**
- * ✅ Marks the user as active (should be called as soon as a message is received)
+ * ✅ Called on each user input to mark them active
  */
 export const markUserActive = (id) => {
   if (!id) return;
-  lastSeenAt[String(id)] = Date.now();
+  const uid = String(id);
+  lastSeenAt[uid] = Date.now();
 };
 
 /**
- * ✅ Clears the delivery (UI) timer
+ * ✅ Clears UI/Delivery timer if active
  */
 export const clearUserTimer = (id) => {
   const uid = String(id);
   if (activeTimers[uid]) {
     clearTimeout(activeTimers[uid]);
     delete activeTimers[uid];
-    console.log(`🕒 ⛔️ UI timer cleared: ${uid}`);
+    console.log(`🕒 UI timer cleared → ${uid}`);
   }
 };
 
 /**
- * ✅ Clears the payment timer
+ * ✅ Clears payment timer if active
  */
 export const clearPaymentTimer = (id) => {
   const uid = String(id);
   if (paymentTimers[uid]) {
     clearTimeout(paymentTimers[uid]);
     delete paymentTimers[uid];
-    console.log(`💳 ⛔️ Payment timer cleared: ${uid}`);
+    console.log(`💳 Payment timer cleared → ${uid}`);
   }
 };
 
 /**
- * ✅ Fully clears the user's session and memory state
+ * ✅ Full session reset (timers + memory state)
  */
 export const resetSession = (id) => {
   const uid = String(id);
+  if (!uid) return;
+
   clearUserTimer(uid);
   clearPaymentTimer(uid);
 
@@ -68,14 +74,16 @@ export const resetSession = (id) => {
   ];
 
   for (const store of stores) {
-    if (store[uid]) delete store[uid];
+    if (store?.[uid] !== undefined) {
+      delete store[uid];
+    }
   }
 
-  console.log(`🧼 ✅ Session reset: ${uid}`);
+  console.log(`🧼 Session reset complete → ${uid}`);
 };
 
 /**
- * ⏳ Automatically expires old/frozen sessions
+ * ⏳ Expires idle or zombie sessions (should run every X min)
  */
 export const autoExpireSessions = (threshold = DEFAULT_EXPIRE_THRESHOLD) => {
   const now = Date.now();
@@ -83,53 +91,60 @@ export const autoExpireSessions = (threshold = DEFAULT_EXPIRE_THRESHOLD) => {
 
   for (const [id, last] of Object.entries(lastSeenAt)) {
     const s = userSessions[id];
-    const age = now - last;
-    const isExpired = age > threshold;
-    const isFrozen = s?.step >= 1 && age > STEP_TIMEOUT;
+    const idle = now - last;
+    const isExpired = idle > threshold;
+    const isFrozen = s?.step >= 1 && idle > STEP_TIMEOUT;
 
-    if (isExpired || isFrozen) expired.push(id);
+    if (isExpired || isFrozen) {
+      expired.push(id);
+    }
   }
 
   for (const id of expired) {
     resetSession(id);
-    console.log(`⏳ AUTO-EXPIRE executed: ${id}`);
+    console.log(`⏳ AUTO-EXPIRE session killed → ${id}`);
   }
 };
 
 /**
- * ✅ Returns the number of currently active users
+ * ✅ Returns total number of tracked sessions
  */
 export const getActiveUsersCount = () => {
   return Object.keys(userSessions).length;
 };
 
 /**
- * ✅ Full session wipe (e.g., during deploy)
+ * 🔥 Forces full session cleanup for all users (e.g., on deploy)
  */
 export const wipeAllSessions = () => {
-  for (const id of Object.keys(userSessions)) {
+  const ids = Object.keys(userSessions);
+  for (const id of ids) {
     resetSession(id);
   }
-  console.log("🔥 ALL sessions wiped (wipeAllSessions)");
+  console.log(`🔥 All sessions wiped — ${ids.length} users`);
 };
 
 /**
- * ✅ Clears stale payment timers (not in step 8)
+ * 🧹 Clears payment timers not tied to step 8
  */
 export const cleanStalePaymentTimers = () => {
   for (const id in paymentTimers) {
-    const isValid = userSessions[id]?.step === 8;
-    if (!isValid) clearPaymentTimer(id);
+    const step = userSessions[id]?.step;
+    if (step !== 8) {
+      clearPaymentTimer(id);
+      console.log(`🧽 Stale payment timer cleared → ${id}`);
+    }
   }
 };
 
 /**
- * ✅ Debug — prints a summary of active users and sessions
+ * 🧾 Debug tool to print all current sessions
  */
 export const printSessionSummary = () => {
   const now = Date.now();
   const users = Object.keys(userSessions);
-  console.log(`📊 Active users: ${users.length}`);
+
+  console.log(`📊 Active sessions: ${users.length}`);
 
   for (const id of users) {
     const s = userSessions[id];
@@ -137,7 +152,6 @@ export const printSessionSummary = () => {
       ? `${Math.floor((now - lastSeenAt[id]) / 1000)}s ago`
       : "n/a";
 
-    console.log(`— ${id}: step=${s?.step}, city=${s?.city || "?"}, last active: ${last}`);
+    console.log(`— ${id}: step=${s?.step || "?"}, city=${s?.city || "?"}, lastActive=${last}`);
   }
 };
-
