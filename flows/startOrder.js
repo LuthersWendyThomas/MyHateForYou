@@ -1,25 +1,35 @@
-// 📦 flows/startOrder.js | FINAL v2.0 — REGION FLOW ULTRASYNC EDITION
+// 📦 flows/startOrder.js | FINAL v2.1 — REGION FLOW BULLETPROOF POLISH
 
 import { userSessions, userMessages, userOrders } from "../state/userState.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
 import { clearTimers, clearUserMessages } from "../state/stateManager.js";
 
+// 💡 Centralized region list (synced with stepHandler.js)
+const REGION_LIST = [
+  "🗽 East Coast",
+  "🌴 West Coast",
+  "🛢️ South",
+  "⛰️ Midwest",
+  "🌲 Northwest",
+  "🏜️ Southwest"
+];
+
 /**
- * 🧼 Starts a fresh order session (region → city → method → etc.)
+ * 🎯 Starts a fresh order session (region → city → method → etc.)
  */
 export async function startOrder(bot, id, userMsgs = {}) {
-  const uid = String(id);
+  const uid = String(id || "").trim();
   if (!bot || !uid) return;
 
   try {
-    // — 1. Full cleanup of user state
+    // 🧼 1. Full cleanup of user session
     await clearTimers(uid);
     await clearUserMessages(uid);
 
     delete userSessions[uid];
     delete userOrders[uid];
 
-    // — 2. Start clean session
+    // 🛡️ 2. Start clean state session
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now(),
@@ -44,23 +54,16 @@ export async function startOrder(bot, id, userMsgs = {}) {
       paymentInProgress: false
     };
 
-    // — 3. Predefined region list (synced with stepHandler.js)
-    const regions = [
-      "🗽 East Coast",
-      "🌴 West Coast",
-      "🛢️ South",
-      "⛰️ Midwest",
-      "🌲 Northwest",
-      "🏜️ Southwest"
-    ];
-
-    const keyboard = regions.map(r => [{ text: r }]);
+    // 🧭 3. Generate region keyboard
+    const keyboard = REGION_LIST.map(r => [{ text: r }]);
     keyboard.push([{ text: "🔙 Back" }]);
 
-    // — 4. UX: send typing action
-    await bot.sendChatAction(uid, "typing").catch(() => {});
+    // 🕐 4. UX improvement: show typing
+    await bot.sendChatAction(uid, "typing").catch(() => {
+      console.warn(`⚠️ [startOrder] Typing failed for ${uid}`);
+    });
 
-    // — 5. Ask user to choose a region
+    // 📬 5. Ask user to choose region
     return await sendKeyboard(
       bot,
       uid,
