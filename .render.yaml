@@ -14,7 +14,7 @@ services:
       - key: ADMIN_ID
         sync: false
 
-      # --- Crypto Wallets
+      # --- Crypto Wallets (🔒 Bulletproof Wallet Routing)
       - key: BTC_WALLET
         sync: false
       - key: ETH_WALLET
@@ -24,7 +24,7 @@ services:
       - key: MATIC_WALLET
         sync: false
 
-      # --- RPC endpoint'ai
+      # --- RPC Endpoints (💠 Chain Sync)
       - key: ETHEREUM_RPC
         sync: false
       - key: MATIC_RPC
@@ -35,12 +35,12 @@ services:
         value: https://blockchain.info/q/addressbalance/
         sync: false
 
-      # --- CoinGecko (EUR kaina)
+      # --- CoinGecko API (💶 EUR rates)
       - key: COINGECKO_URL
         value: https://api.coingecko.com/api/v3/simple/price
         sync: false
 
-      # --- Feature flag'ai
+      # --- Feature Flags (🛡 System Logic)
       - key: AUTOBAN_ENABLED
         value: "true"
         sync: false
@@ -48,7 +48,7 @@ services:
         value: "true"
         sync: false
 
-      # --- Miestų sąrašas
+      # --- Available Cities (📍 UX Layer)
       - key: CITIES
         value: Vilnius,Kaunas
         sync: false
