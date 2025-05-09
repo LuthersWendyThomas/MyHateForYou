@@ -1,5 +1,3 @@
-// 🧠 core/handlers/stepHandler.js | FINAL BULLETPROOF v2.0 — REGION UI LOCK
-
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
 import { products } from "../../config/products.js";
@@ -19,20 +17,23 @@ const regionMap = {
   "🏜️ Southwest": ["Phoenix", "Las Vegas", "Oklahoma City"]
 };
 
+/**
+ * 🧠 Handles dynamic step-by-step order flow
+ */
 export async function handleStep(bot, id, text, userMessages) {
   const s = (userSessions[id] ||= { step: 1, createdAt: Date.now() });
   const input = text?.trim();
 
   if (!input || typeof input !== "string") return punish(bot, id, userMessages);
 
-  // 🔙 Handle back logic
+  // 🔙 Handle back navigation
   if (input === "🔙 Back") {
     try {
       if (s.step === 1) {
         await resetSession(id);
         return await safeStart(bot, id);
       } else {
-        s.step--;
+        s.step = Math.floor(s.step - 1);
         if (s.step <= 1) {
           delete s.region;
           delete s.city;
@@ -108,10 +109,9 @@ export async function handleStep(bot, id, text, userMessages) {
           return await handlePaymentConfirmation(bot, id, userMessages);
         }
         if (input === "❌ Cancel payment") {
-          await sendAndTrack(bot, id, "❌ Payment cancelled. Returning to the start.", {}, userMessages);
+          await sendAndTrack(bot, id, "❌ Payment canceled. Returning to main menu...", {}, userMessages);
           await resetSession(id);
-          setTimeout(() => safeStart(bot, id), 300);
-          return;
+          return setTimeout(() => safeStart(bot, id), 300);
         }
         return punish(bot, id, userMessages);
 
@@ -120,13 +120,17 @@ export async function handleStep(bot, id, text, userMessages) {
         await resetSession(id);
         return await safeStart(bot, id);
     }
+
   } catch (err) {
-    console.error("❌ [handleStep crash]:", err.message);
+    console.error("❌ [handleStep error]:", err.message);
     await resetSession(id);
     return await safeStart(bot, id);
   }
 }
 
+/**
+ * 🔁 UI rendering per step
+ */
 function renderStep(bot, id, step, userMessages) {
   const s = userSessions[id] ||= { step: 1 };
 
@@ -139,25 +143,25 @@ function renderStep(bot, id, step, userMessages) {
         ], userMessages);
 
       case 1.2:
-        return sendKeyboard(bot, id, `🏙 *Select your city in ${s.region}:*`, [
+        return sendKeyboard(bot, id, `🏙 *Choose your city in ${s.region}:*`, [
           ...regionMap[s.region].map(c => [{ text: c }]),
           [{ text: "🔙 Back" }]
         ], userMessages);
 
       case 2:
-        return sendKeyboard(bot, id, "🚛 *Choose delivery method:*", [
+        return sendKeyboard(bot, id, "🚚 *Choose delivery method:*", [
           ...deliveryMethods.map(m => [{ text: m.label }]),
           [{ text: "🔙 Back" }]
         ], userMessages);
 
       case 3:
-        return sendKeyboard(bot, id, "📋 *Select product category:*", [
+        return sendKeyboard(bot, id, "📦 *Choose product category:*", [
           ...Object.keys(products).map(k => [{ text: k }]),
           [{ text: "🔙 Back" }]
         ], userMessages);
 
       case 4:
-        return sendKeyboard(bot, id, "📦 *Choose a product:*", [
+        return sendKeyboard(bot, id, "🧪 *Choose product:*", [
           ...products[s.category]?.map(p => [{ text: p.name }]),
           [{ text: "🔙 Back" }]
         ], userMessages);
@@ -165,7 +169,7 @@ function renderStep(bot, id, step, userMessages) {
       case 5:
         const qtyButtons = Object.entries(s.product?.prices || {}).map(([q, p]) => [{ text: `${q} (${p}$)` }]);
         qtyButtons.push([{ text: "🔙 Back" }]);
-        return sendKeyboard(bot, id, "⚖️ *Select quantity:*", qtyButtons, userMessages);
+        return sendKeyboard(bot, id, "⚖️ *Choose quantity:*", qtyButtons, userMessages);
 
       case 6:
         const wallets = Object.keys(WALLETS).reduce((rows, key) => {
@@ -175,24 +179,24 @@ function renderStep(bot, id, step, userMessages) {
           return rows;
         }, []);
         wallets.push([{ text: "🔙 Back" }]);
-        return sendKeyboard(bot, id, "💳 *Select payment network:*", wallets, userMessages);
+        return sendKeyboard(bot, id, "💳 *Choose payment network:*", wallets, userMessages);
 
       case 7:
         return sendKeyboard(bot, id,
-          `📜 *Order summary:*\n\n` +
+          `🧾 *Order summary:*\n\n` +
           `• City: ${s.city}\n` +
           `• Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)\n` +
           `• Category: ${s.category}\n` +
           `• Product: ${s.product?.name}\n` +
           `• Quantity: ${s.quantity}\n` +
           `• Payment: ${s.currency}\n\n` +
-          `💰 Total: *${s.totalPrice.toFixed(2)}$*\n\n✅ Confirm if everything is correct.`,
+          `💰 Total: *${s.totalPrice.toFixed(2)}$*\n\n✅ Confirm to proceed.`,
           [[{ text: "✅ CONFIRM" }], [{ text: "🔙 Back" }]],
           userMessages
         );
 
       case 8:
-        return sendKeyboard(bot, id, "❓ *Was the payment completed?*", [
+        return sendKeyboard(bot, id, "❓ *Was payment completed?*", [
           [{ text: "✅ CONFIRM" }],
           [{ text: "❌ Cancel payment" }]
         ], userMessages);
@@ -202,8 +206,9 @@ function renderStep(bot, id, step, userMessages) {
         userSessions[id] = { step: 1, createdAt: Date.now() };
         return renderStep(bot, id, 1, userMessages);
     }
+
   } catch (err) {
-    console.error("❌ [renderStep error]:", err.message);
-    return sendKeyboard(bot, id, "⚠️ Error displaying step. Try again.", [[{ text: "🔁 Try again" }]], userMessages);
+    console.error("❌ [renderStep crash]:", err.message);
+    return sendKeyboard(bot, id, "⚠️ Failed to load step. Try again.", [[{ text: "🔁 Try again" }]], userMessages);
   }
 }
