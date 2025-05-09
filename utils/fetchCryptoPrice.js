@@ -1,8 +1,8 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL v3.3 FINAL USA MARKET BULLETPROOF
+// 📦 utils/fetchCryptoPrice.js | IMMORTAL v3.4 FINAL — USA MARKET DEFENDER LOCK
 
 import fetch from "node-fetch";
 
-const CACHE_TTL = 5 * 60 * 1000;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const cache = {};
 const SUPPORTED = {
   btc: "bitcoin",
@@ -12,7 +12,9 @@ const SUPPORTED = {
 };
 
 /**
- * Returns the USD exchange rate for a currency using CoinGecko (with retry) or CoinCap as fallback
+ * ✅ Public API — returns USD price for selected crypto
+ * @param {string} currency - e.g., "btc", "eth"
+ * @returns {number|null}
  */
 export async function fetchCryptoPrice(currency) {
   if (!currency) return null;
@@ -20,7 +22,7 @@ export async function fetchCryptoPrice(currency) {
   const clean = String(currency).trim().toLowerCase();
   const mapped = SUPPORTED[clean];
   if (!mapped) {
-    console.warn(`⚠️ Unsupported currency: ${currency}`);
+    log(`❌ Unsupported currency: ${currency}`);
     return null;
   }
 
@@ -31,61 +33,60 @@ export async function fetchCryptoPrice(currency) {
     return cached.rate;
   }
 
-  // --- CoinGecko with retry attempts
   try {
     const price = await fetchFromCoinGecko(mapped);
-    if (price) {
-      saveToCache(clean, price);
-      return price;
-    }
+    if (price) return saveToCache(clean, price);
   } catch (err) {
-    console.warn(`⚠️ [CoinGecko error]: ${err.message}`);
+    log(`⚠️ CoinGecko error: ${err.message}`);
   }
 
-  // --- CoinCap fallback
   try {
-    const price = await fetchFromCoinCap(mapped);
-    if (price) {
-      saveToCache(clean, price);
-      return price;
-    }
+    const fallback = await fetchFromCoinCap(mapped);
+    if (fallback) return saveToCache(clean, fallback);
   } catch (err) {
-    console.warn(`⚠️ [CoinCap error]: ${err.message}`);
+    log(`⚠️ CoinCap error: ${err.message}`);
   }
 
   return null;
 }
 
 /**
- * CoinGecko with 3x retry logic (USD only)
+ * 🔄 CoinGecko with retries and rate-limit detection
  */
 async function fetchFromCoinGecko(id) {
   const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`;
+
   for (let i = 0; i < 3; i++) {
     try {
-      await wait(i * 800);
+      if (i > 0) await wait(i * 800);
+
       const res = await fetch(url, {
         headers: { Accept: "application/json" }
       });
 
       if (res.status === 429) {
-        console.warn("⏳ CoinGecko rate limit – retrying...");
+        log("⏳ CoinGecko rate limited. Retrying...");
         continue;
       }
 
       if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
+
       const json = await res.json();
       const price = parseFloat(json?.[id]?.usd);
-      if (!isNaN(price) && price > 0) return price;
-    } catch (e) {
-      console.warn("❌ CoinGecko retry error:", e.message);
+
+      if (Number.isFinite(price) && price > 0) {
+        return +price.toFixed(2);
+      }
+    } catch (err) {
+      log(`❌ CoinGecko fetch error: ${err.message}`);
     }
   }
+
   return null;
 }
 
 /**
- * CoinCap fallback (USD only)
+ * 📉 CoinCap fallback API
  */
 async function fetchFromCoinCap(id) {
   const url = `https://api.coincap.io/v2/assets/${id}`;
@@ -94,27 +95,42 @@ async function fetchFromCoinCap(id) {
   });
 
   if (!res.ok) throw new Error(`CoinCap HTTP ${res.status}`);
+
   const json = await res.json();
   const usd = parseFloat(json?.data?.priceUsd);
 
-  if (!isNaN(usd) && usd > 0) {
+  if (Number.isFinite(usd) && usd > 0) {
     return +usd.toFixed(2);
   }
 
-  return null;
+  throw new Error("CoinCap returned invalid price");
 }
 
 /**
- * Stores result in memory cache
+ * 🧠 Cache setter + console log (only if debug enabled)
  */
 function saveToCache(currency, rate) {
   cache[currency] = { rate, timestamp: Date.now() };
-  console.log(`✅ [fetchCryptoPrice] Cache updated: ${currency.toUpperCase()} → $${rate}`);
+
+  if (process.env.DEBUG_MESSAGES === "true") {
+    console.log(`💰 Cached rate: ${currency.toUpperCase()} → $${rate}`);
+  }
+
+  return rate;
 }
 
 /**
- * Async delay (used for retry logic)
+ * 💤 Timeout helper
  */
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * 🧾 Logger (debug conditional)
+ */
+function log(msg) {
+  if (process.env.DEBUG_MESSAGES === "true") {
+    console.warn(`[fetchCryptoPrice] ${msg}`);
+  }
 }
