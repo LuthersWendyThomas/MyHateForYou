@@ -1,4 +1,4 @@
-// 📦 utils/saveOrder.js | BalticPharma V2 — BULLETPROOF v2025.7 IMMORTAL SYNCED SHIELD EDITION
+// 📦 utils/saveOrder.js | FINAL IMMORTAL v3.0 — BULLETPROOF-LOCKED EDITION
 
 import fs from "fs/promises";
 import path from "path";
@@ -7,7 +7,9 @@ const ordersDir = path.resolve("./data");
 const ordersFile = path.join(ordersDir, "orders.json");
 const backupFile = path.join(ordersDir, "orders.bak.json");
 
-// ✅ Ensures that the ./data directory exists
+/**
+ * Ensures the data folder exists
+ */
 async function ensureDataDir() {
   try {
     await fs.mkdir(ordersDir, { recursive: true });
@@ -16,7 +18,9 @@ async function ensureDataDir() {
   }
 }
 
-// ✅ Safely saves a single order
+/**
+ * ✅ Saves a new order securely
+ */
 export async function saveOrder(userId, city, product, amount) {
   try {
     await ensureDataDir();
@@ -42,7 +46,9 @@ export async function saveOrder(userId, city, product, amount) {
   }
 }
 
-// ✅ Returns statistics (today / week / month / total)
+/**
+ * ✅ Provides total stats (per user or admin)
+ */
 export async function getStats(type = "admin", userId = null) {
   try {
     const orders = await loadOrders();
@@ -76,31 +82,41 @@ export async function getStats(type = "admin", userId = null) {
   }
 }
 
-// ✅ Loads all orders or returns an empty array
+/**
+ * ✅ Loads all orders (with fallback)
+ */
 async function loadOrders() {
   try {
     const raw = await fs.readFile(ordersFile, "utf8");
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
+  } catch (err) {
+    console.warn("⚠️ [loadOrders fallback]: returning empty list");
     return [];
   }
 }
 
-// ✅ Removes dangerous characters
+/**
+ * ✅ Prevents invalid characters in strings
+ */
 function sanitize(str) {
   return String(str || "")
     .replace(/[\n\r\t]/g, " ")
     .replace(/[^\wąčęėįšųūžĄČĘĖĮŠŲŪŽ .,\-_/]/gi, "")
-    .trim();
+    .trim()
+    .slice(0, 80); // prevent excessive text
 }
 
-// ✅ Default statistics structure
+/**
+ * ✅ Default stats structure
+ */
 function defaultStats() {
   return { today: 0, week: 0, month: 0, total: 0 };
 }
 
-// ✅ Safe JSON write + fallback backup file
+/**
+ * ✅ Safe JSON write with backup on failure
+ */
 async function safeWriteJSON(filePath, data) {
   try {
     const json = JSON.stringify(data, null, 2);
@@ -110,7 +126,7 @@ async function safeWriteJSON(filePath, data) {
     try {
       const backup = JSON.stringify(data, null, 2);
       await fs.writeFile(backupFile, backup, "utf8");
-      console.log("⚠️ Written to backup file:", backupFile);
+      console.warn("⚠️ Fallback written to backup file:", backupFile);
     } catch (backupErr) {
       console.error("❌ [backupWrite error]:", backupErr?.message || backupErr);
     }
