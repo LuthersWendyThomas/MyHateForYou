@@ -1,4 +1,4 @@
-// 📦 helpers/messageUtils.js | FINAL IMMORTAL v3.1 — DIAMOND ULTRAPOLISH CORE
+// 📦 helpers/messageUtils.js | FINAL IMMORTAL ULTRALOCKED v999999999999 SYNC-GODMODE
 
 import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
@@ -9,7 +9,7 @@ const CLEANUP_TIMEOUT_MS = 27 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 4096;
 
 /**
- * ✅ Sends a message with tracking and automatic cleanup/autoban
+ * ✅ Send a tracked message
  */
 export const sendAndTrack = async (bot, id, text, options = {}, messages = userMessages) => {
   if (!bot || !id || !text?.trim()) return null;
@@ -33,7 +33,7 @@ export const sendAndTrack = async (bot, id, text, options = {}, messages = userM
       if (msg?.message_id) {
         trackMessage(id, msg.message_id, messages);
         if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`📬 Followed message: ${id} → ${msg.message_id}`);
+          console.log(`📬 Tracked message → ${id} :: ${msg.message_id}`);
         }
       }
 
@@ -49,7 +49,7 @@ export const sendAndTrack = async (bot, id, text, options = {}, messages = userM
 };
 
 /**
- * ✅ Sends photos with tracking and cleanup logic
+ * ✅ Send photo with tracking
  */
 export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages = userMessages) => {
   if (!bot || !id || !photo) return null;
@@ -66,7 +66,7 @@ export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages =
     if (msg?.message_id) {
       trackMessage(id, msg.message_id, messages);
       if (process.env.DEBUG_MESSAGES === "true") {
-        console.log(`🖼️ Followed photo: ${id} → ${msg.message_id}`);
+        console.log(`🖼️ Tracked photo → ${id} :: ${msg.message_id}`);
       }
     }
 
@@ -79,7 +79,7 @@ export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages =
 };
 
 /**
- * ✅ Sends a message with a reply keyboard
+ * ✅ Send keyboard-based reply
  */
 export const sendKeyboard = async (bot, id, text, keyboard, messages = userMessages) => {
   return await sendAndTrack(bot, id, text, {
@@ -95,7 +95,7 @@ export const sendKeyboard = async (bot, id, text, keyboard, messages = userMessa
 export const sendMessageWithTracking = sendKeyboard;
 
 /**
- * ✅ Sends a plain message without options
+ * ✅ Send basic unstyled message
  */
 export const sendPlain = async (bot, id, text, messages = userMessages) => {
   if (!bot || !id || !text?.trim()) return null;
@@ -125,23 +125,20 @@ export const sendPlain = async (bot, id, text, messages = userMessages) => {
 };
 
 /**
- * ✅ Records the message ID in the user context
+ * 🔖 Track message ID per user
  */
 function trackMessage(id, messageId, messages = userMessages) {
   const uid = String(id).trim();
   if (!uid || !messageId) return;
 
   if (!messages[uid]) messages[uid] = [];
-
-  if (messages[uid] instanceof Set) {
-    messages[uid].add(messageId);
-  } else if (Array.isArray(messages[uid]) && !messages[uid].includes(messageId)) {
+  if (Array.isArray(messages[uid]) && !messages[uid].includes(messageId)) {
     messages[uid].push(messageId);
   }
 }
 
 /**
- * ✅ Schedules cleanup of all messages (and bans if enabled)
+ * 🧹 Schedules cleanup & autoban (if enabled)
  */
 function scheduleCleanup(bot, id, messages = userMessages) {
   if (!autodeleteEnabled.status && !autobanEnabled.status) return;
@@ -150,8 +147,7 @@ function scheduleCleanup(bot, id, messages = userMessages) {
   const session = userSessions[uid];
   if (!session || session.cleanupScheduled) return;
 
-  const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
-  if (isAdmin) return;
+  if (BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID)) return;
 
   session.cleanupScheduled = true;
   if (process.env.DEBUG_MESSAGES === "true") {
@@ -164,19 +160,19 @@ function scheduleCleanup(bot, id, messages = userMessages) {
 
       for (const msgId of msgIds) {
         await bot.deleteMessage(uid, msgId).catch(e => {
-          console.warn(`⚠️ Failed to delete msg ${msgId}:`, e.message);
+          console.warn(`⚠️ Cannot delete msg #${msgId}:`, e.message);
         });
       }
 
       if (autobanEnabled.status) {
         await banUser(uid);
-        console.log(`⛔️ AutoBan executed → ${uid}`);
+        console.log(`⛔️ Auto-ban executed → ${uid}`);
       } else {
-        console.log(`✅ Cleanup completed without ban: ${uid}`);
+        console.log(`✅ Cleanup complete for ${uid}`);
       }
 
       if (process.env.DEBUG_MESSAGES === "true") {
-        console.log(`🗑️ ${msgIds.length} messages cleaned for ${uid}`);
+        console.log(`🗑️ ${msgIds.length} messages removed`);
       }
     } catch (err) {
       console.error("❌ [scheduleCleanup error]:", err.message);
@@ -188,10 +184,10 @@ function scheduleCleanup(bot, id, messages = userMessages) {
 }
 
 /**
- * ✅ Splits long text into Telegram-safe chunks
+ * 🔪 Safe splitting of long Telegram messages
  */
 function splitMessage(text) {
-  if (!text || typeof text !== "string" || !text.trim()) return [""];
+  if (!text || typeof text !== "string") return [""];
   const parts = [];
   let index = 0;
 
