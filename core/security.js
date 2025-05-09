@@ -1,26 +1,27 @@
-// 🛡️ core/security.js | FINAL DIAMOND SHIELD v2.0 TANK LOCK EDITION
+// 🛡️ core/security.js | FINAL BULLETPROOF SHIELD v2025.9 TITANLOCK MIRROR EDITION
 
 import { isBanned, banUser } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { antiSpam, antiFlood, bannedUntil } from "../state/userState.js";
 import { BOT } from "../config/config.js";
 
-// 🔧 Config
+// 🧠 Configurable limits
 const SPAM_INTERVAL_MS = 3300;
 const FLOOD_LIMIT = 6;
 const FLOOD_WINDOW_MS = 11000;
 const TEMP_MUTE_MS = 4 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 600;
 const MAX_INPUT_FREQUENCY = 4;
+const MAX_DISTINCT_INPUTS = 20;
 
-const recentTexts = {}; // { userId: [text1, text2, ...] }
+const recentTexts = {}; // { userId: [msg1, msg2, ...] }
 
 function isAdmin(id) {
   return BOT.ADMIN_ID && String(id) === String(BOT.ADMIN_ID);
 }
 
 /**
- * 🧯 Spam protection — limits too rapid messages
+ * ⏱️ Detects rapid message sending (spam)
  */
 export function isSpamming(id) {
   if (!id || isAdmin(id)) return false;
@@ -33,7 +34,7 @@ export function isSpamming(id) {
 }
 
 /**
- * 🌊 Flood protection — limits too many messages in small window
+ * 🌊 Detects message flood (too many in a time window)
  */
 export async function handleFlood(id, bot) {
   if (!id || isAdmin(id)) return false;
@@ -48,7 +49,6 @@ export async function handleFlood(id, bot) {
 
   if (now - session.start <= FLOOD_WINDOW_MS) {
     session.count++;
-
     if (session.count > FLOOD_LIMIT) {
       bannedUntil[id] = now + TEMP_MUTE_MS;
       delete antiFlood[id];
@@ -69,7 +69,7 @@ export async function handleFlood(id, bot) {
 }
 
 /**
- * ⛔ Checks if user is muted (temporarily banned due to spam/flood)
+ * ⛔ Checks if user is under temporary mute (from flood/spam)
  */
 export function isMuted(id) {
   if (!id || isAdmin(id)) return false;
@@ -87,25 +87,32 @@ export function isMuted(id) {
 }
 
 /**
- * ⚠️ Detects repeated or oversized messages (script kids, exploits)
+ * ⚠️ Detects repeated inputs, long messages, or scripted abuse
  */
-function isMessageDangerous(id, text) {
+function isMessageDangerous(id, rawText) {
   if (!id || isAdmin(id)) return false;
 
-  if (!text || typeof text !== "string") return true;
-  if (text.length > MAX_MESSAGE_LENGTH) return true;
+  const cleanText = (rawText || "").toString().trim();
 
-  const clean = text.trim();
-  const history = recentTexts[id] || [];
+  if (!cleanText) return true;
+  if (cleanText.length > MAX_MESSAGE_LENGTH) return true;
 
-  recentTexts[id] = [...history.slice(-MAX_INPUT_FREQUENCY + 1), clean];
-  const repeated = recentTexts[id].filter(t => t === clean).length;
+  const uid = String(id);
+  const history = recentTexts[uid] || [];
 
-  return repeated >= MAX_INPUT_FREQUENCY;
+  // Limit how many unique messages we store (to block rotation attacks)
+  if (history.length >= MAX_DISTINCT_INPUTS) {
+    history.shift();
+  }
+
+  recentTexts[uid] = [...history, cleanText];
+
+  const repeatCount = recentTexts[uid].filter(t => t === cleanText).length;
+  return repeatCount >= MAX_INPUT_FREQUENCY;
 }
 
 /**
- * ✅ FINAL FILTER — security gatekeeper
+ * ✅ MASTER GATEKEEPER — allows or blocks further interaction
  */
 export async function canProceed(id, bot, text = "") {
   try {
