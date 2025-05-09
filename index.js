@@ -1,4 +1,4 @@
-// 📦 index.js | BalticPharma V3 — FINAL IMMORTAL v3.0 DEPLOY-TITANLOCK™ EDITION
+// 📦 index.js | BalticPharma V3 — FINAL IMMORTAL v3.0.9999999 DEPLOY-TITANLOCK™
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -8,41 +8,41 @@ import { initBotInstance, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions } from "./core/sessionManager.js";
 
-// 🧠 Initialize bot instance + handlers
+// 🧠 Init instance + register handlers
 initBotInstance();
 registerMainHandler(BOT.INSTANCE);
 
-// 🔁 Periodic session expiration every 10 minutes
+// 🔁 Kill inactive sessions every 10min
 setInterval(() => {
   try {
     autoExpireSessions();
   } catch (err) {
-    console.error("❌ [autoExpireSessions error]:", err.message || err);
+    console.error("❌ [autoExpireSessions error]:", err.message);
   }
 }, 10 * 60 * 1000);
 
-// 🚀 On successful startup
+// 🚀 Startup: validate, log, notify admin
 (async () => {
   try {
-    if (!BOT.INSTANCE?.getMe) throw new Error("BOT.INSTANCE is not available or broken.");
+    if (!BOT.INSTANCE?.getMe) throw new Error("BOT.INSTANCE is unavailable.");
 
     const me = await BOT.INSTANCE.getMe();
     const version = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"))?.version || "1.0.0";
     const now = new Date().toLocaleString("en-GB");
 
     console.log(`
-╔════════════════════════════════════════════════╗
-║ ✅ BALTICPHARMACYBOT IS LIVE — IMMORTAL v3.0   ║
-╚════════════════════════════════════════════════╝
+╔═════════════════════════════════════════════╗
+║ ✅ BALTICPHARMACYBOT IS RUNNING — IMMORTAL ║
+╚═════════════════════════════════════════════╝
 🆙 Version: v${version}
 🕒 Started: ${now}
 👤 Logged in as: @${me.username} (${me.first_name})
-`.trim());
+    `.trim());
 
     if (BOT.ADMIN_ID && !isNaN(BOT.ADMIN_ID)) {
       await BOT.INSTANCE.sendMessage(
         BOT.ADMIN_ID,
-        `✅ *BalticPharmacyBot v${version}* successfully launched.\n🕒 *${now}*`,
+        `✅ *BalticPharmacyBot v${version}* successfully launched!\n🕒 *${now}*`,
         { parse_mode: "Markdown" }
       ).catch((e) => {
         console.warn("⚠️ Failed to notify admin:", e.message);
@@ -50,13 +50,13 @@ setInterval(() => {
     }
 
   } catch (err) {
-    console.error("❌ Startup failure:", err.message || err);
-    await notifyCrash("launch", err);
+    console.error("❌ [Startup crash]:", err.message || err);
+    await notifyCrash("startup", err);
     process.exit(1);
   }
 })();
 
-// 🔥 Fatal error handlers
+// ❗ Crash safety: unhandled exceptions
 process.on("uncaughtException", async (err) => {
   console.error("❌ [UNCAUGHT EXCEPTION]:", err);
   await notifyCrash("uncaughtException", err);
@@ -64,30 +64,31 @@ process.on("uncaughtException", async (err) => {
 });
 
 process.on("unhandledRejection", async (reason) => {
-  console.error("❌ [UNHANDLED PROMISE]:", reason);
+  console.error("❌ [UNHANDLED REJECTION]:", reason);
   await notifyCrash("unhandledRejection", reason);
   process.exit(1);
 });
 
-// 🛑 Graceful shutdown on SIGINT, SIGTERM, SIGQUIT
+// 🛑 Graceful shutdown
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach((sig) => {
   process.on(sig, async () => {
-    console.log(`\n🛑 Received ${sig}, stopping bot...`);
+    console.log(`\n🛑 Signal received (${sig}) → stopping bot...`);
     try {
       await BOT.INSTANCE?.stopPolling();
       console.log("✅ Bot stopped cleanly.");
-    } catch (e) {
-      console.warn("⚠️ Error during shutdown:", e.message);
+    } catch (err) {
+      console.warn("⚠️ Error during shutdown:", err.message);
     }
     process.exit(0);
   });
 });
 
-// ✅ Final ready signal
-console.log("✅ BALTICPHARMACYBOT — BULLETPROOF • LOCKED • LIVE");
+// 🧠 DEV MODE: final ready signal
+console.log("✅ BALTICPHARMACYBOT — LIVE • LOCKED • BULLETPROOF");
 
-
-// 🔔 Sends critical crash info to admin
+/**
+ * 🔔 Sends critical error/crash info to admin
+ */
 async function notifyCrash(type, err) {
   if (!BOT.ADMIN_ID || !BOT.INSTANCE?.sendMessage) return;
 
