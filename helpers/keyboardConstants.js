@@ -1,7 +1,9 @@
-// 📦 helpers/keyboardConstants.js | FINAL IMMORTAL v3.0 — SMART-MODE LEGACY+COMPAT
+// 📦 helpers/keyboardConstants.js | FINAL IMMORTAL v3.1 — DIAMOND SMART+SAFE
+
+import { BOT } from "../config/config.js";
 
 /**
- * ✅ All button labels (used across UI)
+ * ✅ All button labels used across the UI
  */
 export const MENU_BUTTONS = {
   START: "🚀 START",
@@ -16,7 +18,7 @@ export const MENU_BUTTONS = {
 };
 
 /**
- * ✅ Default keyboard (legacy version for compatibility)
+ * ✅ Default static keyboard — legacy fallback
  */
 export const MAIN_KEYBOARD = {
   reply_markup: {
@@ -32,21 +34,24 @@ export const MAIN_KEYBOARD = {
 };
 
 /**
- * ✅ Smart keyboard generator — filters buttons by role
+ * ✅ Generates main menu keyboard — smart admin-aware
+ * @param {string|number} id - Telegram user ID
+ * @returns {object} Telegram keyboard markup
  */
 export function getMainMenu(id) {
-  const isAdmin =
-    process.env.BOT_ADMIN_ID &&
-    String(id) === String(process.env.BOT_ADMIN_ID);
+  const uid = String(id || "").trim();
+  const adminId = String(BOT?.ADMIN_ID || "").trim();
 
-  const keyboard = [
+  const isAdmin = uid && adminId && uid === adminId;
+
+  const base = [
     [{ text: MENU_BUTTONS.START }],
     [{ text: MENU_BUTTONS.BUY }, { text: MENU_BUTTONS.HELP }],
     [{ text: MENU_BUTTONS.PROFILE }, { text: MENU_BUTTONS.ORDERS }]
   ];
 
   if (isAdmin) {
-    keyboard.push([
+    base.push([
       { text: MENU_BUTTONS.STATS },
       { text: MENU_BUTTONS.ADMIN }
     ]);
@@ -54,9 +59,10 @@ export function getMainMenu(id) {
 
   return {
     reply_markup: {
-      keyboard,
+      keyboard: base,
       resize_keyboard: true,
-      one_time_keyboard: false
+      one_time_keyboard: false,
+      selective: true
     }
   };
 }
