@@ -1,29 +1,29 @@
-// 🧹 cron/cleanOldLogs.js | BalticPharma V2 — FINAL v2.0 DIAMOND POLISHED AUTOLOOP
+// 🧹 cron/cleanOldLogs.js | FINAL v2.1 DIAMOND TANK CLEANER – AUTOLOG ROTATION
 
 import fs from "fs";
 import path from "path";
 
 const LOG_DIR = path.resolve("./logs");
 const MAX_AGE_DAYS = 3;
-const LOOP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const LOOP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
 
 /**
- * Calculates how old (in days) a file is based on its timestamp
+ * ⏱️ Skaičiuoja dienų senumą nuo timestamp
  */
 function daysOld(timestamp) {
-  const now = Date.now();
-  return (now - timestamp) / (1000 * 60 * 60 * 24);
+  return (Date.now() - timestamp) / (1000 * 60 * 60 * 24);
 }
 
 /**
- * Deletes all log files older than MAX_AGE_DAYS
+ * 🧹 Trina senus log failus
  */
 function cleanLogs() {
   try {
-    console.log(`🧹 Starting log cleanup: ${new Date().toLocaleString("en-GB")}`);
+    const now = new Date().toLocaleString("en-GB");
+    console.log(`🧹 Log cleanup started — ${now}`);
 
     if (!fs.existsSync(LOG_DIR)) {
-      console.warn("📁 Logs directory does not exist. Skipping.");
+      console.warn("📁 Logs directory not found. Skipping.");
       return;
     }
 
@@ -32,31 +32,28 @@ function cleanLogs() {
 
     for (const file of files) {
       const filePath = path.join(LOG_DIR, file);
+      if (!file.endsWith(".log")) continue; // Triname tik .log failus
 
       try {
         const stats = fs.statSync(filePath);
-        const age = daysOld(stats.mtimeMs);
-
-        if (age > MAX_AGE_DAYS) {
+        if (daysOld(stats.mtimeMs) > MAX_AGE_DAYS) {
           fs.unlinkSync(filePath);
+          console.log(`🗑️ Deleted: ${file}`);
           deleted++;
-          console.log(`🗑️ Deleted old log file: ${file}`);
         }
       } catch (err) {
-        console.error(`❌ Error deleting "${file}":`, err.message);
+        console.error(`❌ Error processing ${file}:`, err.message);
       }
     }
 
-    console.log(`✅ Log cleanup finished. Deleted: ${deleted} files.\n`);
+    console.log(`✅ Cleanup complete — ${deleted} log files deleted.\n`);
   } catch (err) {
     console.error("❌ [cleanLogs error]:", err.message || err);
   }
 }
 
-// — Run immediately on start
+// 🕒 Paleidžiam iškart
 cleanLogs();
 
-// — Repeat every 24 hours
-setInterval(() => {
-  cleanLogs();
-}, LOOP_INTERVAL_MS);
+// 🔁 Kartojam kas 24h
+setInterval(cleanLogs, LOOP_INTERVAL_MS);
