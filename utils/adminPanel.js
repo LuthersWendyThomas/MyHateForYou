@@ -1,4 +1,4 @@
-// 📦 utils/adminPanel.js | BalticPharma V2 — FINAL ADMIN LOCK v2.0 BULLETPROOF+
+// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v3.0 — BULLETPROOF SYNC 2025
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import {
@@ -10,7 +10,7 @@ import { userSessions } from "../state/userState.js";
 import { BOT } from "../config/config.js";
 
 /**
- * Opens the main admin panel menu with all control buttons
+ * 🛠️ Opens admin panel with control buttons
  */
 export async function openAdminPanel(bot, id) {
   try {
@@ -23,10 +23,10 @@ export async function openAdminPanel(bot, id) {
       [{ text: "🔙 Back" }]
     ];
 
-    await sendAndTrack(
+    return await sendAndTrack(
       bot,
       id,
-      "🛠️ *Admin panel activated*\nChoose an action using the buttons below:",
+      "🛠️ *Admin panel activated*\nChoose an action:",
       {
         parse_mode: "Markdown",
         reply_markup: {
@@ -43,25 +43,22 @@ export async function openAdminPanel(bot, id) {
 }
 
 /**
- * Handles all admin buttons and step-based actions
+ * 🔄 Handles all admin interactions and step-based actions
  */
 export async function handleAdminAction(bot, msg, userSessions, userOrders) {
+  const id = msg?.chat?.id;
+  const text = msg?.text?.trim();
+  if (!id || String(id) !== String(BOT.ADMIN_ID) || !text) return;
+
+  const session = userSessions[id] ||= {};
+
   try {
-    const id = msg?.chat?.id;
-    const text = msg?.text?.trim();
-
-    if (!id || String(id) !== String(BOT.ADMIN_ID) || !text) return;
-
-    const session = userSessions[id] ||= {};
-
-    // Step-based actions
     switch (session.adminStep) {
       case "ban_user": {
         banUser(text);
         delete session.adminStep;
         return await sendAndTrack(bot, id, `🚫 User banned: \`${text}\``, { parse_mode: "Markdown" }, {});
       }
-
       case "temp_ban": {
         const [targetId, minutesRaw] = text.split(" ");
         const minutes = parseInt(minutesRaw);
@@ -79,12 +76,11 @@ export async function handleAdminAction(bot, msg, userSessions, userOrders) {
         return await sendAndTrack(
           bot,
           id,
-          `⏳ Temporary ban: \`${targetId}\` (${minutes} min)`,
+          `⏳ Temporary ban applied: \`${targetId}\` (${minutes} min)`,
           { parse_mode: "Markdown" },
           {}
         );
       }
-
       case "unban_user": {
         unbanUser(text);
         delete session.adminStep;
@@ -92,7 +88,7 @@ export async function handleAdminAction(bot, msg, userSessions, userOrders) {
       }
     }
 
-    // Direct commands
+    // — Admin button actions
     switch (text) {
       case "📊 STATISTICS":
       case "📅 Today":
@@ -104,7 +100,6 @@ export async function handleAdminAction(bot, msg, userSessions, userOrders) {
         if (text === "📊 STATISTICS" || text === "🗓️ Week") msg += `🗓️ Week: *${stats.week.toFixed(2)}$*\n`;
         if (text === "📊 STATISTICS" || text === "📆 Month") msg += `📆 Month: *${stats.month.toFixed(2)}$*\n`;
         msg += `💰 Total: *${stats.total.toFixed(2)}$*`;
-
         return await sendAndTrack(bot, id, msg, { parse_mode: "Markdown" }, {});
       }
 
@@ -114,7 +109,7 @@ export async function handleAdminAction(bot, msg, userSessions, userOrders) {
 
       case "⏳ Temp. BAN":
         session.adminStep = "temp_ban";
-        return await sendAndTrack(bot, id, "⏳ Enter user ID and duration (e.g. `123456789 10`):", { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, "⏳ Enter user ID and minutes (e.g. `123456789 10`):", { parse_mode: "Markdown" }, {});
 
       case "✅ UNBAN user":
         session.adminStep = "unban_user";
@@ -122,32 +117,30 @@ export async function handleAdminAction(bot, msg, userSessions, userOrders) {
 
       case "🧹 Clear BANs":
         clearBans();
-        return await sendAndTrack(bot, id, "🧹 *All permanent bans cleared.*", { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, "🧹 *All permanent bans have been cleared.*", { parse_mode: "Markdown" }, {});
 
       case "📋 Banned list": {
         const list = listBannedUsers();
-        const formatted = list.length
-          ? list.map(id => `- \`${id}\``).join("\n")
-          : "_(Empty)_";
-        return await sendAndTrack(bot, id, `📋 *Banned users:*\n${formatted}`, { parse_mode: "Markdown" }, {});
+        const body = list.length ? list.map(id => `- \`${id}\``).join("\n") : "_(Empty)_";
+        return await sendAndTrack(bot, id, `📋 *Banned users:*\n${body}`, { parse_mode: "Markdown" }, {});
       }
 
       case "⏱️ Temp bans": {
         const list = listTemporaryBans();
-        const formatted = list.length
+        const body = list.length
           ? list.map(b => `- \`${b.userId}\` until ${b.until}`).join("\n")
           : "_(Empty)_";
-        return await sendAndTrack(bot, id, `⏱️ *Temporarily banned:*\n${formatted}`, { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, `⏱️ *Temporary bans:*\n${body}`, { parse_mode: "Markdown" }, {});
       }
 
       case "🔙 Back":
         delete session.adminStep;
-        return await sendAndTrack(bot, id, "🔙 Returned to main menu.", { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, "🔙 Returned to admin menu.", { parse_mode: "Markdown" }, {});
     }
   } catch (err) {
     console.error("❌ [handleAdminAction error]:", err.message || err);
-    if (msg?.chat?.id) {
-      await sendAndTrack(bot, msg.chat.id, "❗️ Action processing error. Please try again.", {}, {});
-    }
+    try {
+      await sendAndTrack(bot, id, "❗️ Admin action failed. Please try again.", {}, {});
+    } catch {}
   }
 }
