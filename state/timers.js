@@ -1,68 +1,72 @@
-// 📦 state/timers.js | BalticPharma V2 — FINAL v2025.6 TITAN CLOCK SHIELD MIRROR EDITION
+// 📦 state/timers.js | BalticPharma V2 — FINAL v2025.9 ULTRASHIELD READY
 
 /**
- * Active delivery or step timers
+ * ⏱️ Active delivery or UI timers
  * Format: { [userId]: Timeout }
  */
 export const activeTimers = {};
 
 /**
- * Payment step (step 8) timers
+ * 💳 Payment step (step 8) timers
  * Format: { [userId]: Timeout }
  */
 export const paymentTimers = {};
 
 /**
- * ✅ Assigns a UI (delivery) timer to the user
- * @param {string|number} id - user ID
- * @param {Timeout} timerId - setTimeout returned ID
+ * ✅ Assigns a UI/delivery timer
  */
 export function setActiveTimer(id, timerId) {
   const uid = safeId(id);
-  if (uid && timerId) {
-    activeTimers[uid] = timerId;
-    console.log(`🕒 Active timer set for ${uid}`);
-  }
+  if (!uid || !isValidTimer(timerId)) return;
+
+  activeTimers[uid] = timerId;
+  console.log(`🕒 UI timer set for ${uid}`);
 }
 
 /**
- * ✅ Assigns a payment step timer to a user
- * @param {string|number} id - user ID
- * @param {Timeout} timerId - setTimeout returned ID
+ * ✅ Assigns a payment timer
  */
 export function setPaymentTimer(id, timerId) {
   const uid = safeId(id);
-  if (uid && timerId) {
-    paymentTimers[uid] = timerId;
-    console.log(`💳 Payment timer set for ${uid}`);
-  }
+  if (!uid || !isValidTimer(timerId)) return;
+
+  paymentTimers[uid] = timerId;
+  console.log(`💳 Payment timer set for ${uid}`);
 }
 
 /**
- * ✅ Clears all timers (during deployment or force stop)
+ * ✅ Clears all timers (used during global reset)
  */
 export function clearAllTimers() {
   try {
-    // Clear all active timers for delivery and payment
-    for (const t of Object.values(activeTimers)) clearTimeout(t);
-    for (const t of Object.values(paymentTimers)) clearTimeout(t);
+    for (const tid of Object.values(activeTimers)) {
+      if (isValidTimer(tid)) clearTimeout(tid);
+    }
 
-    // Clean up the timer objects
-    Object.keys(activeTimers).forEach((id) => delete activeTimers[id]);
-    Object.keys(paymentTimers).forEach((id) => delete paymentTimers[id]);
+    for (const tid of Object.values(paymentTimers)) {
+      if (isValidTimer(tid)) clearTimeout(tid);
+    }
 
-    console.log("🧨 All timers cleaned (UI + payments).");
+    Object.keys(activeTimers).forEach(id => delete activeTimers[id]);
+    Object.keys(paymentTimers).forEach(id => delete paymentTimers[id]);
+
+    console.log("🧨 All timers cleared (UI + payments)");
   } catch (err) {
     console.error("❌ [clearAllTimers error]:", err.message || err);
   }
 }
 
 /**
- * ✅ Safely converts ID to string, used for ID-based storage
- * @param {string|number} id - User ID
- * @returns {string|null} - Safe string ID or null if invalid
+ * ✅ Checks if value is a valid Timeout object
+ */
+function isValidTimer(timer) {
+  return timer && typeof timer._onTimeout === "function";
+}
+
+/**
+ * ✅ Converts ID to safe string or null
  */
 function safeId(id) {
-  if (id === undefined || id === null) return null;
-  return String(id);
+  const str = String(id || "").trim();
+  return str && str !== "null" && str !== "undefined" ? str : null;
 }
