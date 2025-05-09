@@ -1,4 +1,4 @@
-// 📦 helpers/messageUtils.js | BalticPharma V2 — FINAL IMMORTAL v2.8 BULLETPROOF ULTRA POLISH
+// 📦 helpers/messageUtils.js | FINAL IMMORTAL v3.0 — DIAMOND ULTRAPOLISH CORE
 
 import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
@@ -12,17 +12,19 @@ const MAX_MESSAGE_LENGTH = 4096;
  * ✅ Sends a message with tracking and automatic cleanup/autoban
  */
 export const sendAndTrack = async (bot, id, text, options = {}, messages = userMessages) => {
-  if (!bot || !id || !text) return null;
+  if (!bot || !id || !text?.trim()) return null;
 
   try {
     const chunks = splitMessage(text);
     let firstMsg = null;
 
     for (const chunk of chunks) {
+      if (!chunk?.length) continue;
+
       const msg = await bot.sendMessage(id, chunk, {
         parse_mode: "Markdown",
         disable_web_page_preview: true,
-        ...options,
+        ...options
       }).catch(e => {
         console.warn("⚠️ [sendMessage error]:", e.message);
         return null;
@@ -55,7 +57,7 @@ export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages =
   try {
     const msg = await bot.sendPhoto(id, photo, {
       parse_mode: "Markdown",
-      ...options,
+      ...options
     }).catch(e => {
       console.warn("⚠️ [sendPhoto error]:", e.message);
       return null;
@@ -93,16 +95,18 @@ export const sendKeyboard = async (bot, id, text, keyboard, messages = userMessa
 export const sendMessageWithTracking = sendKeyboard;
 
 /**
- * ✅ Sends a simple message without additional options
+ * ✅ Sends a plain message without extra options
  */
 export const sendPlain = async (bot, id, text, messages = userMessages) => {
-  if (!bot || !id || !text) return null;
+  if (!bot || !id || !text?.trim()) return null;
 
   try {
     const chunks = splitMessage(text);
     let firstMsg = null;
 
     for (const chunk of chunks) {
+      if (!chunk?.length) continue;
+
       const msg = await bot.sendMessage(id, chunk).catch(e => {
         console.warn("⚠️ [sendPlain error]:", e.message);
         return null;
@@ -145,6 +149,9 @@ function scheduleCleanup(bot, id, messages = userMessages) {
   if (isAdmin) return;
 
   session.cleanupScheduled = true;
+  if (process.env.DEBUG_MESSAGES === "true") {
+    console.log(`🧹 Cleanup scheduled for ${uid}`);
+  }
 
   setTimeout(async () => {
     try {
@@ -160,6 +167,10 @@ function scheduleCleanup(bot, id, messages = userMessages) {
         await banUser(uid);
         console.log(`⛔️ AutoBan executed → ${uid}`);
       }
+
+      if (process.env.DEBUG_MESSAGES === "true") {
+        console.log(`🗑️ ${msgIds.length} messages cleaned for ${uid}`);
+      }
     } catch (err) {
       console.error("❌ [scheduleCleanup error]:", err.message);
     } finally {
@@ -170,10 +181,10 @@ function scheduleCleanup(bot, id, messages = userMessages) {
 }
 
 /**
- * ✅ Divides long text into blocks of 4096 characters
+ * ✅ Splits long text into valid Telegram message chunks
  */
 function splitMessage(text) {
-  if (!text || typeof text !== "string") return [""];
+  if (!text || typeof text !== "string" || !text.trim()) return [""];
   const parts = [];
   let index = 0;
 
