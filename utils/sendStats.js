@@ -1,3 +1,5 @@
+// 📦 utils/sendStats.js | FINAL IMMORTAL v3.0 — BULLETPROOF ADMIN/USER VIEW
+
 import { userOrders, userSessions, activeUsers } from "../state/userState.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { BOT } from "../config/config.js";
@@ -28,12 +30,12 @@ export async function sendStats(bot, id, userMessages = {}) {
       const msg = `
 📊 *SYSTEM TELEMETRY — ADMIN VIEW*
 
-👤 *Live active users:* ${activeCount}
+👥 *Active users now:* ${activeCount}
 📦 *Total completed orders:* ${totalOrders}
 🧠 *Tracked sessions:* ${sessionCount}
 
 🕓 Updated: _${timestamp}_
-`.trim();
+      `.trim();
 
       return await sendAndTrack(bot, id, msg, {
         parse_mode: "Markdown",
@@ -41,16 +43,16 @@ export async function sendStats(bot, id, userMessages = {}) {
       }, userMessages);
     }
 
-    // — Standard user
+    // — Standard user view
     const count = Number(userOrders?.[uid]) || 0;
     const userMsg = `
 📦 *Your usage stats:*
 
 ✅ Orders completed: *${count}*
-🔒 Fully anonymous — *no private data saved*
+🔒 Fully anonymous — *no personal data stored*
 
 Use *PROFILE* for full account view.
-`.trim();
+    `.trim();
 
     return await sendAndTrack(bot, id, userMsg, {
       parse_mode: "Markdown",
