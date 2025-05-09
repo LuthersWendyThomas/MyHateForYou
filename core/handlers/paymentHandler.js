@@ -1,3 +1,5 @@
+// 🧠 core/handlers/paymentHandler.js | FINAL DIAMOND v2.0 BULLETPROOF
+
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
@@ -6,20 +8,23 @@ import { sendAndTrack, sendKeyboard } from "../../helpers/messageUtils.js";
 import { simulateDelivery } from "./deliveryHandler.js";
 import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
+import { BOT } from "../../config/config.js";
 
-// Retry helper with exponential backoff
+/**
+ * Internal: retry with exponential backoff
+ */
 async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
   try {
     return await apiCall();
-  } catch (error) {
-    if (retries === 0) throw error;
-    await new Promise(resolve => setTimeout(resolve, delay));
+  } catch (err) {
+    if (retries === 0) throw err;
+    await new Promise(res => setTimeout(res, delay));
     return fetchWithRetry(apiCall, retries - 1, delay * 2);
   }
 }
 
 /**
- * Step 7 — Generate QR, move to step 8
+ * Step 7 — QR generation + move to step 8
  */
 export async function handlePayment(bot, id, userMessages) {
   const s = userSessions[id];
@@ -36,7 +41,7 @@ export async function handlePayment(bot, id, userMessages) {
     }
 
     const rate = await fetchWithRetry(() => fetchCryptoPrice(s.currency));
-    if (!rate || isNaN(rate) || rate <= 0) throw new Error("Exchange rate error");
+    if (!rate || isNaN(rate) || rate <= 0) throw new Error("Exchange rate fetch failed");
 
     const amount = +(usd / rate).toFixed(6);
     s.expectedAmount = amount;
@@ -63,15 +68,14 @@ export async function handlePayment(bot, id, userMessages) {
     await bot.sendChatAction(id, "upload_photo").catch(() => {});
     await bot.sendPhoto(id, qr, { caption: summary, parse_mode: "Markdown" });
 
-    // Clear old timer if exists
+    // Clear old timer
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
 
-    // Start new 30min expiry
     const timer = setTimeout(() => {
       console.warn(`⌛️ Payment expired: ${id}`);
       delete paymentTimers[id];
       delete userSessions[id];
-    }, 30 * 60 * 1000);
+    }, 30 * 60 * 1000); // 30 min
 
     s.paymentTimer = timer;
     paymentTimers[id] = timer;
@@ -89,16 +93,15 @@ export async function handlePayment(bot, id, userMessages) {
 }
 
 /**
- * Step 8 — User cancels payment
+ * Step 8 — Cancel payment
  */
 export async function handlePaymentCancel(bot, id, userMessages) {
+  const s = userSessions[id];
+  if (!s || s.step !== 8 || !s.paymentInProgress) {
+    return sendAndTrack(bot, id, "⚠️ No active payment to cancel.", {}, userMessages);
+  }
+
   try {
-    const s = userSessions[id];
-
-    if (!s || s.step !== 8 || !s.paymentInProgress) {
-      return sendAndTrack(bot, id, "⚠️ Cannot cancel. No active payment in progress.", {}, userMessages);
-    }
-
     s.paymentInProgress = false;
 
     if (s.paymentTimer) clearTimeout(s.paymentTimer);
@@ -109,13 +112,8 @@ export async function handlePaymentCancel(bot, id, userMessages) {
 
     delete userSessions[id];
 
-    await sendAndTrack(bot, id, "❌ Payment canceled. Returning to main menu.", {}, userMessages);
-
-    // Let node event loop fully release memory, then restart cleanly
-    setTimeout(async () => {
-      await safeStart(bot, id);
-    }, 250);
-
+    await sendAndTrack(bot, id, "❌ Payment canceled. Returning to main menu...", {}, userMessages);
+    return setTimeout(() => safeStart(bot, id), 300);
   } catch (err) {
     console.error("❌ [handlePaymentCancel error]:", err.message);
     return safeStart(bot, id);
@@ -123,23 +121,22 @@ export async function handlePaymentCancel(bot, id, userMessages) {
 }
 
 /**
- * Step 9 — Confirm payment, trigger delivery
+ * Step 9 — Confirm payment + trigger delivery
  */
 export async function handlePaymentConfirmation(bot, id, userMessages) {
   const s = userSessions[id];
   const valid = s && s.step === 9 && s.wallet && s.currency && s.expectedAmount;
 
   if (!valid) {
-    return sendAndTrack(bot, id, "⚠️ Invalid payment session. Restart with /start.", {}, userMessages);
+    return sendAndTrack(bot, id, "⚠️ Invalid session. Use /start to begin again.", {}, userMessages);
   }
 
   try {
     await sendAndTrack(bot, id, "⏳ Verifying payment on the blockchain...", {}, userMessages);
-
     const success = await checkPayment(s.wallet, s.currency, s.expectedAmount, bot);
 
     if (!success) {
-      return sendKeyboard(bot, id, "❌ Payment not detected yet.\nYou can check again or cancel.", [
+      return sendKeyboard(bot, id, "❌ Payment not yet detected. Try again or cancel:", [
         [{ text: "✅ CONFIRM" }],
         [{ text: "❌ Cancel payment" }]
       ], userMessages);
@@ -151,19 +148,21 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
       delete paymentTimers[id];
     }
 
-    await sendAndTrack(bot, id, "✅ Payment confirmed! Delivery is on its way...", {}, userMessages);
-
+    await sendAndTrack(bot, id, "✅ Payment confirmed! Delivery is on the way...", {}, userMessages);
     userOrders[id] = (userOrders[id] || 0) + 1;
 
     await saveOrder(id, s.city, s.product.name, s.totalPrice).catch(err =>
       console.warn("⚠️ [saveOrder error]:", err.message)
     );
 
-    await sendAndTrack(globalThis.adminBot, globalThis.adminId, `✅ New successful payment from ${s.wallet}`);
+    const adminId = String(BOT.ADMIN_ID || "");
+    if (adminId && bot && bot.sendMessage) {
+      await sendAndTrack(bot, adminId, `✅ New successful payment from \`${s.wallet}\``, { parse_mode: "Markdown" });
+    }
 
-    return await simulateDelivery(bot, id);
+    return simulateDelivery(bot, id);
   } catch (err) {
     console.error("❌ [handlePaymentConfirmation error]:", err.message);
-    return sendAndTrack(bot, id, "❗️ Error verifying payment. Try again later.", {}, userMessages);
+    return sendAndTrack(bot, id, "❗️ Blockchain check failed. Try again later.", {}, userMessages);
   }
 }
