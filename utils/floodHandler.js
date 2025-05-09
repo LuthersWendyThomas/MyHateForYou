@@ -1,4 +1,4 @@
-// 📦 utils/floodHandler.js | BalticPharma V2 — v1.6 FINAL MIRROR-PROTECTED EDITION
+// 📦 utils/floodHandler.js | IMMORTAL v3.0 — FINAL BULLETPROOF MIRROR SYNC
 
 import {
   antiSpam,
@@ -6,17 +6,20 @@ import {
   bannedUntil,
   userOrders
 } from "../state/userState.js";
+
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
 /**
- * Checks if the user is clicking too frequently (<1s between messages)
+ * ✅ Spam: detects messages sent <1s apart
  */
 export function isSpamming(id) {
   try {
     const now = Date.now();
     const last = antiSpam[id] || 0;
     antiSpam[id] = now;
-    return now - last < 1000;
+
+    const diff = now - last;
+    return diff < 1000;
   } catch (err) {
     console.error("❌ [isSpamming error]:", err.message);
     return false;
@@ -24,7 +27,7 @@ export function isSpamming(id) {
 }
 
 /**
- * Checks if the user is muted (temporarily blocked)
+ * ✅ Returns whether the user is muted (temporary flood block)
  */
 export function isMuted(id) {
   try {
@@ -34,6 +37,7 @@ export function isMuted(id) {
     const now = Date.now();
     if (now < until) return true;
 
+    // Remove expired mute
     delete bannedUntil[id];
     return false;
   } catch (err) {
@@ -43,7 +47,7 @@ export function isMuted(id) {
 }
 
 /**
- * Dynamically determines allowed actions (per 5s) based on the user's order count
+ * ✅ Dynamic flood tolerance by order count
  */
 function getFloodLimit(id) {
   try {
@@ -57,51 +61,58 @@ function getFloodLimit(id) {
 }
 
 /**
- * Handles flood events — if the limit is exceeded, the user is muted for 5 minutes
+ * ✅ Anti-flood logic with 5s window
  */
 export async function handleFlood(id, bot, userMessages = {}) {
   try {
-    if (isMuted(id)) return true;
-
+    const uid = String(id).trim();
     const now = Date.now();
-    if (!Array.isArray(antiFlood[id])) antiFlood[id] = [];
 
-    // Filter only actions from the last 5 seconds
-    antiFlood[id] = antiFlood[id].filter(ts => now - ts < 5000);
-    antiFlood[id].push(now);
+    if (!uid || isMuted(uid)) return true;
 
-    const limit = getFloodLimit(id);
-    const hits = antiFlood[id].length;
+    if (!Array.isArray(antiFlood[uid])) antiFlood[uid] = [];
+    antiFlood[uid] = antiFlood[uid].filter(ts => now - ts < 5000);
+    antiFlood[uid].push(now);
+
+    const limit = getFloodLimit(uid);
+    const hits = antiFlood[uid].length;
 
     if (hits > limit) {
-      bannedUntil[id] = now + 5 * 60 * 1000;
+      bannedUntil[uid] = now + 5 * 60 * 1000;
 
       await sendAndTrack(
         bot,
-        id,
+        uid,
         "⛔️ *Too many actions in a short period.*\n🕓 Session paused for *5 minutes*.",
         { parse_mode: "Markdown" },
         userMessages
       );
 
-      console.warn(`🚫 [FLOOD MUTE] ${id} exceeded limit (${hits}/${limit}/5s) — muted.`);
+      if (process.env.DEBUG_MESSAGES === "true") {
+        console.warn(`🚫 [FLOOD MUTE] ${uid} → ${hits}/${limit} (5s window)`);
+      }
+
       return true;
     }
 
     if (hits === limit) {
       await sendAndTrack(
         bot,
-        id,
-        "⚠️ *Warning:* one more action and your session will be *temporarily paused* for 5 minutes.",
+        uid,
+        "⚠️ *Warning:* one more action and your session will be *paused* for 5 minutes.",
         { parse_mode: "Markdown" },
         userMessages
       );
+
+      if (process.env.DEBUG_MESSAGES === "true") {
+        console.log(`⚠️ [FLOOD WARN] ${uid} at limit (${hits}/${limit})`);
+      }
     }
 
     return false;
 
   } catch (err) {
-    console.error("❌ [handleFlood error]:", err.message);
+    console.error("❌ [handleFlood error]:", err.message || err);
     return false;
   }
 }
