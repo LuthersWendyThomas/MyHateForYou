@@ -1,4 +1,4 @@
-// 📦 helpers/messageUtils.js | FINAL IMMORTAL v3.0 — DIAMOND ULTRAPOLISH CORE
+// 📦 helpers/messageUtils.js | FINAL IMMORTAL v3.1 — DIAMOND ULTRAPOLISH CORE
 
 import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
@@ -79,7 +79,7 @@ export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages =
 };
 
 /**
- * ✅ Sends a message with the keyboard (ReplyKeyboard)
+ * ✅ Sends a message with a reply keyboard
  */
 export const sendKeyboard = async (bot, id, text, keyboard, messages = userMessages) => {
   return await sendAndTrack(bot, id, text, {
@@ -95,7 +95,7 @@ export const sendKeyboard = async (bot, id, text, keyboard, messages = userMessa
 export const sendMessageWithTracking = sendKeyboard;
 
 /**
- * ✅ Sends a plain message without extra options
+ * ✅ Sends a plain message without options
  */
 export const sendPlain = async (bot, id, text, messages = userMessages) => {
   if (!bot || !id || !text?.trim()) return null;
@@ -131,12 +131,17 @@ function trackMessage(id, messageId, messages = userMessages) {
   const uid = String(id).trim();
   if (!uid || !messageId) return;
 
-  if (!Array.isArray(messages[uid])) messages[uid] = [];
-  if (!messages[uid].includes(messageId)) messages[uid].push(messageId);
+  if (!messages[uid]) messages[uid] = [];
+
+  if (messages[uid] instanceof Set) {
+    messages[uid].add(messageId);
+  } else if (Array.isArray(messages[uid]) && !messages[uid].includes(messageId)) {
+    messages[uid].push(messageId);
+  }
 }
 
 /**
- * ✅ Plans to delete messages and block the user
+ * ✅ Schedules cleanup of all messages (and bans if enabled)
  */
 function scheduleCleanup(bot, id, messages = userMessages) {
   if (!autodeleteEnabled.status && !autobanEnabled.status) return;
@@ -155,7 +160,7 @@ function scheduleCleanup(bot, id, messages = userMessages) {
 
   setTimeout(async () => {
     try {
-      const msgIds = messages[uid] || [];
+      const msgIds = Array.isArray(messages[uid]) ? messages[uid] : [];
 
       for (const msgId of msgIds) {
         await bot.deleteMessage(uid, msgId).catch(e => {
@@ -166,6 +171,8 @@ function scheduleCleanup(bot, id, messages = userMessages) {
       if (autobanEnabled.status) {
         await banUser(uid);
         console.log(`⛔️ AutoBan executed → ${uid}`);
+      } else {
+        console.log(`✅ Cleanup completed without ban: ${uid}`);
       }
 
       if (process.env.DEBUG_MESSAGES === "true") {
@@ -175,13 +182,13 @@ function scheduleCleanup(bot, id, messages = userMessages) {
       console.error("❌ [scheduleCleanup error]:", err.message);
     } finally {
       delete messages[uid];
-      delete session.cleanupScheduled;
+      if (userSessions[uid]) delete userSessions[uid].cleanupScheduled;
     }
   }, CLEANUP_TIMEOUT_MS);
 }
 
 /**
- * ✅ Splits long text into valid Telegram message chunks
+ * ✅ Splits long text into Telegram-safe chunks
  */
 function splitMessage(text) {
   if (!text || typeof text !== "string" || !text.trim()) return [""];
