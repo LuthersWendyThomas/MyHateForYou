@@ -1,4 +1,4 @@
-// 📦 utils/floodHandler.js | IMMORTAL v3.0 — FINAL BULLETPROOF MIRROR SYNC
+// 📦 utils/floodHandler.js | IMMORTAL v3.1 — FINAL LOCKED BULLETPROOF MIRROR SYNC EDITION
 
 import {
   antiSpam,
@@ -10,16 +10,14 @@ import {
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
 /**
- * ✅ Spam: detects messages sent <1s apart
+ * ✅ Detects messages sent too rapidly (<1s apart)
  */
 export function isSpamming(id) {
   try {
     const now = Date.now();
     const last = antiSpam[id] || 0;
     antiSpam[id] = now;
-
-    const diff = now - last;
-    return diff < 1000;
+    return now - last < 1000;
   } catch (err) {
     console.error("❌ [isSpamming error]:", err.message);
     return false;
@@ -27,18 +25,16 @@ export function isSpamming(id) {
 }
 
 /**
- * ✅ Returns whether the user is muted (temporary flood block)
+ * ✅ Detects if user is under flood mute
  */
 export function isMuted(id) {
   try {
     const until = bannedUntil[id];
     if (!until) return false;
 
-    const now = Date.now();
-    if (now < until) return true;
+    if (Date.now() < until) return true;
 
-    // Remove expired mute
-    delete bannedUntil[id];
+    delete bannedUntil[id]; // mute expired
     return false;
   } catch (err) {
     console.error("❌ [isMuted error]:", err.message);
@@ -47,7 +43,7 @@ export function isMuted(id) {
 }
 
 /**
- * ✅ Dynamic flood tolerance by order count
+ * ✅ Adjust flood tolerance based on user trust level
  */
 function getFloodLimit(id) {
   try {
@@ -61,7 +57,7 @@ function getFloodLimit(id) {
 }
 
 /**
- * ✅ Anti-flood logic with 5s window
+ * ✅ Flood handler with warnings and session mute
  */
 export async function handleFlood(id, bot, userMessages = {}) {
   try {
@@ -71,6 +67,8 @@ export async function handleFlood(id, bot, userMessages = {}) {
     if (!uid || isMuted(uid)) return true;
 
     if (!Array.isArray(antiFlood[uid])) antiFlood[uid] = [];
+
+    // Filter to recent 5s window
     antiFlood[uid] = antiFlood[uid].filter(ts => now - ts < 5000);
     antiFlood[uid].push(now);
 
@@ -83,13 +81,13 @@ export async function handleFlood(id, bot, userMessages = {}) {
       await sendAndTrack(
         bot,
         uid,
-        "⛔️ *Too many actions in a short period.*\n🕓 Session paused for *5 minutes*.",
+        "⛔️ *Too many actions in a short time.*\n🕓 Session has been muted for *5 minutes*.",
         { parse_mode: "Markdown" },
         userMessages
       );
 
       if (process.env.DEBUG_MESSAGES === "true") {
-        console.warn(`🚫 [FLOOD MUTE] ${uid} → ${hits}/${limit} (5s window)`);
+        console.warn(`🚫 [FLOOD MUTE] ${uid} → ${hits}/${limit}`);
       }
 
       return true;
@@ -99,13 +97,13 @@ export async function handleFlood(id, bot, userMessages = {}) {
       await sendAndTrack(
         bot,
         uid,
-        "⚠️ *Warning:* one more action and your session will be *paused* for 5 minutes.",
+        "⚠️ *Flood warning:* one more action and your session will be *muted* for 5 minutes.",
         { parse_mode: "Markdown" },
         userMessages
       );
 
       if (process.env.DEBUG_MESSAGES === "true") {
-        console.log(`⚠️ [FLOOD WARN] ${uid} at limit (${hits}/${limit})`);
+        console.log(`⚠️ [FLOOD WARN] ${uid} → ${hits}/${limit}`);
       }
     }
 
