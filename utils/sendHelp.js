@@ -1,9 +1,7 @@
-// 📦 utils/sendHelp.js | FINAL IMMORTAL v3.0 — FULLY LOCKED BULLETPROOF
-
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
 /**
- * ✅ Displays help and safety rules (UX-synced)
+ * ✅ Displays help and safety rules (UX-synced + email fallback)
  */
 export async function sendHelp(bot, id, userMessages = {}) {
   try {
@@ -30,10 +28,24 @@ export async function sendHelp(bot, id, userMessages = {}) {
 ⚠️ If something breaks, use */start* or tap *HELP* again.
     `.trim();
 
+    const emailURL = encodeURI(
+      `mailto:balticpharmausa@gmail.com?subject=BalticPharmacyBot Support&body=Hello,%20I%20need%20help%20with%20my%20order.%20Please%20assist.`
+    );
+
     await bot.sendChatAction(uid, "typing").catch(() => {});
     return await sendAndTrack(bot, uid, helpText, {
       parse_mode: "Markdown",
-      disable_web_page_preview: true
+      disable_web_page_preview: true,
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "📬 Contact support",
+              url: emailURL
+            }
+          ]
+        ]
+      }
     }, userMessages);
 
   } catch (err) {
