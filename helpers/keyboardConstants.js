@@ -1,9 +1,9 @@
-// 📦 helpers/keyboardConstants.js | FINAL IMMORTAL v3.1 — DIAMOND SMART+SAFE
+// 📦 helpers/keyboardConstants.js | IMMORTAL FINAL v99999999 — SYNC DIAMOND+LOCKED
 
 import { BOT } from "../config/config.js";
 
 /**
- * ✅ All button labels used across the UI
+ * ✅ Centralized menu button labels
  */
 export const MENU_BUTTONS = {
   START: "🚀 START",
@@ -12,13 +12,13 @@ export const MENU_BUTTONS = {
   ORDERS: "📋 MY ORDERS",
   HELP: "❓ HELP",
 
-  // Admin-only
+  // Admin only
   STATS: "📊 STATISTICS",
   ADMIN: "🔧 ADMIN PANEL"
 };
 
 /**
- * ✅ Default static keyboard — legacy fallback
+ * ✅ Default legacy fallback — for unsafe environments
  */
 export const MAIN_KEYBOARD = {
   reply_markup: {
@@ -29,14 +29,15 @@ export const MAIN_KEYBOARD = {
       [{ text: MENU_BUTTONS.STATS }, { text: MENU_BUTTONS.ADMIN }]
     ],
     resize_keyboard: true,
-    one_time_keyboard: false
+    one_time_keyboard: false,
+    selective: true
   }
 };
 
 /**
- * ✅ Generates main menu keyboard — smart admin-aware
- * @param {string|number} id - Telegram user ID
- * @returns {object} Telegram keyboard markup
+ * ✅ Smart keyboard builder with admin-awareness
+ * @param {string|number} id — Telegram user ID
+ * @returns {object} Telegram keyboard
  */
 export function getMainMenu(id) {
   const uid = String(id || "").trim();
