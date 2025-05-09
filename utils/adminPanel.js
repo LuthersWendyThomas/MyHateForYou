@@ -1,4 +1,4 @@
-// 📦 utils/adminPanel.js | BalticPharma V2 — FINAL ADMIN LOCK v1.9
+// 📦 utils/adminPanel.js | BalticPharma V2 — FINAL ADMIN LOCK v2.0 BULLETPROOF+
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import {
@@ -54,33 +54,45 @@ export async function handleAdminAction(bot, msg, userSessions, userOrders) {
 
     const session = userSessions[id] ||= {};
 
-    // Step-based: BAN user
-    if (session.adminStep === "ban_user") {
-      banUser(text);
-      delete session.adminStep;
-      return await sendAndTrack(bot, id, `🚫 User banned: \`${text}\``, { parse_mode: "Markdown" }, {});
-    }
-
-    // Step-based: Temp. BAN
-    if (session.adminStep === "temp_ban") {
-      const [targetId, minutesRaw] = text.split(" ");
-      const minutes = parseInt(minutesRaw);
-      if (!targetId || isNaN(minutes) || minutes < 1) {
-        return await sendAndTrack(bot, id, "⚠️ Invalid format. Use: `123456789 10`", { parse_mode: "Markdown" }, {});
+    // Step-based actions
+    switch (session.adminStep) {
+      case "ban_user": {
+        banUser(text);
+        delete session.adminStep;
+        return await sendAndTrack(bot, id, `🚫 User banned: \`${text}\``, { parse_mode: "Markdown" }, {});
       }
-      banUserTemporary(targetId, minutes);
-      delete session.adminStep;
-      return await sendAndTrack(bot, id, `⏳ Temporary ban: \`${targetId}\` (${minutes} min)`, { parse_mode: "Markdown" }, {});
+
+      case "temp_ban": {
+        const [targetId, minutesRaw] = text.split(" ");
+        const minutes = parseInt(minutesRaw);
+        if (!targetId || isNaN(minutes) || minutes < 1) {
+          return await sendAndTrack(
+            bot,
+            id,
+            "⚠️ Invalid format. Use: `123456789 10`",
+            { parse_mode: "Markdown" },
+            {}
+          );
+        }
+        banUserTemporary(targetId, minutes);
+        delete session.adminStep;
+        return await sendAndTrack(
+          bot,
+          id,
+          `⏳ Temporary ban: \`${targetId}\` (${minutes} min)`,
+          { parse_mode: "Markdown" },
+          {}
+        );
+      }
+
+      case "unban_user": {
+        unbanUser(text);
+        delete session.adminStep;
+        return await sendAndTrack(bot, id, `✅ User unbanned: \`${text}\``, { parse_mode: "Markdown" }, {});
+      }
     }
 
-    // Step-based: UNBAN
-    if (session.adminStep === "unban_user") {
-      unbanUser(text);
-      delete session.adminStep;
-      return await sendAndTrack(bot, id, `✅ User unbanned: \`${text}\``, { parse_mode: "Markdown" }, {});
-    }
-
-    // Main buttons
+    // Direct commands
     switch (text) {
       case "📊 STATISTICS":
       case "📅 Today":
@@ -102,7 +114,7 @@ export async function handleAdminAction(bot, msg, userSessions, userOrders) {
 
       case "⏳ Temp. BAN":
         session.adminStep = "temp_ban";
-        return await sendAndTrack(bot, id, "⏳ Enter user ID and duration in minutes (e.g. `123456789 10`):", { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, "⏳ Enter user ID and duration (e.g. `123456789 10`):", { parse_mode: "Markdown" }, {});
 
       case "✅ UNBAN user":
         session.adminStep = "unban_user";
