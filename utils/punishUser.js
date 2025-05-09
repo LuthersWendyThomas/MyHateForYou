@@ -1,11 +1,12 @@
-// 📛 utils/punishUser.js | IMMORTAL v3.0 — WARNING SHIELD SYNCED
+// 📛 utils/punishUser.js | IMMORTAL v3.1 — FINAL BULLETPROOF SHIELD SYNCED
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
-import { FLAGS } from "../config/config.js";
+import { autodeleteEnabled } from "../config/features.js";
 import { userMessages } from "../state/userState.js";
 
 /**
- * Sends a warning if user input is invalid (and deletes it after 3s if autodelete enabled)
+ * ⚠️ Warns user about invalid action
+ * Deletes the warning message after 3s if autodelete is enabled
  */
 export async function punish(bot, id, messages = userMessages) {
   try {
@@ -25,18 +26,18 @@ export async function punish(bot, id, messages = userMessages) {
       messages
     );
 
-    const autodelete = ["1", "true"].includes(String(FLAGS.AUTODELETE_ENABLED).toLowerCase());
     const messageId = msg?.message_id;
+    const shouldDelete = autodeleteEnabled?.status === true;
 
-    if (autodelete && messageId) {
+    if (shouldDelete && messageId) {
       setTimeout(() => {
-        bot.deleteMessage(uid, messageId).catch(err =>
-          console.warn(`⚠️ Failed to delete punish message (${messageId}):`, err.message)
-        );
+        bot.deleteMessage(uid, messageId).catch(err => {
+          console.warn(`⚠️ Failed to delete punish message (${messageId}):`, err.message);
+        });
       }, 3000);
     }
 
   } catch (err) {
-    console.error("❌ [punishUser error]:", err.message || err);
+    console.error("❌ [punish error]:", err.message || err);
   }
 }
