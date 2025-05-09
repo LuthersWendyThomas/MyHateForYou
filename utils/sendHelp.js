@@ -1,36 +1,37 @@
-// 📦 utils/sendHelp.js | BalticPharma V2 — IMMORTAL v2025.6 SYNCED LAYER EDITION
+// 📦 utils/sendHelp.js | FINAL IMMORTAL v3.0 — FULLY LOCKED BULLETPROOF
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
 /**
- * ✅ Displays help and security rules (fully protected)
+ * ✅ Displays help and safety rules (UX-synced)
  */
 export async function sendHelp(bot, id, userMessages = {}) {
   try {
-    if (!bot || !id) return;
+    const uid = String(id || "").trim();
+    if (!bot || !uid) return;
 
-    const text = `
+    const helpText = `
 ❓ *HELP & SAFETY RULES:*
 
-1️⃣ *Orders are only processed through this bot*  
-— No private chats. Use buttons only.
+1️⃣ *Orders are ONLY processed via this bot*  
+🔒 No private chats. Use interface buttons only.
 
-2️⃣ *Do not photograph or talk to courier/drop person*  
-— 📵 Any attempt = *BAN*.
+2️⃣ *Do NOT photograph or speak to the courier/dropper*  
+📵 Any attempt = *INSTANT BAN*
 
 3️⃣ *Delivery takes ~20–30 minutes*  
-— Be ready and follow all instructions.
+⏱ Follow instructions and be ready.
 
-4️⃣ *After delivery — no messages or photos!*  
-— System will auto-clean everything.
+4️⃣ *After delivery: No messages, no photos!*  
+🧼 Auto-clean triggers in 25–27min.
 
-⛔ *Violations = instant BAN*
+⛔ *Any violations = ban / blacklist*
 
-If you encounter a problem – use */start* or tap *HELP* again.
+⚠️ If something breaks, use */start* or tap *HELP* again.
     `.trim();
 
-    await bot.sendChatAction(id, "typing").catch(() => {});
-    return await sendAndTrack(bot, id, text, {
+    await bot.sendChatAction(uid, "typing").catch(() => {});
+    return await sendAndTrack(bot, uid, helpText, {
       parse_mode: "Markdown",
       disable_web_page_preview: true
     }, userMessages);
@@ -38,7 +39,9 @@ If you encounter a problem – use */start* or tap *HELP* again.
   } catch (err) {
     console.error("❌ [sendHelp error]:", err.message || err);
     try {
-      await bot.sendMessage(id, "⚠️ Failed to display help information. Please try again later.");
-    } catch {}
+      await bot.sendMessage(id, "⚠️ Failed to load help. Please try again.");
+    } catch (e) {
+      console.warn("⚠️ [sendHelp fallback failed]:", e.message);
+    }
   }
 }
