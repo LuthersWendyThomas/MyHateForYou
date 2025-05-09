@@ -1,25 +1,25 @@
-// 📦 flows/startOrder.js | BalticPharma V2 — REGION-MODE FINAL v2.6.9
+// 📦 flows/startOrder.js | FINAL v2.0 — REGION FLOW ULTRASYNC EDITION
 
 import { userSessions, userMessages, userOrders } from "../state/userState.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
 import { clearTimers, clearUserMessages } from "../state/stateManager.js";
 
 /**
- * Initiates a clean order start from the first step (region selection)
+ * 🧼 Starts a fresh order session (region → city → method → etc.)
  */
 export async function startOrder(bot, id, userMsgs = {}) {
   const uid = String(id);
   if (!bot || !uid) return;
 
   try {
-    // — 1. Full cleanup
+    // — 1. Full cleanup of user state
     await clearTimers(uid);
     await clearUserMessages(uid);
 
     delete userSessions[uid];
     delete userOrders[uid];
 
-    // — 2. New blank session
+    // — 2. Start clean session
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now(),
@@ -44,7 +44,7 @@ export async function startOrder(bot, id, userMsgs = {}) {
       paymentInProgress: false
     };
 
-    // — 3. Define static region list (synced with stepHandler)
+    // — 3. Predefined region list (synced with stepHandler.js)
     const regions = [
       "🗽 East Coast",
       "🌴 West Coast",
@@ -57,9 +57,10 @@ export async function startOrder(bot, id, userMsgs = {}) {
     const keyboard = regions.map(r => [{ text: r }]);
     keyboard.push([{ text: "🔙 Back" }]);
 
-    // Enhanced flow: ensure the user is typing before we send the message.
+    // — 4. UX: send typing action
     await bot.sendChatAction(uid, "typing").catch(() => {});
 
+    // — 5. Ask user to choose a region
     return await sendKeyboard(
       bot,
       uid,
@@ -69,7 +70,6 @@ export async function startOrder(bot, id, userMsgs = {}) {
     );
 
   } catch (err) {
-    // Enhanced error handling and retry suggestion
     console.error("❌ [startOrder error]:", err.message || err);
 
     return await sendKeyboard(
