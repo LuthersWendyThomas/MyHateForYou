@@ -4,7 +4,6 @@ import { sendAndTrack } from "../../helpers/messageUtils.js";
 import { userSessions, userMessages, activeTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
 
-// 🕓 Cleanup 27 minutes after delivery start
 const FINAL_CLEANUP_TIMEOUT_MS = 27 * 60 * 1000;
 
 /**
@@ -19,6 +18,7 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
     if (session.deliveryInProgress) return;
 
     session.deliveryInProgress = true;
+    session.step = 9;
 
     const isCourier = method.toLowerCase() === "courier";
 
@@ -42,24 +42,27 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
       const [text, delay = i * 60000] = steps[i];
       const isFinal = i === steps.length - 1;
 
-      (isFinal ? scheduleFinalStep : scheduleStep)(bot, uid, text, delay, userMsgs);
+      if (isFinal) {
+        scheduleFinalStep(bot, uid, text, delay, userMsgs);
+      } else {
+        scheduleStep(bot, uid, text, delay, userMsgs);
+      }
     }
 
-    // Failsafe cleanup
+    // Safety cleanup if final step fails
     if (activeTimers[uid]) clearTimeout(activeTimers[uid]);
-    const cleanupTimer = setTimeout(() => {
+    activeTimers[uid] = setTimeout(() => {
       triggerFinalCleanup(bot, uid, userMsgs);
       delete activeTimers[uid];
     }, FINAL_CLEANUP_TIMEOUT_MS);
 
-    activeTimers[uid] = cleanupTimer;
   } catch (err) {
     console.error("❌ [simulateDelivery error]:", err.message);
   }
 }
 
 /**
- * 💬 Sends scheduled non-final message
+ * 💬 Standard delivery message
  */
 function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
   setTimeout(async () => {
@@ -75,8 +78,7 @@ function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
         userMsgs
       );
 
-      const isAdmin = String(id) === String(BOT.ADMIN_ID);
-      if (autodeleteEnabled?.status && !isAdmin && msg?.message_id) {
+      if (shouldAutoDelete(id) && msg?.message_id) {
         setTimeout(() => {
           bot.deleteMessage(id, msg.message_id).catch(() => {});
         }, 15000);
@@ -88,7 +90,7 @@ function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
 }
 
 /**
- * 🚨 Final step + triggers full cleanup
+ * ✅ Final delivery message + triggers cleanup
  */
 function scheduleFinalStep(bot, id, text, delayMs = 0, userMsgs = {}) {
   setTimeout(async () => {
@@ -104,17 +106,16 @@ function scheduleFinalStep(bot, id, text, delayMs = 0, userMsgs = {}) {
         userMsgs
       );
 
-      const isAdmin = String(id) === String(BOT.ADMIN_ID);
-      if (autodeleteEnabled?.status && !isAdmin && msg?.message_id) {
+      if (shouldAutoDelete(id) && msg?.message_id) {
         setTimeout(() => {
           bot.deleteMessage(id, msg.message_id).catch(() => {});
         }, 15000);
       }
 
-      // Delay before cleanup
       setTimeout(() => {
         triggerFinalCleanup(bot, id, userMsgs);
       }, 7000);
+
     } catch (err) {
       console.error("❌ [scheduleFinalStep error]:", err.message);
     }
@@ -122,7 +123,7 @@ function scheduleFinalStep(bot, id, text, delayMs = 0, userMsgs = {}) {
 }
 
 /**
- * 🧼 Final cleanup: messages + session + autoban if enabled
+ * 🧼 Full session cleanup after delivery (autodelete + autoban)
  */
 async function triggerFinalCleanup(bot, id, userMsgs = {}) {
   try {
@@ -131,10 +132,9 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
 
     const session = userSessions[uid];
     if (session?.cleanupScheduled) return;
-
     userSessions[uid] = { ...session, cleanupScheduled: true };
 
-    const isAdmin = String(uid) === String(BOT.ADMIN_ID);
+    const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
 
     if (autodeleteEnabled?.status && !isAdmin && Array.isArray(userMsgs[uid])) {
       for (const msgId of userMsgs[uid]) {
@@ -157,12 +157,23 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
       console.warn(`⛔️ AutoBan executed → ${uid}`);
     }
 
-    if (session?.paymentTimer) clearTimeout(session.paymentTimer);
+    if (activeTimers[uid]) {
+      clearTimeout(activeTimers[uid]);
+      delete activeTimers[uid];
+    }
 
     delete userSessions[uid];
-    delete activeTimers[uid];
-    console.log(`🧼 Final session cleanup complete → ${uid}`);
+    console.log(`🧼 Final delivery cleanup complete → ${uid}`);
   } catch (err) {
     console.error("❌ [triggerFinalCleanup error]:", err.message);
   }
+}
+
+/**
+ * Utility: Check if autodelete is allowed for user
+ */
+function shouldAutoDelete(id) {
+  const uid = String(id);
+  const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
+  return autodeleteEnabled?.status && !isAdmin;
 }
