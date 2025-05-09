@@ -1,10 +1,10 @@
-// 📦 utils/generateQR.js | IMMORTAL v3.0 — BULLETPROOF INLINE+QR EDITION
+// 📦 utils/generateQR.js | IMMORTAL v3.1 — BULLETPROOF INLINE+QR FINAL LOCKED EDITION
 
 import QRCode from "qrcode";
 import { WALLETS } from "../config/config.js";
 
 /**
- * ✅ Generates QR code PNG buffer for payment
+ * ✅ Generates QR code PNG buffer for crypto payment
  */
 export async function generateQR(currency, amount, overrideAddress) {
   try {
@@ -14,16 +14,16 @@ export async function generateQR(currency, amount, overrideAddress) {
     }
 
     const cleanCurrency = String(currency).trim().toUpperCase();
-    const address = String(overrideAddress || WALLETS[cleanCurrency] || "").trim();
     const parsedAmount = parseFloat(amount);
+    const address = String(overrideAddress || WALLETS[cleanCurrency] || "").trim();
 
-    if (!address || address.length < 8 || !isValidAddress(address)) {
-      console.warn(`[generateQR] Invalid or empty address: "${address}"`);
+    if (!isValidAddress(address)) {
+      console.warn(`⚠️ [generateQR] Invalid address: "${address}"`);
       return null;
     }
 
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      console.warn(`[generateQR] Invalid amount: ${amount}`);
+      console.warn(`⚠️ [generateQR] Invalid amount: ${amount}`);
       return null;
     }
 
@@ -41,12 +41,12 @@ export async function generateQR(currency, amount, overrideAddress) {
       }
     });
 
-    if (!buffer || !(buffer instanceof Buffer)) {
-      throw new Error("QR generated in incorrect format");
+    if (!(buffer instanceof Buffer)) {
+      throw new Error("QR code not generated as buffer.");
     }
 
     if (process.env.DEBUG_MESSAGES === "true") {
-      console.log(`✅ [generateQR] QR created for ${cleanCurrency} → ${formatted}`);
+      console.log(`✅ [generateQR] ${cleanCurrency} → ${formatted} → OK`);
     }
 
     return buffer;
@@ -57,7 +57,7 @@ export async function generateQR(currency, amount, overrideAddress) {
 }
 
 /**
- * ✅ Inline message + copy button (for after QR)
+ * ✅ Generates message with copyable crypto address inline button
  */
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
   const cleanCurrency = String(currency || "").toUpperCase();
@@ -69,7 +69,7 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
   const address = String(overrideAddress || WALLETS[cleanCurrency] || "").trim();
   const valid = isValidAddress(address) ? address : "[Invalid address]";
 
-  const text = `
+  const message = `
 💳 *Payment details:*
 
 • Network: *${cleanCurrency}*
@@ -78,10 +78,10 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
 
 ⏱️ *Expected payment within 30 minutes.*
 ✅ Use the QR code or copy the address.
-  `.trim();
+`.trim();
 
   return {
-    message: text,
+    message,
     reply_markup: {
       inline_keyboard: [
         [{ text: "📋 Copy address", callback_data: `copy:${valid}` }]
@@ -91,9 +91,8 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
 }
 
 /**
- * ✅ Simple but strict crypto address format validation
+ * ✅ Basic validation of wallet address format
  */
 function isValidAddress(addr) {
-  return typeof addr === "string" &&
-    /^[a-zA-Z0-9]{8,}$/.test(addr);
+  return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
 }
