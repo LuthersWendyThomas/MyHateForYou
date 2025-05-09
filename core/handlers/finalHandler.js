@@ -1,11 +1,9 @@
-// 🧠 core/handlers/finalHandler.js | BULLETPROOF FINAL v2.0
-
 import fs from "fs/promises";
 import path from "path";
 import { sendAndTrack, sendPhotoAndTrack } from "../../helpers/messageUtils.js";
 import { getMainMenu } from "../../helpers/menu.js";
 import { clearTimers, clearUserMessages, resetUser } from "../../state/stateManager.js";
-import { userSessions, userMessages, activeUsers } from "../../state/userState.js";
+import { userSessions, userMessages, activeUsers, paymentTimers } from "../../state/userState.js";
 import { simulateDelivery } from "./deliveryHandler.js";
 
 /**
@@ -16,23 +14,18 @@ export async function safeStart(bot, id) {
   if (!bot || !uid) return;
 
   try {
-    // 🔒 1. Full cleanup of timers and user memory
-    await clearTimers(uid);
-    await clearUserMessages(uid);
-    await resetUser(uid);
+    await fullSessionReset(uid);
 
-    // ⚙️ 2. Initialize new session
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now()
     };
 
-    // 📈 3. Register active user
     activeUsers.add(uid);
     const count = activeUsers.count;
 
-    // 🖼️ 4. Try to send greeting image
     const greetingPath = path.join(process.cwd(), "assets", "greeting.jpg");
+
     try {
       const buffer = await fs.readFile(greetingPath);
       if (buffer?.length > 0) {
@@ -76,7 +69,7 @@ export async function safeStart(bot, id) {
 }
 
 /**
- * ✅ Finishes order and starts delivery
+ * ✅ Finalizes order and triggers delivery
  */
 export async function finishOrder(bot, id) {
   const uid = String(id);
@@ -110,17 +103,39 @@ export async function finishOrder(bot, id) {
 }
 
 /**
- * ✅ Completely clears the session for the user
+ * ✅ Clears all timers and memory for the session
  */
 export async function resetSession(id) {
   const uid = String(id);
+  await fullSessionReset(uid);
+  console.log(`🧼 Session fully cleared: ${uid}`);
+}
+
+/**
+ * 🔁 Fully clears everything related to the user: timers, payments, memory
+ */
+async function fullSessionReset(uid) {
   try {
     await clearTimers(uid);
     await clearUserMessages(uid);
     await resetUser(uid);
-    console.log(`🧼 Session fully cleared: ${uid}`);
+
+    // Extra kill-switch: clear payment timers
+    if (paymentTimers[uid]) {
+      clearTimeout(paymentTimers[uid]);
+      delete paymentTimers[uid];
+    }
+
+    // Remove hanging flags from past flows
+    if (userSessions[uid]) {
+      delete userSessions[uid].paymentInProgress;
+      delete userSessions[uid].deliveryInProgress;
+      delete userSessions[uid].cleanupScheduled;
+      delete userSessions[uid].paymentTimer;
+      delete userSessions[uid].expectedAmount;
+    }
   } catch (err) {
-    console.error("❌ [resetSession error]:", err.message);
+    console.error("❌ [fullSessionReset error]:", err.message);
   }
 }
 
