@@ -1,4 +1,4 @@
-// 📦 utils/bans.js | BalticPharma V2 — FINAL IMMORTAL BANLOCK v2.5
+// 📦 utils/bans.js | BalticPharma V2 — BULLETPROOF FINAL v2.6
 
 import fs from "fs";
 import path from "path";
@@ -8,18 +8,19 @@ const dataDir = path.resolve("./data");
 const bansFile = path.join(dataDir, "bans.json");
 const tempBansFile = path.join(dataDir, "tempbans.json");
 
+// — In-memory ban storage
 const bannedUserIds = new Set();
 const temporaryBans = {}; // { userId: timestamp }
 
 /**
- * Prevents null/undefined from becoming "undefined"
+ * Ensures all IDs are safe strings
  */
 function safeString(input) {
   return typeof input === "string" ? input.trim() : String(input || "").trim();
 }
 
 /**
- * Initializes the ban system with fallbacks
+ * 🛠️ Initializes the ban system
  */
 export function initBans() {
   try {
@@ -39,14 +40,14 @@ export function initBans() {
 
     console.log(`✅ Ban system initialized: ${bannedUserIds.size} permanent | ${Object.keys(temporaryBans).length} temporary`);
   } catch (err) {
-    console.error("❌ [initBans error]:", err.message);
+    console.error("❌ [initBans error]:", err.message || err);
   }
 }
 
-// — Auto-init
+// — Auto-initialize
 initBans();
 
-// — File saving
+// — Save handlers
 function saveBans() {
   try {
     fs.writeFileSync(bansFile, JSON.stringify([...bannedUserIds], null, 2), "utf8");
@@ -67,6 +68,9 @@ function saveTempBans() {
 // 🚫 PUBLIC API
 // ==============================
 
+/**
+ * ⛔ Checks if user is permanently or temporarily banned
+ */
 export function isBanned(userId) {
   try {
     const id = safeString(userId);
@@ -80,11 +84,14 @@ export function isBanned(userId) {
 
     return bannedUserIds.has(id);
   } catch (err) {
-    console.error("❌ [isBanned error]:", err.message);
+    console.error("❌ [isBanned error]:", err.message || err);
     return false;
   }
 }
 
+/**
+ * 🚫 Permanently bans a user
+ */
 export function banUser(userId) {
   try {
     const id = safeString(userId);
@@ -94,22 +101,28 @@ export function banUser(userId) {
       console.log(`🚫 Banned: ${id} @ ${new Date().toLocaleString("en-GB")}`);
     }
   } catch (err) {
-    console.error("❌ [banUser error]:", err.message);
+    console.error("❌ [banUser error]:", err.message || err);
   }
 }
 
+/**
+ * ⏳ Temporarily bans a user for X minutes
+ */
 export function banUserTemporary(userId, minutes = 5) {
   try {
     const id = safeString(userId);
     const until = Date.now() + minutes * 60 * 1000;
     temporaryBans[id] = until;
     saveTempBans();
-    console.log(`⏳ Temporary ban: ${id} until ${new Date(until).toLocaleString("en-GB")} (${minutes} min)`);
+    console.log(`⏳ TempBan: ${id} until ${new Date(until).toLocaleString("en-GB")} (${minutes} min)`);
   } catch (err) {
-    console.error("❌ [banUserTemporary error]:", err.message);
+    console.error("❌ [banUserTemporary error]:", err.message || err);
   }
 }
 
+/**
+ * ✅ Fully unbans a user from both sets
+ */
 export function unbanUser(userId) {
   try {
     const id = safeString(userId);
@@ -131,14 +144,20 @@ export function unbanUser(userId) {
       console.log(`✅ Unbanned: ${id}`);
     }
   } catch (err) {
-    console.error("❌ [unbanUser error]:", err.message);
+    console.error("❌ [unbanUser error]:", err.message || err);
   }
 }
 
+/**
+ * 📋 Returns all permanent bans
+ */
 export function listBannedUsers() {
   return [...bannedUserIds];
 }
 
+/**
+ * 📋 Returns all active temp bans
+ */
 export function listTemporaryBans() {
   return Object.entries(temporaryBans).map(([id, until]) => ({
     userId: id,
@@ -146,26 +165,35 @@ export function listTemporaryBans() {
   }));
 }
 
+/**
+ * 📈 Ban count
+ */
 export function getBansCount() {
   return bannedUserIds.size;
 }
 
+/**
+ * 🧹 Clears all permanent bans
+ */
 export function clearBans() {
   try {
     bannedUserIds.clear();
     saveBans();
     console.log("🧹 Permanent bans cleared.");
   } catch (err) {
-    console.error("❌ [clearBans error]:", err.message);
+    console.error("❌ [clearBans error]:", err.message || err);
   }
 }
 
+/**
+ * 🧼 Clears all temporary bans
+ */
 export function clearTempBans() {
   try {
     Object.keys(temporaryBans).forEach(id => delete temporaryBans[id]);
     saveTempBans();
     console.log("🧼 Temporary bans cleared.");
   } catch (err) {
-    console.error("❌ [clearTempBans error]:", err.message);
+    console.error("❌ [clearTempBans error]:", err.message || err);
   }
 }
