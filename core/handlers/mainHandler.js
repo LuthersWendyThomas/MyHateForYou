@@ -1,4 +1,4 @@
-// 🧠 core/handlers/mainHandler.js | FINAL DIAMOND v2.0 BULLETPROOF SYNC
+// 🧠 core/handlers/mainHandler.js | FINAL DIAMOND v2.0 BULLETPROOF SYNC+
 
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages, userOrders } from "../../state/userState.js";
@@ -19,39 +19,38 @@ export function registerMainHandler(bot) {
     const id = msg.chat?.id;
     let text = msg.text;
 
-    if (!bot || !id || !text || typeof text !== "string") return;
+    if (!bot || !id || typeof text !== "string") return;
 
     const uid = String(id).trim();
-    text = text.trim();
+    text = text.toString().trim().slice(0, 4096); // 🔐 normalized input
 
     try {
-      // ✅ Mark user as active immediately
       markUserActive(uid);
+
       const session = userSessions[uid] ||= { step: 1, createdAt: Date.now() };
       const isAdmin = uid === String(BOT.ADMIN_ID);
       const allowedMenu = Object.values(MENU_BUTTONS);
 
-      // ✅ 1. Apply full security filter (spam, flood, mute, bans)
-      const allowed = await canProceed(uid, bot, text);
-      if (!allowed) return;
+      // ✅ 1. Security check
+      if (!(await canProceed(uid, bot, text))) return;
 
-      // ✅ 2. Handle /start or START button
+      // ✅ 2. Start command
       if (text.toLowerCase() === "/start" || text === MENU_BUTTONS.START) {
         console.log(`🚀 Restart from ${uid}`);
         return await safeStart(bot, uid);
       }
 
-      // ✅ 3. Admin flow (locked under session.adminStep)
+      // ✅ 3. Admin handler
       if (session.adminStep) {
         try {
           return await handleAdminAction(bot, msg, userSessions, userOrders);
         } catch (err) {
           console.error("❌ [Admin error]:", err.message);
-          return await bot.sendMessage(uid, "❗️ Admin action failed.");
+          return await bot.sendMessage(uid, "❗️ Admin error. Returning to panel...", MAIN_KEYBOARD);
         }
       }
 
-      // ✅ 4. Main menu routing (UI buttons)
+      // ✅ 4. Menu routing
       switch (text) {
         case MENU_BUTTONS.BUY:
           return await startOrder(bot, uid, userMessages);
@@ -69,19 +68,14 @@ export function registerMainHandler(bot) {
           break;
       }
 
-      // ✅ 5. Step-based handler (flow state)
+      // ✅ 5. Step-based flow
       if (typeof session.step === "number" && session.step >= 1 && session.step <= 9) {
         return await handleStep(bot, uid, text, userMessages);
       }
 
-      // ✅ 6. Unknown / invalid input outside context — warn user
-      if (!allowedMenu.includes(text)) {
-        return await bot.sendMessage(
-          uid,
-          "⚠️ *Invalid action.*\nUse the buttons below only.",
-          { parse_mode: "Markdown", ...MAIN_KEYBOARD }
-        );
-      }
+      // 🧯 Fallback on broken state
+      session.step = 1;
+      return await safeStart(bot, uid);
 
     } catch (err) {
       console.error("❌ [mainHandler crash]:", err.message || err);
