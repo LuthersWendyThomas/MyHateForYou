@@ -1,54 +1,57 @@
-// 🧹 cron/cleanOldLogs.js | FINAL v2.1 DIAMOND TANK CLEANER – AUTOLOG ROTATION
+// 📦 cron/cleanOldLogs.js | FINAL IMMORTAL v9999999.0 — ULTRABULLETPROOF CLEANER
 
 import fs from "fs";
 import path from "path";
 
 const LOG_DIR = path.resolve("./logs");
 const MAX_AGE_DAYS = 3;
-const LOOP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
+const LOOP_INTERVAL_MS = 24 * 60 * 60 * 1000; // kas 24h
 
 /**
- * ⏱️ Skaičiuoja dienų senumą nuo timestamp
+ * ⏱️ Paskaičiuoja, kiek dienų praėjo nuo timestamp
  */
 function daysOld(timestamp) {
   return (Date.now() - timestamp) / (1000 * 60 * 60 * 24);
 }
 
 /**
- * 🧹 Trina senus log failus
+ * 🧹 Trina senus .log failus (vyresnius nei MAX_AGE_DAYS)
  */
 function cleanLogs() {
   try {
     const now = new Date().toLocaleString("en-GB");
-    console.log(`🧹 Log cleanup started — ${now}`);
+    console.log(`\n🧹 [cleanOldLogs] Log cleanup started — ${now}`);
 
     if (!fs.existsSync(LOG_DIR)) {
-      console.warn("📁 Logs directory not found. Skipping.");
+      console.warn("📁 [cleanOldLogs] 'logs/' folder not found — skipping cleanup.");
       return;
     }
 
     const files = fs.readdirSync(LOG_DIR);
-    let deleted = 0;
+    let deletedCount = 0;
 
     for (const file of files) {
+      if (!file.endsWith(".log")) continue;
+
       const filePath = path.join(LOG_DIR, file);
-      if (!file.endsWith(".log")) continue; // Triname tik .log failus
 
       try {
         const stats = fs.statSync(filePath);
-        if (daysOld(stats.mtimeMs) > MAX_AGE_DAYS) {
+        const age = daysOld(stats.mtimeMs);
+
+        if (age > MAX_AGE_DAYS) {
           fs.unlinkSync(filePath);
-          console.log(`🗑️ Deleted: ${file}`);
-          deleted++;
+          console.log(`🗑️ Deleted: ${file} (age: ${age.toFixed(1)}d)`);
+          deletedCount++;
         }
       } catch (err) {
-        console.error(`❌ Error processing ${file}:`, err.message);
+        console.error(`❌ [cleanOldLogs] Failed to process ${file}:`, err.message);
       }
     }
 
-    console.log(`✅ Cleanup complete — ${deleted} log files deleted.\n`);
+    console.log(`✅ [cleanOldLogs] Cleanup complete — ${deletedCount} file(s) deleted.\n`);
   } catch (err) {
-    console.error("❌ [cleanLogs error]:", err.message || err);
+    console.error("❌ [cleanOldLogs] Fatal error:", err.message || err);
   }
 }
 
