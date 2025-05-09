@@ -34,11 +34,11 @@ export function registerMainHandler(bot) {
       // ✅ 1. Security gate (flood/ban checks)
       if (!(await canProceed(uid, bot, text))) return;
 
-      // ✅ 2. Hard restart
-      if (text.toLowerCase() === "/start" || text === MENU_BUTTONS.START) {
-        console.log(`🚀 Restart from ${uid}`);
-        return await safeStart(bot, uid);
-      }
+     // ✅ 2. Hard restart
+     if (text.toLowerCase() === "/start") {
+       console.log(`🚀 Restart from ${uid}`);
+       return await safeStart(bot, uid);
+     }
 
       // ✅ 3. Admin action in progress (step-based)
       if (session.adminStep) {
