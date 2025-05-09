@@ -1,11 +1,7 @@
-// 🧠 core/handlers/mainHandler.js | IMMORTAL REGION UI v1.0 FINAL
+// 🧠 core/handlers/mainHandler.js | FINAL DIAMOND v2.0 BULLETPROOF SYNC
 
 import { BOT } from "../../config/config.js";
-import {
-  userSessions,
-  userMessages,
-  userOrders
-} from "../../state/userState.js";
+import { userSessions, userMessages, userOrders } from "../../state/userState.js";
 import { safeStart } from "./finalHandler.js";
 import { handleStep } from "./stepHandler.js";
 import { startOrder } from "../../flows/startOrder.js";
@@ -25,26 +21,27 @@ export function registerMainHandler(bot) {
 
     if (!bot || !id || !text || typeof text !== "string") return;
 
-    try {
-      const uid = String(id);
-      text = text.trim();
+    const uid = String(id).trim();
+    text = text.trim();
 
-      // ✅ Ensure user is marked active and session is initialized
+    try {
+      // ✅ Mark user as active immediately
       markUserActive(uid);
       const session = userSessions[uid] ||= { step: 1, createdAt: Date.now() };
       const isAdmin = uid === String(BOT.ADMIN_ID);
       const allowedMenu = Object.values(MENU_BUTTONS);
 
-      // ✅ 1. Anti-spam / flood / ban
-      if (!(await canProceed(uid, bot, text))) return;
+      // ✅ 1. Apply full security filter (spam, flood, mute, bans)
+      const allowed = await canProceed(uid, bot, text);
+      if (!allowed) return;
 
-      // ✅ 2. Start – starts a fresh session
+      // ✅ 2. Handle /start or START button
       if (text.toLowerCase() === "/start" || text === MENU_BUTTONS.START) {
-        console.log(`🚀 /start from ${uid}`);
+        console.log(`🚀 Restart from ${uid}`);
         return await safeStart(bot, uid);
       }
 
-      // ✅ 3. Admin flow
+      // ✅ 3. Admin flow (locked under session.adminStep)
       if (session.adminStep) {
         try {
           return await handleAdminAction(bot, msg, userSessions, userOrders);
@@ -54,7 +51,7 @@ export function registerMainHandler(bot) {
         }
       }
 
-      // ✅ 4. Menu options
+      // ✅ 4. Main menu routing (UI buttons)
       switch (text) {
         case MENU_BUTTONS.BUY:
           return await startOrder(bot, uid, userMessages);
@@ -72,29 +69,31 @@ export function registerMainHandler(bot) {
           break;
       }
 
-      // ✅ 5. If step flow is active
+      // ✅ 5. Step-based handler (flow state)
       if (typeof session.step === "number" && session.step >= 1 && session.step <= 9) {
         return await handleStep(bot, uid, text, userMessages);
       }
 
-      // ✅ 6. Unrecognized or unauthorized input
+      // ✅ 6. Unknown / invalid input outside context — warn user
       if (!allowedMenu.includes(text)) {
         return await bot.sendMessage(
           uid,
-          "⚠️ *Illegal action.*\nUse the buttons below.",
+          "⚠️ *Invalid action.*\nUse the buttons below only.",
           { parse_mode: "Markdown", ...MAIN_KEYBOARD }
         );
       }
 
     } catch (err) {
-      console.error("❌ [mainHandler fatal error]:", err.message || err);
+      console.error("❌ [mainHandler crash]:", err.message || err);
       try {
-        await bot.sendMessage(
-          msg.chat.id,
-          "❗️ Internal error. Please try again..",
+        return await bot.sendMessage(
+          uid,
+          "❗️ Internal error occurred.\nTry again or type /start.",
           { parse_mode: "Markdown", ...MAIN_KEYBOARD }
         );
-      } catch {}
+      } catch (fail) {
+        console.warn("⚠️ Failed to send fallback message:", fail.message);
+      }
     }
   });
 }
