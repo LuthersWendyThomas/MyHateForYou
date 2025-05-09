@@ -1,10 +1,10 @@
-// 📦 flows/startOrder.js | FINAL v2.2 — REGION FLOW BULLETPROOF TANKLOCK
+// 📦 flows/startOrder.js | IMMORTAL FINAL v9999999 — ULTRA-SYNC TANKLOCK
 
 import { userSessions, userMessages, userOrders } from "../state/userState.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
 import { clearTimers, clearUserMessages } from "../state/stateManager.js";
 
-// 🌐 Centralized region list (synced with stepHandler.js)
+// 🌍 Must match stepHandler.js regionMap keys exactly
 const REGION_LIST = [
   "🗽 East Coast",
   "🌴 West Coast",
@@ -15,27 +15,29 @@ const REGION_LIST = [
 ];
 
 /**
- * 🎯 Starts a clean order session (step 1: region)
+ * 🔁 Starts a 100% clean new order flow (step 1)
  */
 export async function startOrder(bot, id, userMsgs = {}) {
   const uid = String(id || "").trim();
   if (!bot || !uid || typeof bot.sendMessage !== "function") return;
 
   try {
-    // 🧼 1. Full cleanup of user's timers & messages
+    // 🧼 1. Full cleanup: session, timers, messages, order count
     await clearTimers(uid);
     await clearUserMessages(uid);
 
     delete userSessions[uid];
     delete userOrders[uid];
+    delete userMessages[uid];
 
-    // 🛡️ 2. New clean session setup
+    // 🔒 2. Reinit session
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now(),
 
       region: null,
       city: null,
+
       deliveryMethod: null,
       deliveryFee: 0,
 
@@ -50,35 +52,32 @@ export async function startOrder(bot, id, userMsgs = {}) {
       expectedAmount: null,
 
       paymentTimer: null,
-      cleanupScheduled: false,
-      paymentInProgress: false
+      paymentInProgress: false,
+      cleanupScheduled: false
     };
 
-    // 📲 3. Prepare keyboard with region list
+    // ⌨️ 3. Show keyboard
     const keyboard = REGION_LIST.map(r => [{ text: r }]);
     keyboard.push([{ text: "🔙 Back" }]);
 
-    // ⌨️ 4. UX: show typing before sending
-    await bot.sendChatAction(uid, "typing").catch(() => {
-      console.warn(`⚠️ [startOrder] ChatAction failed → ${uid}`);
-    });
+    await bot.sendChatAction(uid, "typing").catch(() =>
+      console.warn(`⚠️ [startOrder] chatAction failed: ${uid}`)
+    );
 
-    // 🗺️ 5. Prompt user to select region
     return await sendKeyboard(
       bot,
       uid,
-      "🗺 *Select the region* where you want to receive the shipment:",
+      "🗺 *Select the region where delivery is needed:*",
       keyboard,
       userMsgs
     );
 
   } catch (err) {
-    console.error("❌ [startOrder fatal]:", err.message || err);
-
+    console.error("❌ [startOrder error]:", err.message || err);
     return await sendKeyboard(
       bot,
       uid,
-      "❗️ Unexpected error. Please try again later.",
+      "❗️ Unexpected error. Please try again.",
       [[{ text: "🔁 Try again" }]],
       userMsgs
     );
