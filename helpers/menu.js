@@ -1,49 +1,35 @@
-// 📦 helpers/menu.js | BalticPharma V2 — FINAL IMMORTAL v2025.8 DIAMOND-POLISH ADMIN UX MENU
+// 📦 helpers/menu.js | FINAL IMMORTAL v3.1 — SYNC-POLISHED ADMIN UX EDITION
 
 import { BOT } from "../config/config.js";
+import { MENU_BUTTONS } from "./keyboardConstants.js";
 
 /**
- * ✅ Generates the main UX menu for the Telegram bot:
+ * ✅ Smart dynamic keyboard generator
+ * Matches config + keyboardConstants.js for 100% compatibility
  * 
- * — For User:
- *   • 🛒 BUY
- *   • 👤 PROFILE
- *   • 📋 MY ORDERS
- *   • ❓ HELP
- * 
- * — For Admin Extra:
- *   • 📊 STATISTICS
- *   • 🔧 ADMIN PANEL
- * 
- * @param {number|string} id - Telegram User ID
- * @returns {Object} reply_markup object with buttons
- * @example
- * bot.sendMessage(id, "Welcome!", {
- *   reply_markup: getMainMenu(id),
- *   parse_mode: "Markdown"
- * });
+ * @param {string|number} id - Telegram User ID
+ * @returns {object} Telegram-compatible keyboard markup
  */
 export function getMainMenu(id) {
   const uid = String(id || "").trim();
   const adminId = String(BOT?.ADMIN_ID || "").trim();
-
-  // ✅ Is the user an admin?
   const isAdmin = uid && adminId && uid === adminId;
 
-  // ✅ Basic buttons for everyone
-  const userMenu = [
-    [{ text: "🛒 BUY" }, { text: "👤 PROFILE" }],
-    [{ text: "📋 MY ORDERS" }, { text: "❓ HELP" }]
+  const keyboard = [
+    [{ text: MENU_BUTTONS.START }],
+    [{ text: MENU_BUTTONS.BUY }, { text: MENU_BUTTONS.HELP }],
+    [{ text: MENU_BUTTONS.PROFILE }, { text: MENU_BUTTONS.ORDERS }]
   ];
 
-  // ✅ Admin accessories
-  const adminMenu = [
-    [{ text: "📊 STATISTICS" }, { text: "🔧 ADMIN PANEL" }]
-  ];
+  if (isAdmin) {
+    keyboard.push([
+      { text: MENU_BUTTONS.STATS },
+      { text: MENU_BUTTONS.ADMIN }
+    ]);
+  }
 
-  // ✅ Return to the correct menu
   return {
-    keyboard: isAdmin ? [...userMenu, ...adminMenu] : userMenu,
+    keyboard,
     resize_keyboard: true,
     one_time_keyboard: false,
     selective: true
