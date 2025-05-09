@@ -1,14 +1,15 @@
-// 📦 utils/cryptoChecker.js | IMMORTAL v3.1 — BULLETPROOF FINAL FINAL NEVER FAILS EDITION+
+// 📦 utils/cryptoChecker.js | FINAL v3.5 — IMMORTAL BULLETPROOF PAYMENT CORE LOCKED
 
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 import { API, BOT } from "../config/config.js";
 
+// 🧾 Log failo kelias
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
 /**
- * ✅ Checks if payment was received (supports BTC, ETH, MATIC, SOL)
+ * ✅ Patikrina ar mokėjimas gautas
  */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
   try {
@@ -17,19 +18,27 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 
     if (
       !wallet || typeof wallet !== "string" || wallet.length < 8 ||
-      !cur || !["BTC", "ETH", "MATIC", "SOL"].includes(cur) ||
+      !["BTC", "ETH", "MATIC", "SOL"].includes(cur) ||
       !Number.isFinite(amount) || amount <= 0
     ) {
-      log(wallet, currency, expectedAmount, "❌ INVALID PARAMS");
+      log(wallet, cur, amount, "❌ INVALID PARAMS");
       return false;
     }
 
     let result = false;
     switch (cur) {
-      case "BTC": result = await checkBTC(wallet, amount); break;
-      case "ETH": result = await checkEVM(wallet, amount, API.ETHEREUM_RPC, "ETH"); break;
-      case "MATIC": result = await checkEVM(wallet, amount, API.MATIC_RPC, "MATIC"); break;
-      case "SOL": result = await checkSOL(wallet, amount); break;
+      case "BTC":
+        result = await checkBTC(wallet, amount);
+        break;
+      case "ETH":
+        result = await checkEVM(wallet, amount, API.ETHEREUM_RPC, "ETH");
+        break;
+      case "MATIC":
+        result = await checkEVM(wallet, amount, API.MATIC_RPC, "MATIC");
+        break;
+      case "SOL":
+        result = await checkSOL(wallet, amount);
+        break;
     }
 
     log(wallet, cur, amount, result ? "✅ PAID" : "❌ NOT PAID");
@@ -52,7 +61,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 }
 
 /**
- * ✅ BTC balance checker
+ * ✅ BTC — tikrina balanso satoshis per blockchain.info
  */
 async function checkBTC(address, expected) {
   try {
@@ -62,8 +71,7 @@ async function checkBTC(address, expected) {
     const res = await fetch(`${API.BTC_RPC}${address}`, { signal: controller.signal });
     clearTimeout(timeout);
 
-    const text = await res.text();
-    const satoshis = parseInt(text);
+    const satoshis = parseInt(await res.text());
     return Number.isFinite(satoshis) && (satoshis / 1e8) >= expected;
   } catch (err) {
     console.error("❌ [BTC error]:", err.message || err);
@@ -72,7 +80,7 @@ async function checkBTC(address, expected) {
 }
 
 /**
- * ✅ ETH / MATIC checker via JSON-RPC
+ * ✅ ETH / MATIC JSON-RPC balansų tikrinimas
  */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
@@ -104,7 +112,7 @@ async function checkEVM(address, expected, rpcUrl, label) {
 }
 
 /**
- * ✅ SOL balance checker via JSON-RPC
+ * ✅ SOL — tikrina balansą RPC būdu
  */
 async function checkSOL(address, expected) {
   try {
@@ -126,6 +134,7 @@ async function checkSOL(address, expected) {
 
     const data = await res.json();
     const lamports = data?.result?.value;
+
     return Number.isFinite(lamports) && (lamports / 1e9) >= expected;
   } catch (err) {
     console.error("❌ [SOL error]:", err.message || err);
@@ -134,7 +143,7 @@ async function checkSOL(address, expected) {
 }
 
 /**
- * ✅ Logs all results into persistent file
+ * 📁 Įrašo rezultatą į `logs/cryptoChecks.log`
  */
 function log(wallet, currency, amount, status) {
   try {
@@ -143,9 +152,9 @@ function log(wallet, currency, amount, status) {
     }
 
     const time = new Date().toISOString();
-    const logLine = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
-    fs.appendFileSync(logPath, logLine, "utf8");
+    const entry = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
+    fs.appendFileSync(logPath, entry, "utf8");
   } catch (err) {
-    console.warn("⚠️ [Log error]:", err.message || err);
+    console.warn("⚠️ [log error]:", err.message || err);
   }
 }
