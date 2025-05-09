@@ -1,11 +1,11 @@
-// 📦 core/security.js | BalticPharma V2 — FINAL SHIELD v2025.6 ULTRAGUARD LOCK MIRROR POLISH
+// 🛡️ core/security.js | FINAL DIAMOND SHIELD v2.0 TANK LOCK EDITION
 
 import { isBanned, banUser } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { antiSpam, antiFlood, bannedUntil } from "../state/userState.js";
 import { BOT } from "../config/config.js";
 
-// — Configuration
+// 🔧 Config
 const SPAM_INTERVAL_MS = 3300;
 const FLOOD_LIMIT = 6;
 const FLOOD_WINDOW_MS = 11000;
@@ -20,7 +20,7 @@ function isAdmin(id) {
 }
 
 /**
- * ✅ Spam protection (time interval between messages)
+ * 🧯 Spam protection — limits too rapid messages
  */
 export function isSpamming(id) {
   if (!id || isAdmin(id)) return false;
@@ -33,7 +33,7 @@ export function isSpamming(id) {
 }
 
 /**
- * ✅ Flood protection (too many actions in a short time)
+ * 🌊 Flood protection — limits too many messages in small window
  */
 export async function handleFlood(id, bot) {
   if (!id || isAdmin(id)) return false;
@@ -56,7 +56,7 @@ export async function handleFlood(id, bot) {
       await sendAndTrack(
         bot,
         id,
-        "⛔ *Too many actions!* Your account has been temporarily muted for *4 minutes*.",
+        "⛔ *Too many actions!*\nYour account has been temporarily muted for *4 minutes*.",
         { parse_mode: "Markdown" }
       );
       return true;
@@ -69,7 +69,7 @@ export async function handleFlood(id, bot) {
 }
 
 /**
- * ✅ Checks whether a user is currently muted (temporary ban)
+ * ⛔ Checks if user is muted (temporarily banned due to spam/flood)
  */
 export function isMuted(id) {
   if (!id || isAdmin(id)) return false;
@@ -87,7 +87,7 @@ export function isMuted(id) {
 }
 
 /**
- * ✅ Detects dangerous messages (too long or repeated)
+ * ⚠️ Detects repeated or oversized messages (script kids, exploits)
  */
 function isMessageDangerous(id, text) {
   if (!id || isAdmin(id)) return false;
@@ -95,16 +95,17 @@ function isMessageDangerous(id, text) {
   if (!text || typeof text !== "string") return true;
   if (text.length > MAX_MESSAGE_LENGTH) return true;
 
+  const clean = text.trim();
   const history = recentTexts[id] || [];
-  const cleanText = text.trim();
-  recentTexts[id] = [...history.slice(-MAX_INPUT_FREQUENCY + 1), cleanText];
 
-  const repeated = recentTexts[id].filter(t => t === cleanText).length;
+  recentTexts[id] = [...history.slice(-MAX_INPUT_FREQUENCY + 1), clean];
+  const repeated = recentTexts[id].filter(t => t === clean).length;
+
   return repeated >= MAX_INPUT_FREQUENCY;
 }
 
 /**
- * ✅ Main security filter — allows action only if all checks pass
+ * ✅ FINAL FILTER — security gatekeeper
  */
 export async function canProceed(id, bot, text = "") {
   try {
@@ -119,7 +120,6 @@ export async function canProceed(id, bot, text = "") {
     return true;
   } catch (err) {
     console.error("❌ [canProceed error]:", err.message || err);
-    // Improved error handling
     return false;
   }
 }
