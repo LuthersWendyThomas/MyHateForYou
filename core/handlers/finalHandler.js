@@ -1,3 +1,5 @@
+// 🧠 core/handlers/finalHandler.js | BULLETPROOF FINAL v2.0
+
 import fs from "fs/promises";
 import path from "path";
 import { sendAndTrack, sendPhotoAndTrack } from "../../helpers/messageUtils.js";
@@ -7,33 +9,31 @@ import { userSessions, userMessages, activeUsers } from "../../state/userState.j
 import { simulateDelivery } from "./deliveryHandler.js";
 
 /**
- * ✅ /start command – safely starts a new session
+ * ✅ Fully resets and restarts the user session (entrypoint for /start)
  */
 export async function safeStart(bot, id) {
   const uid = String(id);
   if (!bot || !uid) return;
 
   try {
-    // Clear any active sessions or messages
+    // 1. Guaranteed cleanup
     await clearTimers(uid);
     await clearUserMessages(uid);
     await resetUser(uid);
 
-    // Initialize session for this user
+    // 2. Initialize new session
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now()
     };
 
-    // Ensure the user is marked as active
-    if (!activeUsers.has(uid)) {
-      activeUsers.add(uid);
-    }
+    // 3. Track active user
+    activeUsers.add(uid);
 
-    const count = activeUsers.count;  // Fixed the issue with active user count (size not count)
+    const count = activeUsers.count;
     const greetingPath = path.join(process.cwd(), "assets", "greeting.jpg");
 
-    // Try to load the greeting image, if it exists
+    // 4. Try sending image greeting
     try {
       const buffer = await fs.readFile(greetingPath);
       if (buffer?.length > 0) {
@@ -48,12 +48,10 @@ export async function safeStart(bot, id) {
           },
           userMessages
         );
-      } else {
-        throw new Error("No Picture");
       }
+      throw new Error("Empty image buffer");
     } catch (imgErr) {
-      console.warn("⚠️ greeting.jpg error:", imgErr.message);
-      // If image fails, send the fallback text
+      console.warn("⚠️ greeting.jpg not found or invalid:", imgErr.message);
       return await sendAndTrack(
         bot,
         uid,
@@ -68,11 +66,10 @@ export async function safeStart(bot, id) {
 
   } catch (err) {
     console.error("❌ [safeStart error]:", err.message);
-    // If session setup fails, send an error message and ensure session reset
     return await sendAndTrack(
       bot,
       uid,
-      "⚠️ Failed to start session. Please try again with /start.",
+      "⚠️ Failed to start session. Please try again later or use /start.",
       {},
       userMessages
     );
@@ -80,41 +77,33 @@ export async function safeStart(bot, id) {
 }
 
 /**
- * ✅ Completes the order and returns to the main menu
+ * ✅ Finishes order and launches delivery
  */
 export async function finishOrder(bot, id) {
   const uid = String(id);
   try {
-    const session = userSessions[uid];
-    if (!session || !session.deliveryMethod) {
-      throw new Error("Missing delivery information");
-    }
+    const s = userSessions[uid];
+    if (!s || !s.deliveryMethod) throw new Error("Missing delivery method");
 
-    // Trigger delivery simulation
-    await simulateDelivery(bot, uid, session.deliveryMethod, userMessages);
-    
-    // Reset session once the order is processed
+    await simulateDelivery(bot, uid, s.deliveryMethod, userMessages);
     await resetSession(uid);
 
-    // Inform the user that the order has been successfully accepted
     return await sendAndTrack(
       bot,
       uid,
-      "✅ Order has been accepted!\n🚚 Delivery is now in progress...\n\nYou have been returned to the main menu:",
+      "✅ Order accepted!\n🚚 Delivery in progress...\n\nYou’ve been returned to the main menu:",
       {
         parse_mode: "Markdown",
         reply_markup: getMainMenu(uid)
       },
       userMessages
     );
-
   } catch (err) {
     console.error("❌ [finishOrder error]:", err.message);
-    // In case of an error, notify the user about the failure
     return await sendAndTrack(
       bot,
       uid,
-      "❗️ Error while delivering. Please try again later.",
+      "❗️ Delivery error. Try again later or contact support.",
       {},
       userMessages
     );
@@ -122,7 +111,7 @@ export async function finishOrder(bot, id) {
 }
 
 /**
- * ✅ Clears the user session
+ * ✅ Force-clears full session state
  */
 export async function resetSession(id) {
   const uid = String(id);
@@ -130,12 +119,13 @@ export async function resetSession(id) {
     await clearTimers(uid);
     await clearUserMessages(uid);
     await resetUser(uid);
+    console.log(`🧼 Full session reset: ${uid}`);
   } catch (err) {
     console.error("❌ [resetSession error]:", err.message);
   }
 }
 
-// — With image
+// 🖼️ Greeting with image
 function greetingText(count) {
   return `
 🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
@@ -151,18 +141,18 @@ function greetingText(count) {
 🌆 *Drop anywhere in your city* 📍
 🌆 *Courier to your agreed location* 🚚
 
-✅ *U see product button ON = IN STOCK!* ✅
-✅ *U see city button ON = THAT CITY IS ON!* ✅
-✅ *We constantly update products & cities!* ✅
+✅ *U see product button ON = IN STOCK!*  
+✅ *U see city button ON = THAT CITY IS ON!*  
+✅ *We constantly update products & cities!*
 
 ❗️ *Do not speak or photograph couriers*  
 ⛔ Any violation = instant *BAN*  
 
-👥 Active users: *${count}*  
-`;
+👥 Active users: *${count}*
+`.trim();
 }
 
-// — Fallback without image
+// 📝 Text-only fallback
 function fallbackText(count) {
   return `
 🇺🇸 *BalticPharmacyBot* — now live in 30+ US cities  
@@ -171,7 +161,6 @@ function fallbackText(count) {
 🚚 *Courier* or *Drop* delivery in 45 min  
 🔒 Fully anonymous crypto payments  
 
-👥 Active users: *${count}*  
-`;
+👥 Active users: *${count}*
+`.trim();
 }
-
