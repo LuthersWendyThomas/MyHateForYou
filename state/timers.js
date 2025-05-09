@@ -1,72 +1,86 @@
-// 📦 state/timers.js | BalticPharma V2 — FINAL v2025.9 ULTRASHIELD READY
+// 📦 state/timers.js | FINAL IMMORTAL v999999999.0 — BULLETPROOF SYNC CORE
+
+export const activeTimers = {};      // { userId: Timeout } – delivery, cleanup, etc.
+export const paymentTimers = {};     // { userId: Timeout } – payment step (8)
 
 /**
- * ⏱️ Active delivery or UI timers
- * Format: { [userId]: Timeout }
- */
-export const activeTimers = {};
-
-/**
- * 💳 Payment step (step 8) timers
- * Format: { [userId]: Timeout }
- */
-export const paymentTimers = {};
-
-/**
- * ✅ Assigns a UI/delivery timer
+ * ✅ Assigns active (UI/delivery) timer with overwrite
  */
 export function setActiveTimer(id, timerId) {
   const uid = safeId(id);
   if (!uid || !isValidTimer(timerId)) return;
 
+  if (activeTimers[uid]) clearTimeout(activeTimers[uid]);
   activeTimers[uid] = timerId;
-  console.log(`🕒 UI timer set for ${uid}`);
+
+  if (process.env.DEBUG_TIMERS === "true") {
+    console.log(`🕒 [setActiveTimer] → ${uid}`);
+  }
 }
 
 /**
- * ✅ Assigns a payment timer
+ * ✅ Assigns payment timer (step 8) with overwrite
  */
 export function setPaymentTimer(id, timerId) {
   const uid = safeId(id);
   if (!uid || !isValidTimer(timerId)) return;
 
+  if (paymentTimers[uid]) clearTimeout(paymentTimers[uid]);
   paymentTimers[uid] = timerId;
-  console.log(`💳 Payment timer set for ${uid}`);
+
+  if (process.env.DEBUG_TIMERS === "true") {
+    console.log(`💳 [setPaymentTimer] → ${uid}`);
+  }
 }
 
 /**
- * ✅ Clears all timers (used during global reset)
+ * ✅ Clears ALL timers (global kill-switch)
  */
 export function clearAllTimers() {
   try {
-    for (const tid of Object.values(activeTimers)) {
-      if (isValidTimer(tid)) clearTimeout(tid);
-    }
+    Object.entries(activeTimers).forEach(([uid, timer]) => {
+      if (isValidTimer(timer)) clearTimeout(timer);
+      delete activeTimers[uid];
+    });
 
-    for (const tid of Object.values(paymentTimers)) {
-      if (isValidTimer(tid)) clearTimeout(tid);
-    }
+    Object.entries(paymentTimers).forEach(([uid, timer]) => {
+      if (isValidTimer(timer)) clearTimeout(timer);
+      delete paymentTimers[uid];
+    });
 
-    Object.keys(activeTimers).forEach(id => delete activeTimers[id]);
-    Object.keys(paymentTimers).forEach(id => delete paymentTimers[id]);
-
-    console.log("🧨 All timers cleared (UI + payments)");
+    console.log("🧨 [clearAllTimers] → All timers cleared (UI + payment)");
   } catch (err) {
     console.error("❌ [clearAllTimers error]:", err.message || err);
   }
 }
 
 /**
- * ✅ Checks if value is a valid Timeout object
+ * ✅ Clears timers for a single user
  */
+export function clearTimersForUser(id) {
+  const uid = safeId(id);
+  if (!uid) return;
+
+  if (activeTimers[uid]) {
+    clearTimeout(activeTimers[uid]);
+    delete activeTimers[uid];
+    console.log(`🕒 [clearTimersForUser] UI timer cleared → ${uid}`);
+  }
+
+  if (paymentTimers[uid]) {
+    clearTimeout(paymentTimers[uid]);
+    delete paymentTimers[uid];
+    console.log(`💳 [clearTimersForUser] Payment timer cleared → ${uid}`);
+  }
+}
+
+// ————— HELPERS —————
+
 function isValidTimer(timer) {
   return timer && typeof timer._onTimeout === "function";
 }
 
-/**
- * ✅ Converts ID to safe string or null
- */
 function safeId(id) {
   const str = String(id || "").trim();
-  return str && str !== "null" && str !== "undefined" ? str : null;
+  return str && str !== "undefined" && str !== "null" ? str : null;
 }
