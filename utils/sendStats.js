@@ -1,63 +1,64 @@
-// 📦 utils/sendStats.js | BalticPharma V2 — IMMORTAL v2025.6 FINAL TELEMETRY CORE LOCK
-
 import { userOrders, userSessions, activeUsers } from "../state/userState.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { BOT } from "../config/config.js";
 
 /**
- * ✅ Displays statistics (admin or user)
+ * ✅ Sends statistics — admin gets system view, users see personal usage
  */
 export async function sendStats(bot, id, userMessages = {}) {
   try {
-    const uid = String(id);
+    const uid = String(id).trim();
+    if (!bot || !uid) return;
+
     const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
 
     if (isAdmin) {
-      const totalUsers = Object.keys(userSessions || {}).length;
+      const sessionCount = Object.keys(userSessions || {}).length;
       const totalOrders = Object.values(userOrders || {}).reduce(
         (sum, val) => sum + (Number(val) || 0), 0
       );
-      const activeCount = Number(activeUsers?.count) || totalUsers;
+      const activeCount = Number(activeUsers?.count) || 0;
 
-      const now = new Date().toLocaleString("en-GB", {
+      const timestamp = new Date().toLocaleString("en-GB", {
+        weekday: "short",
         hour: "2-digit",
         minute: "2-digit"
       });
 
-      const adminStats = `
-📊 *ADMIN Statistics:*
+      const msg = `
+📊 *SYSTEM TELEMETRY — ADMIN VIEW*
 
-👤 *Active users:* ${activeCount}
-📦 *Total orders:* ${totalOrders}
-🧠 *Active sessions:* ${totalUsers}
+👤 *Live active users:* ${activeCount}
+📦 *Total completed orders:* ${totalOrders}
+🧠 *Tracked sessions:* ${sessionCount}
 
-⏱ *Updated at:* ${now}
-      `.trim();
+🕓 Updated: _${timestamp}_
+`.trim();
 
-      return await sendAndTrack(bot, id, adminStats, {
+      return await sendAndTrack(bot, id, msg, {
         parse_mode: "Markdown",
         disable_web_page_preview: true
       }, userMessages);
     }
 
-    const userOrderCount = Number(userOrders[uid]) || 0;
+    // — Standard user
+    const count = Number(userOrders?.[uid]) || 0;
+    const userMsg = `
+📦 *Your usage stats:*
 
-    const userStats = `
-📦 *Your Statistics:*
+✅ Orders completed: *${count}*
+🔒 Fully anonymous — *no private data saved*
 
-✅ Orders completed: *${userOrderCount}*
-⏱ Tracking active since your first order.
+Use *PROFILE* for full account view.
+`.trim();
 
-🔒 All data is stored locally — *no personal data is saved*.
-    `.trim();
-
-    return await sendAndTrack(bot, id, userStats, {
+    return await sendAndTrack(bot, id, userMsg, {
       parse_mode: "Markdown",
       disable_web_page_preview: true
     }, userMessages);
 
   } catch (err) {
     console.error("❌ [sendStats error]:", err.message || err);
-    return await sendAndTrack(bot, id, "⚠️ Failed to fetch statistics.", {}, userMessages);
+    return await sendAndTrack(bot, id, "⚠️ Failed to fetch stats. Try again later.", {}, userMessages);
   }
 }
