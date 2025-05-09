@@ -16,24 +16,23 @@ export async function safeStart(bot, id) {
   if (!bot || !uid) return;
 
   try {
-    // 1. Guaranteed cleanup
+    // 🔒 1. Full cleanup of timers and user memory
     await clearTimers(uid);
     await clearUserMessages(uid);
     await resetUser(uid);
 
-    // 2. Initialize new session
+    // ⚙️ 2. Initialize new session
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now()
     };
 
-    // 3. Track active user
+    // 📈 3. Register active user
     activeUsers.add(uid);
-
     const count = activeUsers.count;
-    const greetingPath = path.join(process.cwd(), "assets", "greeting.jpg");
 
-    // 4. Try sending image greeting
+    // 🖼️ 4. Try to send greeting image
+    const greetingPath = path.join(process.cwd(), "assets", "greeting.jpg");
     try {
       const buffer = await fs.readFile(greetingPath);
       if (buffer?.length > 0) {
@@ -51,7 +50,7 @@ export async function safeStart(bot, id) {
       }
       throw new Error("Empty image buffer");
     } catch (imgErr) {
-      console.warn("⚠️ greeting.jpg not found or invalid:", imgErr.message);
+      console.warn("⚠️ greeting.jpg not found or unreadable:", imgErr.message);
       return await sendAndTrack(
         bot,
         uid,
@@ -69,7 +68,7 @@ export async function safeStart(bot, id) {
     return await sendAndTrack(
       bot,
       uid,
-      "⚠️ Failed to start session. Please try again later or use /start.",
+      "⚠️ Session start failed. Please try again or type /start.",
       {},
       userMessages
     );
@@ -77,7 +76,7 @@ export async function safeStart(bot, id) {
 }
 
 /**
- * ✅ Finishes order and launches delivery
+ * ✅ Finishes order and starts delivery
  */
 export async function finishOrder(bot, id) {
   const uid = String(id);
@@ -103,7 +102,7 @@ export async function finishOrder(bot, id) {
     return await sendAndTrack(
       bot,
       uid,
-      "❗️ Delivery error. Try again later or contact support.",
+      "❗️ Delivery error. Please try again later or use /start.",
       {},
       userMessages
     );
@@ -111,7 +110,7 @@ export async function finishOrder(bot, id) {
 }
 
 /**
- * ✅ Force-clears full session state
+ * ✅ Completely clears the session for the user
  */
 export async function resetSession(id) {
   const uid = String(id);
@@ -119,7 +118,7 @@ export async function resetSession(id) {
     await clearTimers(uid);
     await clearUserMessages(uid);
     await resetUser(uid);
-    console.log(`🧼 Full session reset: ${uid}`);
+    console.log(`🧼 Session fully cleared: ${uid}`);
   } catch (err) {
     console.error("❌ [resetSession error]:", err.message);
   }
@@ -138,8 +137,8 @@ function greetingText(count) {
 ✨ *24/7* Live Support & Fully Automated Service
 ✨ *Drop / Courier Options Available*
 
-🌆 *Drop anywhere in your city* 📍
-🌆 *Courier to your agreed location* 🚚
+🌆 *Drop anywhere in your city* 📍  
+🌆 *Courier to your agreed location* 🚚  
 
 ✅ *U see product button ON = IN STOCK!*  
 ✅ *U see city button ON = THAT CITY IS ON!*  
@@ -152,7 +151,7 @@ function greetingText(count) {
 `.trim();
 }
 
-// 📝 Text-only fallback
+// 📝 Fallback version (no image)
 function fallbackText(count) {
   return `
 🇺🇸 *BalticPharmacyBot* — now live in 30+ US cities  
