@@ -1,4 +1,4 @@
-// 📦 state/stateManager.js | BalticPharma V2 — IMMORTAL v2025.9 FINAL BULLETPROOF LOCKED
+// 📦 state/stateManager.js | FINAL IMMORTAL v999999999.0 — CORE SYSTEM LOCK
 
 import {
   userSessions,
@@ -14,7 +14,7 @@ import {
 } from "./userState.js";
 
 /**
- * ✅ Completely clears user state and timers
+ * ✅ Fully clears all user state, timers, spam flags, and tracking
  */
 export function resetUser(id) {
   const uid = safeId(id);
@@ -23,35 +23,22 @@ export function resetUser(id) {
   try {
     clearTimers(uid);
 
-    const stores = [
-      userSessions,
-      userOrders,
-      userMessages,
-      failedAttempts,
-      antiSpam,
-      bannedUntil,
-      antiFlood
-    ];
+    [userSessions, userOrders, userMessages, failedAttempts, antiSpam, bannedUntil, antiFlood].forEach(store => {
+      if (store?.[uid] !== undefined) delete store[uid];
+    });
 
-    for (const store of stores) {
-      if (store && typeof store === "object" && uid in store) {
-        delete store[uid];
-      }
-    }
-
-    // Remove timers
     delete activeTimers[uid];
     delete paymentTimers[uid];
 
     activeUsers.remove(uid);
-    console.log(`🧼 User state fully reset: ${uid}`);
+    console.log(`🧼 [resetUser] → State fully cleared: ${uid}`);
   } catch (err) {
     console.error("❌ [resetUser error]:", err.message || err);
   }
 }
 
 /**
- * ✅ Clears spam/flood/activity without deleting the session
+ * ✅ Clears only activity and security-related data
  */
 export function clearUserActivity(id) {
   const uid = safeId(id);
@@ -64,14 +51,14 @@ export function clearUserActivity(id) {
     delete antiFlood[uid];
 
     activeUsers.remove(uid);
-    console.log(`🧹 Activity cleared for user (session preserved): ${uid}`);
+    console.log(`🧹 [clearUserActivity] → Security flags cleared: ${uid}`);
   } catch (err) {
     console.error("❌ [clearUserActivity error]:", err.message || err);
   }
 }
 
 /**
- * ✅ Clears user-tracked message IDs (for autodelete logic)
+ * ✅ Clears only tracked messages (for autodelete)
  */
 export function clearUserMessages(id) {
   const uid = safeId(id);
@@ -79,13 +66,14 @@ export function clearUserMessages(id) {
 
   try {
     delete userMessages[uid];
+    console.log(`🗑️ [clearUserMessages] → Messages cleared: ${uid}`);
   } catch (err) {
     console.error("❌ [clearUserMessages error]:", err.message || err);
   }
 }
 
 /**
- * ✅ Clears delivery/payment timers and session flags
+ * ✅ Stops and clears delivery/payment timers + session flags
  */
 export function clearTimers(id) {
   const uid = safeId(id);
@@ -95,18 +83,18 @@ export function clearTimers(id) {
     if (activeTimers[uid]) {
       clearTimeout(activeTimers[uid]);
       delete activeTimers[uid];
-      console.log(`🕒 UI timer cleared: ${uid}`);
+      console.log(`🕒 [clearTimers] UI timer stopped: ${uid}`);
     }
 
     if (paymentTimers[uid]) {
       clearTimeout(paymentTimers[uid]);
       delete paymentTimers[uid];
-      console.log(`💳 Payment timer cleared: ${uid}`);
+      console.log(`💳 [clearTimers] Payment timer stopped: ${uid}`);
     }
 
     if (userSessions[uid]?.cleanupScheduled) {
       delete userSessions[uid].cleanupScheduled;
-      console.log(`🧼 Session cleanup flag cleared: ${uid}`);
+      console.log(`🧼 [clearTimers] Cleanup flag removed: ${uid}`);
     }
   } catch (err) {
     console.error("❌ [clearTimers error]:", err.message || err);
@@ -114,25 +102,26 @@ export function clearTimers(id) {
 }
 
 /**
- * ✅ Completely unregisters a user from system
+ * ✅ Total user removal from the system
  */
 export function unregisterUser(id) {
-  try {
-    const uid = safeId(id);
-    if (!uid) return;
+  const uid = safeId(id);
+  if (!uid) return;
 
+  try {
     clearTimers(uid);
     clearUserMessages(uid);
     resetUser(uid);
+    console.log(`🚫 [unregisterUser] → User fully unregistered: ${uid}`);
   } catch (err) {
     console.error("❌ [unregisterUser error]:", err.message || err);
   }
 }
 
 /**
- * ✅ Safely stringifies user ID
+ * ✅ Sanitizes and validates user ID
  */
 function safeId(id) {
-  const uid = String(id ?? "").trim();
-  return uid && uid !== "undefined" && uid !== "null" ? uid : null;
+  const str = String(id ?? "").trim();
+  return str && str !== "undefined" && str !== "null" ? str : null;
 }
