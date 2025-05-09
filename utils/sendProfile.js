@@ -1,3 +1,5 @@
+// 📦 utils/sendProfile.js | FINAL IMMORTAL v3.0 — BULLETPROOF SYNCED PROFILE
+
 import { userSessions, userOrders } from "../state/userState.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
@@ -28,7 +30,7 @@ export async function sendProfile(bot, id, userMessages = {}) {
 
 🧾 All data auto-reset after every session.
 🛡️ Fully anonymous | 0 data stored on server.
-`.trim();
+    `.trim();
 
     return await sendAndTrack(bot, uid, profile, {
       parse_mode: "Markdown",
