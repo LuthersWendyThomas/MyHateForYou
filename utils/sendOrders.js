@@ -1,3 +1,5 @@
+// 📦 utils/sendOrders.js | FINAL IMMORTAL v3.0 — BULLETPROOF VIP STATUS SYNC+
+
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { userOrders } from "../state/userState.js";
 
