@@ -1,4 +1,4 @@
-// 📦 state/userState.js | BalticPharma V2 — IMMORTAL v2025.6 DIAMOND GRIDLOCK FINAL EDITION
+// 📦 state/userState.js | FINAL IMMORTAL BULLETPROOF EDITION v2025.9
 
 // ==============================
 // 🔁 User sessions and order progress
@@ -17,15 +17,12 @@ export const paymentTimers = {};    // { [userId]: Timeout } – payment timers
 export const failedAttempts = {};   // { [userId]: number } – number of incorrect attempts
 export const bannedUntil = {};      // { [userId]: timestampMs } – temporary bans
 export const antiSpam = {};         // { [userId]: timestampMs } – anti-spam tracker
-export const antiFlood = {};        // { [userId]: number[] } – anti-flood times
+export const antiFlood = {};        // { [userId]: number[] } – anti-flood window
 
 // ==============================
 // 📊 Real-Time activity tracker
 // ==============================
 
-/**
- * ✅ Active user tracking (used for analytics and UX statistics)
- */
 export const activeUsers = {
   list: new Set(),
 
@@ -34,17 +31,17 @@ export const activeUsers = {
   },
 
   add(id) {
-    const uid = String(id);
-    this.list.add(uid);
+    const uid = safeString(id);
+    if (uid) this.list.add(uid);
   },
 
   remove(id) {
-    const uid = String(id);
-    this.list.delete(uid);
+    const uid = safeString(id);
+    if (uid) this.list.delete(uid);
   },
 
   has(id) {
-    return this.list.has(String(id));
+    return this.list.has(safeString(id));
   },
 
   reset() {
@@ -57,55 +54,13 @@ export const activeUsers = {
 // ==============================
 
 /**
- * ✅ Clears the session data for the user
+ * ✅ Completely clears all user state and timers
  */
-export function clearUserSession(uid) {
-  const userId = String(uid);
+export function clearUserSession(id) {
+  const uid = safeString(id);
+  if (!uid) return;
 
-  delete userSessions[userId];
-  delete userOrders[userId];
-  delete userMessages[userId];
-  delete activeTimers[userId];
-  delete paymentTimers[userId];
-  delete failedAttempts[userId];
-  delete bannedUntil[userId];
-  delete antiSpam[userId];
-  delete antiFlood[userId];
-
-  activeUsers.remove(userId);
-  console.log(`🧼 Session cleared for ${userId}`);
-}
-
-/**
- * ✅ Safe start, initializes a new session for the user
- */
-export function safeStartSession(uid) {
-  userSessions[String(uid)] = {
-    step: 1,
-    createdAt: Date.now()
-  };
-
-  activeUsers.add(uid);
-  console.log(`✅ New session started for ${uid}`);
-}
-
-/**
- * ✅ Tracks failed attempts and bans after exceeding the limit
- */
-export function trackFailedAttempts(uid) {
-  const attempts = (failedAttempts[uid] || 0) + 1;
-  failedAttempts[uid] = attempts;
-
-  if (attempts >= 5) {
-    bannedUntil[uid] = Date.now() + 15 * 60 * 1000; // Ban for 15 minutes
-    console.warn(`⛔️ User ${uid} banned due to too many failed attempts.`);
-  }
-}
-
-/**
- * ✅ Clears timers associated with the user (payment or session)
- */
-export function clearTimersForUser(uid) {
+  // Timers
   if (activeTimers[uid]) {
     clearTimeout(activeTimers[uid]);
     delete activeTimers[uid];
@@ -116,5 +71,80 @@ export function clearTimersForUser(uid) {
     delete paymentTimers[uid];
   }
 
-  console.log(`🕒 Timers cleared for ${uid}`);
+  // Stores
+  [
+    userSessions,
+    userOrders,
+    userMessages,
+    failedAttempts,
+    bannedUntil,
+    antiSpam,
+    antiFlood
+  ].forEach(store => {
+    if (store?.[uid] !== undefined) delete store[uid];
+  });
+
+  // Remove from active
+  activeUsers.remove(uid);
+  console.log(`🧼 Session fully cleared for ${uid}`);
+}
+
+/**
+ * ✅ Safe session start (step 1)
+ */
+export function safeStartSession(id) {
+  const uid = safeString(id);
+  if (!uid) return;
+
+  userSessions[uid] = {
+    step: 1,
+    createdAt: Date.now()
+  };
+
+  activeUsers.add(uid);
+  console.log(`✅ New session started for ${uid}`);
+}
+
+/**
+ * ✅ Track failed attempts and ban on abuse
+ */
+export function trackFailedAttempts(id) {
+  const uid = safeString(id);
+  if (!uid) return;
+
+  const attempts = (failedAttempts[uid] || 0) + 1;
+  failedAttempts[uid] = attempts;
+
+  if (attempts >= 5) {
+    bannedUntil[uid] = Date.now() + 15 * 60 * 1000;
+    console.warn(`⛔️ User ${uid} banned for too many failed attempts.`);
+  }
+}
+
+/**
+ * ✅ Clears all user timers only (safe fallback)
+ */
+export function clearTimersForUser(id) {
+  const uid = safeString(id);
+  if (!uid) return;
+
+  if (activeTimers[uid]) {
+    clearTimeout(activeTimers[uid]);
+    delete activeTimers[uid];
+    console.log(`🕒 ⛔️ Active timer cleared for ${uid}`);
+  }
+
+  if (paymentTimers[uid]) {
+    clearTimeout(paymentTimers[uid]);
+    delete paymentTimers[uid];
+    console.log(`💳 ⛔️ Payment timer cleared for ${uid}`);
+  }
+}
+
+/**
+ * 🛡️ Utility: safely stringify any ID and validate
+ */
+function safeString(id) {
+  const str = String(id || "").trim();
+  return str && str !== "undefined" && str !== "null" ? str : null;
 }
