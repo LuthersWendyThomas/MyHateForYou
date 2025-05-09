@@ -1,4 +1,4 @@
-// 🧠 core/sessionManager.js | FINAL IMMORTAL LOCKED v2025.9 — TITAN SYNC+ MIRROR POLISH
+// 📦 core/sessionManager.js | FINAL IMMORTAL v99999999.9 — TITAN SYNC+ MIRROR POLISH
 
 import {
   activeTimers,
@@ -12,25 +12,24 @@ import {
   userOrders
 } from "../state/userState.js";
 
-const lastSeenAt = {}; // ⏱️ Tracks last activity time per user
+const lastSeenAt = {}; // ⏱️ Track last user activity time
 
-const STEP_TIMEOUT = 60 * 60 * 1000;            // 1h — zombie protection
-const DEFAULT_EXPIRE_THRESHOLD = 45 * 60 * 1000; // 45min — idle session kill
+const STEP_TIMEOUT = 60 * 60 * 1000;             // 1h — zombie protection
+const DEFAULT_EXPIRE_THRESHOLD = 45 * 60 * 1000; // 45min — idle timeout
 
 /**
- * ✅ Called on every user action to mark activity
+ * ✅ Marks user as active (on any interaction)
  */
 export const markUserActive = (id) => {
-  if (!id) return;
-  const uid = String(id);
-  lastSeenAt[uid] = Date.now();
+  const uid = String(id || "").trim();
+  if (uid) lastSeenAt[uid] = Date.now();
 };
 
 /**
- * ✅ Clears user delivery timer
+ * ✅ Clears UI/delivery timer
  */
 export const clearUserTimer = (id) => {
-  const uid = String(id);
+  const uid = String(id || "").trim();
   if (activeTimers[uid]) {
     clearTimeout(activeTimers[uid]);
     delete activeTimers[uid];
@@ -39,10 +38,10 @@ export const clearUserTimer = (id) => {
 };
 
 /**
- * ✅ Clears user payment timer
+ * ✅ Clears payment timeout
  */
 export const clearPaymentTimer = (id) => {
-  const uid = String(id);
+  const uid = String(id || "").trim();
   if (paymentTimers[uid]) {
     clearTimeout(paymentTimers[uid]);
     delete paymentTimers[uid];
@@ -51,10 +50,10 @@ export const clearPaymentTimer = (id) => {
 };
 
 /**
- * ✅ Fully clears user session, memory, timers, flags
+ * ✅ Resets full session, memory, flags, timers
  */
 export const resetSession = (id) => {
-  const uid = String(id);
+  const uid = String(id || "").trim();
   if (!uid) return;
 
   try {
@@ -85,7 +84,7 @@ export const resetSession = (id) => {
 };
 
 /**
- * ⏳ Kills inactive or zombie sessions
+ * ⏳ Auto-expires idle or zombie sessions
  */
 export const autoExpireSessions = (threshold = DEFAULT_EXPIRE_THRESHOLD) => {
   const now = Date.now();
@@ -110,14 +109,14 @@ export const autoExpireSessions = (threshold = DEFAULT_EXPIRE_THRESHOLD) => {
 };
 
 /**
- * ✅ Returns number of active user sessions
+ * 📊 Returns number of live sessions
  */
 export const getActiveUsersCount = () => {
   return Object.keys(userSessions).length;
 };
 
 /**
- * 🔥 Clears everything (use on deploy)
+ * 🔥 Dev tool — wipe everything (on deploy/hard reset)
  */
 export const wipeAllSessions = () => {
   const ids = Object.keys(userSessions);
@@ -126,12 +125,11 @@ export const wipeAllSessions = () => {
 };
 
 /**
- * 🧽 Cleans payment timers for users not in step 8
+ * 🧽 Cleans hanging payment timers for users no longer in step 8
  */
 export const cleanStalePaymentTimers = () => {
   for (const id in paymentTimers) {
-    const step = userSessions[id]?.step;
-    if (step !== 8) {
+    if (userSessions[id]?.step !== 8) {
       clearPaymentTimer(id);
       console.log(`🧽 Stale payment timer cleared → ${id}`);
     }
@@ -139,7 +137,7 @@ export const cleanStalePaymentTimers = () => {
 };
 
 /**
- * 📊 Developer debug tool
+ * 🧪 Dev/debug tool: prints session overview
  */
 export const printSessionSummary = () => {
   const now = Date.now();
@@ -151,6 +149,6 @@ export const printSessionSummary = () => {
     const lastSeen = lastSeenAt[id]
       ? `${Math.floor((now - lastSeenAt[id]) / 1000)}s ago`
       : "unknown";
-    console.log(`— ${id} | step=${session.step || "?"} | last=${lastSeen}`);
+    console.log(`— ${id} | step=${session.step ?? "?"} | last=${lastSeen}`);
   }
 };
