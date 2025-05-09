@@ -1,24 +1,22 @@
-// 📛 utils/punishUser.js | BalticPharma V2 — BULLETPROOF v2.1 IMMORTAL-SYNCED FINAL BUILD
+// 📛 utils/punishUser.js | IMMORTAL v3.0 — WARNING SHIELD SYNCED
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { FLAGS } from "../config/config.js";
 import { userMessages } from "../state/userState.js";
 
 /**
- * Reacts to invalid input — sends a warning, tracks the message, deletes after 3s (if enabled)
- * @param {TelegramBot} bot - Bot instance
- * @param {number|string} id - Telegram user ID
- * @param {Object=} messages - Tracked messages (default: userMessages)
+ * Sends a warning if user input is invalid (and deletes it after 3s if autodelete enabled)
  */
 export async function punish(bot, id, messages = userMessages) {
   try {
     if (!bot || !id) return;
 
+    const uid = String(id).trim();
     const warning = "⚠️ *Invalid action.*\nPlease use the *buttons below*.";
 
     const msg = await sendAndTrack(
       bot,
-      id,
+      uid,
       warning,
       {
         parse_mode: "Markdown",
@@ -27,12 +25,12 @@ export async function punish(bot, id, messages = userMessages) {
       messages
     );
 
-    const canDelete = FLAGS.AUTODELETE_ENABLED === true;
+    const autodelete = ["1", "true"].includes(String(FLAGS.AUTODELETE_ENABLED).toLowerCase());
     const messageId = msg?.message_id;
 
-    if (canDelete && messageId) {
+    if (autodelete && messageId) {
       setTimeout(() => {
-        bot.deleteMessage(id, messageId).catch((err) =>
+        bot.deleteMessage(uid, messageId).catch(err =>
           console.warn(`⚠️ Failed to delete punish message (${messageId}):`, err.message)
         );
       }, 3000);
