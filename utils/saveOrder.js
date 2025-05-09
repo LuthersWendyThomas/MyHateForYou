@@ -1,4 +1,4 @@
-// 📦 utils/saveOrder.js | FINAL IMMORTAL v3.0 — BULLETPROOF-LOCKED EDITION
+// 📦 utils/saveOrder.js | FINAL IMMORTAL v3.1 — BULLETPROOF-LOCKED SYNC EDITION
 
 import fs from "fs/promises";
 import path from "path";
@@ -8,7 +8,7 @@ const ordersFile = path.join(ordersDir, "orders.json");
 const backupFile = path.join(ordersDir, "orders.bak.json");
 
 /**
- * Ensures the data folder exists
+ * 📁 Ensures the /data folder exists
  */
 async function ensureDataDir() {
   try {
@@ -19,7 +19,7 @@ async function ensureDataDir() {
 }
 
 /**
- * ✅ Saves a new order securely
+ * ✅ Saves a new order (used on payment confirm)
  */
 export async function saveOrder(userId, city, product, amount) {
   try {
@@ -47,7 +47,7 @@ export async function saveOrder(userId, city, product, amount) {
 }
 
 /**
- * ✅ Provides total stats (per user or admin)
+ * 📊 Provides revenue stats for admin/user
  */
 export async function getStats(type = "admin", userId = null) {
   try {
@@ -62,7 +62,7 @@ export async function getStats(type = "admin", userId = null) {
 
     for (const order of relevant) {
       const amount = parseFloat(order.amount || 0);
-      if (!isFinite(amount)) continue;
+      if (!Number.isFinite(amount)) continue;
 
       const date = new Date(order.date);
       const daysAgo = (now - date) / (1000 * 60 * 60 * 24);
@@ -70,7 +70,10 @@ export async function getStats(type = "admin", userId = null) {
       stats.total += amount;
       if (order.date.startsWith(todayStr)) stats.today += amount;
       if (daysAgo <= 7) stats.week += amount;
-      if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
+      if (
+        date.getMonth() === now.getMonth() &&
+        date.getFullYear() === now.getFullYear()
+      ) {
         stats.month += amount;
       }
     }
@@ -83,52 +86,52 @@ export async function getStats(type = "admin", userId = null) {
 }
 
 /**
- * ✅ Loads all orders (with fallback)
+ * 📦 Loads all saved orders
  */
 async function loadOrders() {
   try {
     const raw = await fs.readFile(ordersFile, "utf8");
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch (err) {
-    console.warn("⚠️ [loadOrders fallback]: returning empty list");
+  } catch {
+    console.warn("⚠️ [loadOrders fallback]: empty list returned");
     return [];
   }
 }
 
 /**
- * ✅ Prevents invalid characters in strings
+ * 🧼 Sanitizes strings (city, product)
  */
 function sanitize(str) {
   return String(str || "")
     .replace(/[\n\r\t]/g, " ")
     .replace(/[^\wąčęėįšųūžĄČĘĖĮŠŲŪŽ .,\-_/]/gi, "")
     .trim()
-    .slice(0, 80); // prevent excessive text
+    .slice(0, 80);
 }
 
 /**
- * ✅ Default stats structure
+ * 📈 Returns default zero stats object
  */
 function defaultStats() {
   return { today: 0, week: 0, month: 0, total: 0 };
 }
 
 /**
- * ✅ Safe JSON write with backup on failure
+ * 💾 Safe write to file (backup fallback if fail)
  */
 async function safeWriteJSON(filePath, data) {
   try {
     const json = JSON.stringify(data, null, 2);
     await fs.writeFile(filePath, json, "utf8");
   } catch (err) {
-    console.error("❌ [safeWriteJSON error]:", err?.message || err);
+    console.error("❌ [safeWriteJSON error]:", err.message);
     try {
       const backup = JSON.stringify(data, null, 2);
       await fs.writeFile(backupFile, backup, "utf8");
-      console.warn("⚠️ Fallback written to backup file:", backupFile);
+      console.warn("⚠️ Backup saved to:", backupFile);
     } catch (backupErr) {
-      console.error("❌ [backupWrite error]:", backupErr?.message || backupErr);
+      console.error("❌ [backupWrite error]:", backupErr.message || backupErr);
     }
   }
 }
