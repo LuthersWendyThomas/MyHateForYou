@@ -1,32 +1,34 @@
-// 📦 utils/sendProfile.js | BalticPharma V2 — IMMORTAL v2025.7 PROFILE FINALIZED EDITION
-
 import { userSessions, userOrders } from "../state/userState.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
 /**
- * ✅ Displays user profile summary (bulletproof)
+ * ✅ Displays user profile summary (safe, synced, bulletproof)
  */
 export async function sendProfile(bot, id, userMessages = {}) {
   try {
-    const uid = String(id);
+    const uid = String(id).trim();
+    if (!bot || !uid) return;
+
     const session = typeof userSessions[uid] === "object" ? userSessions[uid] : {};
     const orderCount = typeof userOrders[uid] === "number" ? userOrders[uid] : 0;
 
-    const chat = await bot.getChat(id);
-    const username = chat?.username ? `@${chat.username}` : "NONE";
+    const chat = await bot.getChat(id).catch(() => null);
+    const username = chat?.username ? `@${chat.username}` : "— none —";
 
-    const status =
-      orderCount >= 10 ? "⭐️ *VIP client*" :
-      orderCount >= 5  ? "🔁 *Approaching VIP!*" :
-                        "🚀 *New user*";
+    let status = "🚀 *New user*";
+    if (orderCount >= 10) status = "👑 *VIP client*";
+    else if (orderCount >= 5) status = "🪄 *Almost VIP!*";
 
     const profile = `
-👤 *Your Profile:*
+👤 *Your Profile*
 
-🔗 T. Username: *${username}*
-🏷️ Status: ${status}
-📦 Orders completed: *${orderCount}*
-    `.trim();
+🔗 Telegram: *${username}*
+📦 Completed Orders: *${orderCount}*
+🏅 Status: ${status}
+
+🧾 All data auto-reset after every session.
+🛡️ Fully anonymous | 0 data stored on server.
+`.trim();
 
     return await sendAndTrack(bot, uid, profile, {
       parse_mode: "Markdown",
