@@ -17,6 +17,11 @@ import { BOT } from "../config/config.js";
  * 
  * @param {number|string} id - Telegram User ID
  * @returns {Object} reply_markup object with buttons
+ * @example
+ * bot.sendMessage(id, "Welcome!", {
+ *   reply_markup: getMainMenu(id),
+ *   parse_mode: "Markdown"
+ * });
  */
 export function getMainMenu(id) {
   const uid = String(id || "").trim();
