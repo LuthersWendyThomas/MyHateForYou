@@ -1,14 +1,14 @@
-// 📦 utils/sendOrders.js | BalticPharma V2 — IMMORTAL v2025.6 DEPLOY POLISH EDITION
-
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { userOrders } from "../state/userState.js";
 
 /**
- * ✅ Shows user their order statistics
+ * ✅ Shows user their order statistics and VIP progress
  */
 export async function sendOrders(bot, id, userId, userMessages = {}) {
   try {
-    const uid = String(userId);
+    const uid = String(userId || "").trim();
+    if (!bot || !uid) return;
+
     const raw = userOrders[uid];
     const count = Number.isInteger(raw) && raw > 0 ? raw : 0;
 
@@ -25,8 +25,8 @@ export async function sendOrders(bot, id, userId, userMessages = {}) {
     } else {
       const toVip = getMilestone(count);
       const vipLine = toVip === 0
-        ? "⭐️ You are already a *VIP client*! Thank you for your loyalty."
-        : `🔁 Place *${toVip}* more orders to reach *VIP status*!`;
+        ? "👑 *VIP Status unlocked!*\n💎 Thank you for being a loyal client."
+        : `🔁 *${toVip} more orders* until you reach *VIP client status!*`;
 
       text = `
 📦 *Your order statistics:*
@@ -34,7 +34,7 @@ export async function sendOrders(bot, id, userId, userMessages = {}) {
 ✅ Total completed: *${count}*
 ${vipLine}
 
-Thank you for choosing *BalticPharma™*
+🫶 Thank you for choosing *BalticPharma™*
       `.trim();
     }
 
@@ -46,13 +46,13 @@ Thank you for choosing *BalticPharma™*
   } catch (err) {
     console.error("❌ [sendOrders error]:", err.message || err);
     try {
-      await bot.sendMessage(id, "❗️ Failed to fetch order history. Please try again later.");
+      await bot.sendMessage(id, "❗️ Failed to load order history. Please try again.");
     } catch {}
   }
 }
 
 /**
- * 🔁 Calculates how many orders left until VIP status (milestone system)
+ * 🔁 Calculates how many orders left until VIP status
  */
 function getMilestone(count) {
   if (count >= 10) return 0;
