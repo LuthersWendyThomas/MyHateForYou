@@ -1,14 +1,10 @@
-// 📦 utils/generateQR.js | BalticPharma V2 — IMMORTAL SYNCED v2025.5.1 FINAL FIX
+// 📦 utils/generateQR.js | IMMORTAL v3.0 — BULLETPROOF INLINE+QR EDITION
 
 import QRCode from "qrcode";
 import { WALLETS } from "../config/config.js";
 
 /**
- * Generates a QR image for crypto payment
- * @param {string} currency - e.g. BTC, ETH, SOL, MATIC
- * @param {string|number} amount - e.g. 0.0134
- * @param {string=} overrideAddress - optionally provide a custom address
- * @returns {Promise<Buffer|null>}
+ * ✅ Generates QR code PNG buffer for payment
  */
 export async function generateQR(currency, amount, overrideAddress) {
   try {
@@ -36,7 +32,7 @@ export async function generateQR(currency, amount, overrideAddress) {
 
     const buffer = await QRCode.toBuffer(uri, {
       type: "png",
-      width: 180, // Small size for Telegram mobile
+      width: 180,
       margin: 1,
       errorCorrectionLevel: "H",
       color: {
@@ -49,8 +45,11 @@ export async function generateQR(currency, amount, overrideAddress) {
       throw new Error("QR generated in incorrect format");
     }
 
-    return buffer;
+    if (process.env.DEBUG_MESSAGES === "true") {
+      console.log(`✅ [generateQR] QR created for ${cleanCurrency} → ${formatted}`);
+    }
 
+    return buffer;
   } catch (err) {
     console.error("❌ [generateQR error]:", err.message || err);
     return null;
@@ -58,22 +57,24 @@ export async function generateQR(currency, amount, overrideAddress) {
 }
 
 /**
- * Returns a UX-friendly message with a copy button
+ * ✅ Inline message + copy button (for after QR)
  */
-export function generatePaymentMessageWithButton(currency, amount, address) {
-  const cleanCurrency = String(currency || "").toUpperCase() || "???";
+export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
+  const cleanCurrency = String(currency || "").toUpperCase();
   const parsedAmount = parseFloat(amount);
   const formattedAmount = Number.isFinite(parsedAmount)
     ? parsedAmount.toFixed(6)
     : "?.??????";
 
-  const cleanAddress = String(address || "").trim();
+  const address = String(overrideAddress || WALLETS[cleanCurrency] || "").trim();
+  const valid = isValidAddress(address) ? address : "[Invalid address]";
+
   const text = `
 💳 *Payment details:*
 
 • Network: *${cleanCurrency}*
 • Amount: *${formattedAmount} ${cleanCurrency}*
-• Address: \`${cleanAddress}\`
+• Address: \`${valid}\`
 
 ⏱️ *Expected payment within 30 minutes.*
 ✅ Use the QR code or copy the address.
@@ -83,14 +84,14 @@ export function generatePaymentMessageWithButton(currency, amount, address) {
     message: text,
     reply_markup: {
       inline_keyboard: [
-        [{ text: "📋 Copy address", callback_data: `copy:${cleanAddress}` }]
+        [{ text: "📋 Copy address", callback_data: `copy:${valid}` }]
       ]
     }
   };
 }
 
 /**
- * Simple address validation (accepts various crypto formats)
+ * ✅ Simple but strict crypto address format validation
  */
 function isValidAddress(addr) {
   return typeof addr === "string" &&
