@@ -1,4 +1,4 @@
-// 📦 index.js | BalticPharma V3 — FINAL IMMORTAL v3.0.9999999 DEPLOY-TITANLOCK™
+// 📦 index.js | BalticPharmaBot — FINAL IMMORTAL v3.0.9999999 DEPLOY-TITANLOCK™
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -8,11 +8,11 @@ import { initBotInstance, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions } from "./core/sessionManager.js";
 
-// 🧠 Init instance + register handlers
+// 🧠 Init + register
 initBotInstance();
 registerMainHandler(BOT.INSTANCE);
 
-// 🔁 Kill inactive sessions every 10min
+// 🔁 Auto-expire inactive sessions every 10 minutes
 setInterval(() => {
   try {
     autoExpireSessions();
@@ -21,7 +21,7 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
-// 🚀 Startup: validate, log, notify admin
+// 🚀 Startup sequence
 (async () => {
   try {
     if (!BOT.INSTANCE?.getMe) throw new Error("BOT.INSTANCE is unavailable.");
@@ -56,7 +56,7 @@ setInterval(() => {
   }
 })();
 
-// ❗ Crash safety: unhandled exceptions
+// 🛑 Global crash catchers
 process.on("uncaughtException", async (err) => {
   console.error("❌ [UNCAUGHT EXCEPTION]:", err);
   await notifyCrash("uncaughtException", err);
@@ -69,7 +69,7 @@ process.on("unhandledRejection", async (reason) => {
   process.exit(1);
 });
 
-// 🛑 Graceful shutdown
+// 🔁 Graceful shutdown (SIGINT, etc.)
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach((sig) => {
   process.on(sig, async () => {
     console.log(`\n🛑 Signal received (${sig}) → stopping bot...`);
@@ -77,26 +77,25 @@ process.on("unhandledRejection", async (reason) => {
       await BOT.INSTANCE?.stopPolling();
       console.log("✅ Bot stopped cleanly.");
     } catch (err) {
-      console.warn("⚠️ Error during shutdown:", err.message);
+      console.warn("⚠️ Shutdown error:", err.message);
     }
     process.exit(0);
   });
 });
 
-// 🧠 DEV MODE: final ready signal
+// ✅ Launch log
 console.log("✅ BALTICPHARMACYBOT — LIVE • LOCKED • BULLETPROOF");
 
 /**
- * 🔔 Sends critical error/crash info to admin
+ * 🔔 Sends crash info to admin
  */
 async function notifyCrash(type, err) {
   if (!BOT.ADMIN_ID || !BOT.INSTANCE?.sendMessage) return;
 
   const msg = `❗️ *Bot crashed during ${type}!*\n\n💥 Error: \`${err?.message || err}\`\n🕒 ${new Date().toLocaleString("en-GB")}`;
-
   try {
     await BOT.INSTANCE.sendMessage(BOT.ADMIN_ID, msg, { parse_mode: "Markdown" });
   } catch {
-    console.warn("⚠️ Failed to send crash alert to admin.");
+    console.warn("⚠️ Failed to notify admin.");
   }
 }
