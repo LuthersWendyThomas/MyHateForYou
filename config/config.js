@@ -1,37 +1,35 @@
-// 📦 config/config.js — FINAL IMMORTAL BULLETPROOF v2025.5
+// 📦 config/config.js — IMMORTAL FINAL v2025.9999999 — BULLETPROOF TITANLOCK SYNCED
 
 import { config } from "dotenv";
 config();
 
 import TelegramBot from "node-telegram-bot-api";
 
-// ===============================
-// ✅ ENV Validator (strict)
+// ==============================
+// 🔒 Required ENV validator
 function requiredEnv(value, name) {
-  if (typeof value !== "string" || value.trim() === "") {
-    console.error(`❌ Missing ENV: ${name}`);
+  if (typeof value !== "string" || !value.trim()) {
+    console.error(`❌ MISSING ENV: ${name}`);
     process.exit(1);
   }
   return value.trim();
 }
 
-// ===============================
-// 🔐 Tokens / Admin ID
+// ==============================
+// 🤖 BOT INSTANCE + META
 const token = requiredEnv(process.env.TELEGRAM_TOKEN, "TELEGRAM_TOKEN");
 const adminId = requiredEnv(process.env.ADMIN_ID, "ADMIN_ID");
 
-// ===============================
-// 🤖 Bot Metadata + Instance
 export const BOT = {
   TOKEN: token,
   ADMIN_ID: adminId,
-  VERSION: "v2025.5",
+  VERSION: "v2025.9999999",
   INSTANCE: null
 };
 
 export function initBotInstance() {
   if (!BOT.TOKEN || typeof BOT.TOKEN !== "string") {
-    console.error("❌ BOT token missing or invalid at startup.");
+    console.error("❌ Invalid BOT TOKEN");
     process.exit(1);
   }
 
@@ -44,24 +42,24 @@ export function initBotInstance() {
       }
     });
 
-    console.log("✅ Telegram bot initialized securely.");
+    console.log("✅ BOT initialized @", BOT.VERSION);
   } catch (err) {
-    console.error("❌ Failed to initialize Telegram bot:", err.message);
+    console.error("❌ BOT INIT FAILED:", err.message || err);
     process.exit(1);
   }
 }
 
-// ===============================
-// 💳 Wallets — required
+// ==============================
+// 💳 WALLETS (required)
 export const WALLETS = {
   BTC: requiredEnv(process.env.BTC_WALLET, "BTC_WALLET"),
   ETH: requiredEnv(process.env.ETH_WALLET, "ETH_WALLET"),
-  SOL: requiredEnv(process.env.SOL_WALLET, "SOL_WALLET"),
-  MATIC: requiredEnv(process.env.MATIC_WALLET, "MATIC_WALLET")
+  MATIC: requiredEnv(process.env.MATIC_WALLET, "MATIC_WALLET"),
+  SOL: requiredEnv(process.env.SOL_WALLET, "SOL_WALLET")
 };
 
-// ===============================
-// 🌐 External APIs and RPCs
+// ==============================
+// 🌐 External APIs / RPCs
 export const API = {
   COINGECKO_URLS: (
     process.env.COINGECKO_URL?.trim()
@@ -74,22 +72,22 @@ export const API = {
   SOLANA_RPC: requiredEnv(process.env.SOLANA_RPC, "SOLANA_RPC")
 };
 
-// ===============================
-// 🔄 Unified Currency Aliases (used across system)
+// ==============================
+// 🧩 Unified currency aliases
 export const ALIASES = {
   bitcoin: "BTC",
+  btc: "BTC",
   ethereum: "ETH",
+  eth: "ETH",
   polygon: "MATIC",
   "polygon-pos": "MATIC",
-  solana: "SOL",
-  btc: "BTC",
-  eth: "ETH",
   matic: "MATIC",
+  solana: "SOL",
   sol: "SOL"
 };
 
-// ===============================
-// ⚙️ Feature flags (boolean-safe)
+// ==============================
+// ⚙️ Feature flags (safe boolean)
 export const FLAGS = {
   AUTOBAN_ENABLED: String(process.env.AUTOBAN_ENABLED).trim().toLowerCase() === "true",
   AUTODELETE_ENABLED: String(process.env.AUTODELETE_ENABLED).trim().toLowerCase() === "true"
