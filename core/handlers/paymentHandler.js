@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | FINAL v1_000_000 — BULLETPROOF LOCKED SYNC
+// 📦 core/handlers/paymentHandler.js | FINAL v1_000_001 — BULLETPROOF LOCKED SYNC
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -9,6 +9,14 @@ import { simulateDelivery } from "./deliveryHandler.js";
 import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
+
+// ✅ Vieningas palaikomų valiutų objektas (SYNC su fetchCryptoPrice.js ir cryptoChecker.js)
+const SUPPORTED = {
+  btc: { gecko: "bitcoin", coincap: "bitcoin" },
+  eth: { gecko: "ethereum", coincap: "ethereum" },
+  matic: { gecko: "polygon-pos", coincap: "polygon" },
+  sol: { gecko: "solana", coincap: "solana" }
+};
 
 // ⏳ Delay
 function wait(ms) {
@@ -50,7 +58,10 @@ async function sendSafe(botMethod, ...args) {
 // 💰 Get crypto ↔ USD rate safely
 async function getSafeRate(currency) {
   try {
-    const rate = await fetchWithRetry(() => fetchCryptoPrice(currency));
+    const coin = SUPPORTED[currency.toLowerCase()];
+    if (!coin) throw new Error(`Unsupported currency: "${currency}"`);
+
+    const rate = await fetchWithRetry(() => fetchCryptoPrice(coin.gecko));
     if (!Number.isFinite(rate) || rate <= 0) {
       throw new Error(`Invalid rate for "${currency}"`);
     }
@@ -75,6 +86,10 @@ export async function handlePayment(bot, id, userMessages) {
       throw new Error("Missing or invalid payment session data");
     }
 
+    if (!SUPPORTED[s.currency.toLowerCase()]) {
+      throw new Error(`Unsupported currency "${s.currency}".`);
+    }
+
     const rate = await getSafeRate(s.currency);
     const amount = +(usd / rate).toFixed(6);
 
@@ -83,7 +98,7 @@ export async function handlePayment(bot, id, userMessages) {
     }
 
     s.expectedAmount = amount;
-    const qr = await generateQR(s.currency, amount, s.wallet);
+    const qr = await generateQR(s.currency.toLowerCase(), amount, s.wallet);
     if (!qr || !(qr instanceof Buffer)) throw new Error("QR generation failed");
 
     s.step = 8;
