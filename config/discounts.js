@@ -1,70 +1,37 @@
-// 📦 config/discounts.js | FINAL IMMORTAL v99999999.999 — DISCOUNT-SYNC CORE
+// 📦 config/discounts.js | FINAL IMMORTAL v99999999.999 — DISCOUNT ADMIN CORE
 
-import { config } from "dotenv";
-config();
-
-// 🌐 Optional global env-based discount activator
-export const DISCOUNT_CODE = process.env.DISCOUNT_CODE?.trim().toUpperCase() || null;
-
-// 🎯 Centralized discount rules
 export const DISCOUNTS = {
   global: {
     active: false,
     percentage: 10
   },
 
-  categories: {
-    "🌿 Cannabis": { active: true, percentage: 15 },
-    "❄️ Cocaine": { active: false },
-    "💊 Ecstasy": { active: false },
-    "🍄 Psychedelics": { active: true, percentage: 10 },
-    "🧬 Extracts": { active: false },
-    "💉 Opiates": { active: false },
-    "🧪 Pharma": { active: false }
-  },
-
-  products: {
-    "🔥 Zaza (Exotic Indoor)": { active: true, percentage: 20 },
-    "💤 Xanax 2mg (Bars)": { active: false }
-  },
-
-  cities: {
-    "New York": { active: true, percentage: 5 },
-    "Miami": { active: false }
-  },
-
   users: {
-    "123456789": { active: true, percentage: 25 },
-    "987654321": { active: false }
+    // User-specific discounts (ID mapped)
+    // "123456789": { active: true, percentage: 25 },
+  },
+
+  codes: {
+    // Code-based discounts: "SUMMER25": { active: true, percentage: 25 }
   }
 };
 
 /**
- * 🧮 Resolves the highest applicable discount for a user/session
+ * 🧮 Resolve best discount for a user/order context
  * @param {Object} args
  * @param {string} args.userId
- * @param {string} args.city
- * @param {string} args.category
- * @param {string} args.productName
- * @returns {number} Percentage discount (0–100)
+ * @param {string} [args.code]
+ * @returns {number} final discount %
  */
-export function resolveDiscount({ userId, city, category, productName }) {
+export function resolveDiscount({ userId, code }) {
   let max = 0;
 
   if (DISCOUNTS.global?.active) {
     max = Math.max(max, DISCOUNTS.global.percentage || 0);
   }
 
-  if (city && DISCOUNTS.cities?.[city]?.active) {
-    max = Math.max(max, DISCOUNTS.cities[city].percentage || 0);
-  }
-
-  if (category && DISCOUNTS.categories?.[category]?.active) {
-    max = Math.max(max, DISCOUNTS.categories[category].percentage || 0);
-  }
-
-  if (productName && DISCOUNTS.products?.[productName]?.active) {
-    max = Math.max(max, DISCOUNTS.products[productName].percentage || 0);
+  if (code && DISCOUNTS.codes?.[code]?.active) {
+    max = Math.max(max, DISCOUNTS.codes[code].percentage || 0);
   }
 
   if (userId && DISCOUNTS.users?.[userId]?.active) {
@@ -72,4 +39,50 @@ export function resolveDiscount({ userId, city, category, productName }) {
   }
 
   return max;
+}
+
+/**
+ * 🧾 Returns active discount rules for admin UI
+ */
+export function getActiveDiscounts() {
+  return {
+    global: { ...DISCOUNTS.global },
+    users: { ...DISCOUNTS.users },
+    codes: { ...DISCOUNTS.codes }
+  };
+}
+
+/**
+ * 🛠 Admin setter: update discount value
+ * @param {'global'|'user'|'code'} type
+ * @param {string|null} key — userId or code (null if global)
+ * @param {boolean} active
+ * @param {number} percentage
+ */
+export function setDiscount(type, key, active, percentage) {
+  const pct = Math.min(Math.max(parseInt(percentage), 0), 100);
+
+  switch (type) {
+    case "global":
+      DISCOUNTS.global = { active, percentage: pct };
+      break;
+    case "user":
+      if (!key) return;
+      DISCOUNTS.users[key] = { active, percentage: pct };
+      break;
+    case "code":
+      if (!key) return;
+      DISCOUNTS.codes[key.toUpperCase()] = { active, percentage: pct };
+      break;
+  }
+}
+
+/**
+ * 🧼 Remove discount (user or code)
+ * @param {'user'|'code'} type
+ * @param {string} key
+ */
+export function removeDiscount(type, key) {
+  if (type === "user") delete DISCOUNTS.users[key];
+  if (type === "code") delete DISCOUNTS.codes[key?.toUpperCase()];
 }
