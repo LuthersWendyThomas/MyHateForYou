@@ -1,10 +1,10 @@
-// 📦 state/timers.js | FINAL IMMORTAL v999999999.0 — BULLETPROOF SYNC CORE
+// 📦 state/timers.js | FINAL IMMORTAL v999999999.999 — BULLETPROOF SYNC CORE
 
-export const activeTimers = {};      // { userId: Timeout } – delivery, cleanup, etc.
-export const paymentTimers = {};     // { userId: Timeout } – payment step (8)
+export const activeTimers = {};     // { userId: Timeout } – delivery, cleanup, etc.
+export const paymentTimers = {};    // { userId: Timeout } – payment step (8)
 
 /**
- * ✅ Assigns active (UI/delivery) timer with overwrite
+ * ✅ Assigns UI/delivery timer with auto-clear
  */
 export function setActiveTimer(id, timerId) {
   const uid = safeId(id);
@@ -19,7 +19,7 @@ export function setActiveTimer(id, timerId) {
 }
 
 /**
- * ✅ Assigns payment timer (step 8) with overwrite
+ * ✅ Assigns payment timer with auto-clear
  */
 export function setPaymentTimer(id, timerId) {
   const uid = safeId(id);
@@ -34,7 +34,7 @@ export function setPaymentTimer(id, timerId) {
 }
 
 /**
- * ✅ Clears ALL timers (global kill-switch)
+ * ✅ Clears *all* timers globally
  */
 export function clearAllTimers() {
   try {
@@ -55,7 +55,7 @@ export function clearAllTimers() {
 }
 
 /**
- * ✅ Clears timers for a single user
+ * ✅ Clears timers for specific user
  */
 export function clearTimersForUser(id) {
   const uid = safeId(id);
