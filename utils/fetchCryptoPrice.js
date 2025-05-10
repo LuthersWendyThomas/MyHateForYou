@@ -1,26 +1,14 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v999999999999 — GODMODE ALIASED BULLETPROOF
+// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v999999999999 — GODMODE ALIASED BULLETPROOF SYNCED
 
 import fetch from "node-fetch";
 import { rateLimiter } from "./rateLimiter.js";
+import { ALIASES } from "../config/config.js";
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 min
 const cache = {};
 const locks = {};
 
-// 🔐 Valiutų alias'ai (leidžia naudoti ir 'polygon', ir 'matic')
-const ALIASES = {
-  bitcoin: "BTC",
-  ethereum: "ETH",
-  polygon: "MATIC",
-  "polygon-pos": "MATIC",
-  solana: "SOL",
-  btc: "BTC",
-  eth: "ETH",
-  matic: "MATIC",
-  sol: "SOL"
-};
-
-// 🔐 TIKSLŪS CoinGecko + CoinCap ID’ai
+// 🔐 TIKSLŪS CoinGecko + CoinCap ID’ai (sync with all system)
 const SUPPORTED = {
   BTC:   { gecko: "bitcoin",      coincap: "bitcoin" },
   ETH:   { gecko: "ethereum",     coincap: "ethereum" },
