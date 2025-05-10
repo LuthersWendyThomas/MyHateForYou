@@ -1,5 +1,5 @@
-// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999.∞
-// REGION-SYNCED DIAMOND BUILD + DISCOUNT SYNC + ADMIN IMPORTS + PROMOCODE + POLYGON READY
+// 📦 core/handlers/stepHandler.js | IMMORTAL FINAL v999999999999.∞
+// REGION SYNC + PROMOCODE + DISCOUNT READY + WALLET SELECTOR + DELIVERY LOGIC POLISHED
 
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
@@ -15,6 +15,7 @@ import { resolveDiscount, DISCOUNTS } from "../../config/discounts.js";
 export async function handleStep(bot, id, text, userMessages) {
   const uid = String(id);
   const input = (text || "").trim();
+
   if (!input) return punish(bot, uid, userMessages);
 
   const s = (userSessions[uid] ||= { step: 1, createdAt: Date.now() });
@@ -48,20 +49,20 @@ export async function handleStep(bot, id, text, userMessages) {
 
       case 1.2: {
         const city = input.replace(/^🚫 /, "");
-        const isValid = REGION_MAP[s.region]?.cities?.[city];
-        if (!isValid) return punish(bot, uid, userMessages);
+        if (!REGION_MAP[s.region]?.cities?.[city]) return punish(bot, uid, userMessages);
         s.city = city;
         s.step = 2;
         return renderStep(bot, uid, s.step, userMessages);
       }
 
-      case 2:
+      case 2: {
         const method = deliveryMethods.find(m => m.label === input);
         if (!method) return punish(bot, uid, userMessages);
         s.deliveryMethod = method.key;
         s.deliveryFee = method.fee;
         s.step = 2.1;
         return renderStep(bot, uid, s.step, userMessages);
+      }
 
       case 2.1:
         if (input === "Yes") {
@@ -75,7 +76,7 @@ export async function handleStep(bot, id, text, userMessages) {
         return punish(bot, uid, userMessages);
 
       case 2.2: {
-        const code = input.trim().toUpperCase();
+        const code = input.toUpperCase();
         const promo = DISCOUNTS.codes?.[code];
         if (!promo || !promo.active) {
           await sendAndTrack(bot, uid, `❌ Promo code invalid or inactive: \`${code}\``, { parse_mode: "Markdown" }, userMessages);
@@ -104,7 +105,7 @@ export async function handleStep(bot, id, text, userMessages) {
       case 5: {
         const qty = input.match(/^[^\s(]+/)?.[0];
         const price = s.product?.prices?.[qty];
-        if (!price || isNaN(parseFloat(price))) return punish(bot, uid, userMessages);
+        if (!price || isNaN(price)) return punish(bot, uid, userMessages);
 
         const discount = resolveDiscount({
           userId: uid,
@@ -124,13 +125,14 @@ export async function handleStep(bot, id, text, userMessages) {
         return renderStep(bot, uid, s.step, userMessages);
       }
 
-      case 6:
+      case 6: {
         const wallet = WALLETS[input];
-        if (!wallet) return punish(bot, uid, userMessages);
+        if (!wallet || wallet.length < 8) return punish(bot, uid, userMessages);
         s.currency = input;
         s.wallet = wallet;
         s.step = 7;
         return renderStep(bot, uid, s.step, userMessages);
+      }
 
       case 7:
         if (input !== "✅ CONFIRM") return punish(bot, uid, userMessages);
@@ -149,12 +151,12 @@ export async function handleStep(bot, id, text, userMessages) {
         return punish(bot, uid, userMessages);
 
       default:
-        console.warn(`⚠️ Unknown step=${s.step}`);
+        console.warn(`⚠️ Unknown step=${s.step} for user ${uid}`);
         await resetSession(uid);
         return await safeStart(bot, uid);
     }
   } catch (err) {
-    console.error("❌ handleStep error:", err.message);
+    console.error("❌ [handleStep fatal]:", err.message || err);
     await resetSession(uid);
     return await safeStart(bot, uid);
   }
@@ -201,14 +203,14 @@ function renderStep(bot, id, step, userMessages) {
         return sendKeyboard(bot, id, "⚖️ *Choose quantity:*", qtyButtons, userMessages);
 
       case 6:
-        const wallets = Object.keys(WALLETS).reduce((acc, curr) => {
+        const walletButtons = Object.keys(WALLETS).reduce((acc, curr) => {
           const last = acc[acc.length - 1];
           if (last && last.length < 2) last.push({ text: curr });
           else acc.push([{ text: curr }]);
           return acc;
         }, []);
-        wallets.push([{ text: "🖙 Back" }]);
-        return sendKeyboard(bot, id, "💳 *Choose payment network:*", wallets, userMessages);
+        walletButtons.push([{ text: "🖙 Back" }]);
+        return sendKeyboard(bot, id, "💳 *Choose payment network:*", walletButtons, userMessages);
 
       case 7:
         const discountInfo = s.promoCode ? `🏷️ Promo: *${s.promoCode}* — ${s.appliedDiscount}%\n` : "🏷️ Promo: None\n";
@@ -240,7 +242,7 @@ ${discountInfo}💰 Total: *${s.totalPrice.toFixed(2)}$*
         return renderStep(bot, id, 1, userMessages);
     }
   } catch (err) {
-    console.error("❌ renderStep error:", err.message);
+    console.error("❌ [renderStep error]:", err.message || err);
     return sendKeyboard(bot, id, "⚠️ Failed to load step. Try again.", [[{ text: "🔁 Try again" }]], userMessages);
   }
 }
