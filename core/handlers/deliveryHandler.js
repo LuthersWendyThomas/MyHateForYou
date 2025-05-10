@@ -1,4 +1,5 @@
-// 📦 core/handlers/deliveryHandler.js | IMMORTAL FINAL v999999999999.∞ — AUTOBAN + AUTODELETE + FINAL CLEANUP + BULLETPROOF
+// 📦 core/handlers/deliveryHandler.js | IMMORTAL FINAL v999999999999.∞
+// AUTOBAN + AUTODELETE + FINAL CLEANUP + BULLETPROOF
 
 import { banUser } from "../../utils/bans.js";
 import { autobanEnabled, autodeleteEnabled } from "../../config/features.js";
@@ -9,7 +10,7 @@ import { BOT } from "../../config/config.js";
 const FINAL_CLEANUP_TIMEOUT_MS = 27 * 60 * 1000;
 
 /**
- * 🚚 Simulates delivery process for courier or drop method
+ * 🚚 Simulates full delivery flow (courier/drop)
  */
 export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) {
   const uid = String(id);
@@ -65,7 +66,7 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
 }
 
 /**
- * 🕒 Schedules intermediate delivery message
+ * 🕒 Sends intermediate step message
  */
 function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
   setTimeout(async () => {
@@ -90,7 +91,7 @@ function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
 }
 
 /**
- * 🧾 Final delivery step → triggers cleanup
+ * 🧾 Final delivery step that triggers cleanup
  */
 function scheduleFinalStep(bot, id, text, delayMs = 0, userMsgs = {}) {
   setTimeout(async () => {
@@ -117,7 +118,7 @@ function scheduleFinalStep(bot, id, text, delayMs = 0, userMsgs = {}) {
 }
 
 /**
- * 🧼 Cleans session, deletes messages, bans if enabled
+ * 🧼 Final cleanup: session clear, delete msgs, ban if needed
  */
 async function triggerFinalCleanup(bot, id, userMsgs = {}) {
   const uid = String(id);
@@ -131,7 +132,6 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
     userSessions[uid] = { ...session, cleanupScheduled: true };
     const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
 
-    // Delete messages
     if (autodeleteEnabled?.status && !isAdmin && Array.isArray(userMsgs[uid])) {
       for (const msgId of userMsgs[uid]) {
         if (typeof msgId === "number") {
@@ -141,7 +141,6 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
       delete userMessages[uid];
     }
 
-    // Ban user
     if (autobanEnabled?.status && !isAdmin) {
       await sendAndTrack(
         bot,
@@ -167,7 +166,7 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
 }
 
 /**
- * 🤖 Checks if we should delete user's messages
+ * 🔒 Determines if messages should be autodeleted
  */
 function shouldAutoDelete(id) {
   const uid = String(id);
@@ -176,14 +175,14 @@ function shouldAutoDelete(id) {
 }
 
 /**
- * 💤 Sleep helper
+ * 💤 Delay utility
  */
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
- * 🐛 Debug-only logging
+ * 🐞 Conditional debug logging
  */
 function debug(...args) {
   if (process.env.DEBUG_MESSAGES === "true") {
