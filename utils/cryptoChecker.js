@@ -1,4 +1,4 @@
-// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v1_000_000 — BULLETPROOF SYNC LOCKED
+// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v1_11111111111 — ULTRA BULLETPROOF SYNC
 
 import fetch from "node-fetch";
 import fs from "fs";
@@ -8,7 +8,7 @@ import { API, BOT } from "../config/config.js";
 // 📍 Log failas
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
-// ✅ Palaikomi tinklai (tiksliai suderinti su fetchCryptoPrice.js)
+// ✅ Palaikomi tinklai (sinchronizuoti su fetchCryptoPrice.js)
 const SUPPORTED = {
   BTC: true,
   ETH: true,
@@ -20,19 +20,16 @@ const SUPPORTED = {
  * ✅ Tikrina ar nurodytame wallet'e yra pakankamai lėšų (pagal tinklą)
  */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
+  const cur = String(currency || "").toUpperCase().trim();
+  const amount = parseFloat(expectedAmount);
+
+  if (!wallet || typeof wallet !== "string" || wallet.length < 8 ||
+      !SUPPORTED[cur] || !Number.isFinite(amount) || amount <= 0) {
+    log(wallet, cur, amount, "❌ INVALID PARAMS");
+    return false;
+  }
+
   try {
-    const cur = String(currency || "").toUpperCase().trim();
-    const amount = parseFloat(expectedAmount);
-
-    if (
-      !wallet || typeof wallet !== "string" || wallet.length < 8 ||
-      !SUPPORTED[cur] ||
-      !Number.isFinite(amount) || amount <= 0
-    ) {
-      log(wallet, cur, amount, "❌ INVALID PARAMS");
-      return false;
-    }
-
     let result = false;
     switch (cur) {
       case "BTC":
@@ -60,13 +57,13 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
         BOT.ADMIN_ID,
         `✅ *Payment confirmed*\n\n• Currency: *${cur}*\n• Amount: *${amount}*\n• Wallet: \`${wallet}\`\n• Time: ${time}`,
         { parse_mode: "Markdown" }
-      ).catch(() => {});
+      ).catch((e) => console.warn("⚠️ [Bot notify error]", e.message));
     }
 
     return result;
   } catch (err) {
-    console.error(`❌ [checkPayment error → ${currency}]:`, err.message || err);
-    log(wallet, currency, expectedAmount, "❌ ERROR");
+    console.error(`❌ [checkPayment fatal → ${cur}]:`, err.message || err);
+    log(wallet, cur, amount, "❌ ERROR");
     return false;
   }
 }
@@ -78,6 +75,7 @@ async function checkBTC(address, expected) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
+
     const res = await fetch(`${API.BTC_RPC}${address}`, { signal: controller.signal });
     clearTimeout(timeout);
 
