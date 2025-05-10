@@ -1,4 +1,4 @@
-// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.∞ — BULLETPROOF SYNC + LIVE USER COUNT
+// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.∞ — BULLETPROOF SYNC + LIVE USER COUNT + DISCOUNT CONTROL
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import {
@@ -12,10 +12,13 @@ import {
 import { getStats } from "./saveOrder.js";
 import { userSessions, activeUsers } from "../state/userState.js";
 import { BOT } from "../config/config.js";
+import {
+  getDiscountInfo,
+  setDiscount,
+  removeDiscount,
+  DISCOUNT_TYPES
+} from "../config/discounts.js";
 
-/**
- * 🛠️ Opens admin panel with live active users count
- */
 export async function openAdminPanel(bot, id) {
   try {
     const keyboard = [
@@ -24,6 +27,7 @@ export async function openAdminPanel(bot, id) {
       [{ text: "🔒 BAN user" }, { text: "⏳ Temp. BAN" }],
       [{ text: "✅ UNBAN user" }, { text: "🧹 Clear BANs" }],
       [{ text: "📋 Banned list" }, { text: "⏱️ Temp bans" }],
+      [{ text: "🏷️ Manage Discounts" }],
       [{ text: "🔙 Back" }]
     ];
 
@@ -48,9 +52,6 @@ export async function openAdminPanel(bot, id) {
   }
 }
 
-/**
- * 🎛️ Handles admin inputs and flows
- */
 export async function handleAdminAction(bot, msg, sessions = userSessions) {
   const id = msg?.chat?.id;
   const text = msg?.text?.trim();
@@ -59,7 +60,6 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
   const s = (sessions[id] ||= {});
 
   try {
-    // — Step-based actions
     if (s.adminStep === "ban_user") {
       banUser(text);
       delete s.adminStep;
@@ -83,7 +83,18 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
       return await sendAndTrack(bot, id, `✅ User unbanned: \`${text}\``, { parse_mode: "Markdown" }, {});
     }
 
-    // — Static admin buttons
+    if (s.adminStep === "discount_manage") {
+      const [type, keyRaw, activeRaw, percentRaw] = text.split(" ");
+      const active = activeRaw === "1";
+      const pct = parseInt(percentRaw);
+      if (!DISCOUNT_TYPES.includes(type)) {
+        return await sendAndTrack(bot, id, `❌ Invalid type. Use one of: *${DISCOUNT_TYPES.join(", ")}*`, { parse_mode: "Markdown" }, {});
+      }
+      setDiscount(type, keyRaw || null, active, pct);
+      delete s.adminStep;
+      return await sendAndTrack(bot, id, `✅ *${type}* discount updated → \`${keyRaw || "(global)"}\` = *${pct}%* (${active ? "ON" : "OFF"})`, { parse_mode: "Markdown" }, {});
+    }
+
     switch (text) {
       case "📊 STATISTICS":
       case "📅 Today":
@@ -91,11 +102,9 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
       case "📆 Month": {
         const stats = await getStats("admin");
         let out = "📊 *Statistics:*\n\n";
-
         if (text === "📊 STATISTICS" || text === "📅 Today") out += `📅 Today: *${stats.today.toFixed(2)}$*\n`;
         if (text === "📊 STATISTICS" || text === "🗓️ Week") out += `🗓️ Week: *${stats.week.toFixed(2)}$*\n`;
         if (text === "📊 STATISTICS" || text === "📆 Month") out += `📆 Month: *${stats.month.toFixed(2)}$*\n`;
-
         out += `💰 Total: *${stats.total.toFixed(2)}$*`;
         return await sendAndTrack(bot, id, out, { parse_mode: "Markdown" }, {});
       }
@@ -118,18 +127,40 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
 
       case "📋 Banned list": {
         const list = listBannedUsers();
-        const out = list.length
-          ? list.map(id => `- \`${id}\``).join("\n")
-          : "_(No permanent bans)_";
+        const out = list.length ? list.map(id => `- \`${id}\``).join("\n") : "_(No permanent bans)_";
         return await sendAndTrack(bot, id, `📋 *Banned users:*\n${out}`, { parse_mode: "Markdown" }, {});
       }
 
       case "⏱️ Temp bans": {
         const temp = listTemporaryBans();
-        const out = temp.length
-          ? temp.map(b => `- \`${b.userId}\` until ${b.until}`).join("\n")
-          : "_(No temp bans)_";
+        const out = temp.length ? temp.map(b => `- \`${b.userId}\` until ${b.until}`).join("\n") : "_(No temp bans)_";
         return await sendAndTrack(bot, id, `⏱️ *Temporary bans:*\n${out}`, { parse_mode: "Markdown" }, {});
+      }
+
+      case "🏷️ Manage Discounts": {
+        const all = getDiscountInfo();
+        const info = [
+          all.global,
+          ...all.users,
+          ...all.codes,
+          ...all.regions,
+          ...all.cities,
+          ...all.categories,
+          ...all.products
+        ].join("\n");
+
+        s.adminStep = "discount_manage";
+        return await sendAndTrack(bot, id,
+          `🏷️ *Discounts:*
+
+${info}
+
+✍️ *Input format:* 
+\`type key active percent\`
+
+*Example:* \`user 123456789 1 20\`
+Available types: *${DISCOUNT_TYPES.join(" | ")}*`,
+          { parse_mode: "Markdown" }, {});
       }
 
       case "🔙 Back":
