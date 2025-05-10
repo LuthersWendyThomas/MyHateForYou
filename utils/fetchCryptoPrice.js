@@ -1,5 +1,3 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v999999999999999999999999 — ULTRA LOCKED 24/7
-
 import fetch from "node-fetch";
 import { rateLimiter } from "./rateLimiter.js";
 
@@ -7,19 +5,14 @@ const CACHE_TTL = 5 * 60 * 1000;
 const cache = {};
 const locks = {};
 
-// 🔐 API ID mapping: CoinGecko + CoinCap
+// ✅ TIKSLŪS API ID: CoinGecko + CoinCap
 const SUPPORTED = {
-  btc: { gecko: "bitcoin",      coincap: "bitcoin" },
-  eth: { gecko: "ethereum",     coincap: "ethereum" },
-  matic: { gecko: "polygon",    coincap: "polygon" },
-  sol: { gecko: "solana",       coincap: "solana" }
+  btc:   { gecko: "bitcoin",      coincap: "bitcoin" },
+  eth:   { gecko: "ethereum",     coincap: "ethereum" },
+  matic: { gecko: "polygon-pos",  coincap: "polygon" }, // FIXED HERE
+  sol:   { gecko: "solana",       coincap: "solana" }
 };
 
-/**
- * ✅ Grąžina EUR kursą pagal valiutą
- * @param {string} currency - pvz. "btc", "eth", "matic", "sol"
- * @returns {number|null}
- */
 export async function fetchCryptoPrice(currency) {
   if (!currency) return null;
 
@@ -30,23 +23,20 @@ export async function fetchCryptoPrice(currency) {
     return null;
   }
 
-  await rateLimiter(clean); // ⛔️ anti-spam lock
+  await rateLimiter(clean); // ⛔️ RATE GUARD
 
-  // ⛓️ Single-call lock per coin
   if (locks[clean]) return await locks[clean];
+
   const promise = _fetchCryptoPriceInternal(clean, ids);
   locks[clean] = promise;
 
   try {
     return await promise;
   } finally {
-    delete locks[clean]; // 🔓 unlock
+    delete locks[clean];
   }
 }
 
-/**
- * 🔁 Vidinis fetch logika su cache + fallback
- */
 async function _fetchCryptoPriceInternal(clean, ids) {
   const now = Date.now();
   const cached = cache[clean];
@@ -58,18 +48,16 @@ async function _fetchCryptoPriceInternal(clean, ids) {
     return cached.rate;
   }
 
-  // ⬆️ CoinGecko
   try {
-    const rate = await fetchFromCoinGecko(ids.gecko);
-    if (rate) return saveToCache(clean, rate);
+    const geckoRate = await fetchFromCoinGecko(ids.gecko);
+    if (geckoRate) return saveToCache(clean, geckoRate);
   } catch (err) {
     console.warn(`⚠️ [CoinGecko klaida → ${clean}]: ${err.message}`);
   }
 
-  // ⬇️ CoinCap
   try {
-    const rate = await fetchFromCoinCap(ids.coincap);
-    if (rate) return saveToCache(clean, rate);
+    const capRate = await fetchFromCoinCap(ids.coincap);
+    if (capRate) return saveToCache(clean, capRate);
   } catch (err) {
     console.warn(`⚠️ [CoinCap klaida → ${clean}]: ${err.message}`);
   }
@@ -77,16 +65,12 @@ async function _fetchCryptoPriceInternal(clean, ids) {
   return null;
 }
 
-/**
- * 📡 CoinGecko su retry
- */
 async function fetchFromCoinGecko(id) {
   const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`;
 
   for (let i = 0; i < 3; i++) {
     try {
       if (i > 0) await wait(i * 1000);
-
       const res = await fetch(url, {
         headers: {
           Accept: "application/json",
@@ -95,30 +79,32 @@ async function fetchFromCoinGecko(id) {
       });
 
       if (res.status === 429) {
-        console.warn("⏳ CoinGecko rate limited. Retrying...");
+        console.warn(`⏳ CoinGecko rate limited. Retry ${i + 1}/3`);
         continue;
       }
 
       if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
 
       const json = await res.json();
+      const price = parseFloat(json?.[id]?.eur);
+
       if (process.env.DEBUG_MESSAGES === "true") {
-        console.log(`📡 [Gecko RAW → ${id}]:`, json);
+        console.log(`📡 [Gecko ${id}] →`, json);
       }
 
-      const price = parseFloat(json?.[id]?.eur);
-      if (Number.isFinite(price) && price > 0) return +price.toFixed(2);
+      if (Number.isFinite(price) && price > 0) {
+        return +price.toFixed(2);
+      } else {
+        throw new Error(`⚠️ CoinGecko returned invalid price for "${id}"`);
+      }
     } catch (err) {
-      console.warn(`❌ [Gecko retry ${i + 1}/3]: ${err.message}`);
+      console.warn(`❌ [Gecko attempt ${i + 1}] → ${err.message}`);
     }
   }
 
   return null;
 }
 
-/**
- * 🧭 CoinCap fallback (USD → EUR)
- */
 async function fetchFromCoinCap(id) {
   const url = `https://api.coincap.io/v2/assets/${id}`;
 
@@ -129,36 +115,35 @@ async function fetchFromCoinCap(id) {
     }
   });
 
+  if (res.status === 404) {
+    throw new Error(`CoinCap ID "${id}" not found`);
+  }
+
   if (!res.ok) throw new Error(`CoinCap HTTP ${res.status}`);
 
   const json = await res.json();
+  const usd = parseFloat(json?.data?.priceUsd);
+
   if (process.env.DEBUG_MESSAGES === "true") {
-    console.log(`📡 [CoinCap RAW → ${id}]:`, json);
+    console.log(`📡 [CoinCap ${id}] →`, json);
   }
 
-  const usd = parseFloat(json?.data?.priceUsd);
   if (!Number.isFinite(usd) || usd <= 0) {
-    throw new Error(`❌ CoinCap netinkamas USD kursas: ${usd}`);
+    throw new Error(`CoinCap returned invalid USD: ${usd}`);
   }
 
   const eurRate = 1.07;
   return +(usd / eurRate).toFixed(2);
 }
 
-/**
- * 💾 Įrašo į cache
- */
 function saveToCache(currency, rate) {
   cache[currency] = { rate, timestamp: Date.now() };
   if (process.env.DEBUG_MESSAGES === "true") {
-    console.log(`💰 [CACHE] ${currency.toUpperCase()} → ${rate}€`);
+    console.log(`💰 [CACHE SET] ${currency.toUpperCase()} → ${rate}€`);
   }
   return rate;
 }
 
-/**
- * ⏳ Async delay
- */
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
