@@ -1,62 +1,63 @@
-// 📦 cron/cleanOldLogs.js | FINAL IMMORTAL v9999999.0 — ULTRABULLETPROOF CLEANER
+// 📦 cron/cleanOldLogs.js | FINAL IMMORTAL v9999999.1 — ULTRABULLETPROOF CRON SYNCED
 
 import fs from "fs";
 import path from "path";
 
-const LOG_DIR = path.resolve("./logs");
+const LOG_DIR = path.resolve("logs");
 const MAX_AGE_DAYS = 3;
-const LOOP_INTERVAL_MS = 24 * 60 * 60 * 1000; // kas 24h
+const LOOP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h interval
 
 /**
- * ⏱️ Paskaičiuoja, kiek dienų praėjo nuo timestamp
+ * 📆 Calculates how many days ago a timestamp was
  */
 function daysOld(timestamp) {
   return (Date.now() - timestamp) / (1000 * 60 * 60 * 24);
 }
 
 /**
- * 🧹 Trina senus .log failus (vyresnius nei MAX_AGE_DAYS)
+ * 🧹 Deletes all .log files older than MAX_AGE_DAYS
  */
 function cleanLogs() {
+  const now = new Date().toLocaleString("en-GB");
+  console.log(`\n🧹 [cleanOldLogs] Started at ${now}`);
+
+  if (!fs.existsSync(LOG_DIR)) {
+    console.warn("⚠️ [cleanOldLogs] Log directory does not exist. Skipping.");
+    return;
+  }
+
+  let deleted = 0;
+
   try {
-    const now = new Date().toLocaleString("en-GB");
-    console.log(`\n🧹 [cleanOldLogs] Log cleanup started — ${now}`);
-
-    if (!fs.existsSync(LOG_DIR)) {
-      console.warn("📁 [cleanOldLogs] 'logs/' folder not found — skipping cleanup.");
-      return;
-    }
-
     const files = fs.readdirSync(LOG_DIR);
-    let deletedCount = 0;
 
     for (const file of files) {
       if (!file.endsWith(".log")) continue;
 
-      const filePath = path.join(LOG_DIR, file);
+      const fullPath = path.join(LOG_DIR, file);
 
       try {
-        const stats = fs.statSync(filePath);
-        const age = daysOld(stats.mtimeMs);
+        const { mtimeMs } = fs.statSync(fullPath);
+        const age = daysOld(mtimeMs);
 
         if (age > MAX_AGE_DAYS) {
-          fs.unlinkSync(filePath);
+          fs.unlinkSync(fullPath);
           console.log(`🗑️ Deleted: ${file} (age: ${age.toFixed(1)}d)`);
-          deletedCount++;
+          deleted++;
         }
       } catch (err) {
-        console.error(`❌ [cleanOldLogs] Failed to process ${file}:`, err.message);
+        console.error(`❌ Error reading/deleting "${file}": ${err.message}`);
       }
     }
 
-    console.log(`✅ [cleanOldLogs] Cleanup complete — ${deletedCount} file(s) deleted.\n`);
+    console.log(`✅ Cleanup complete. Deleted ${deleted} file(s).\n`);
   } catch (err) {
     console.error("❌ [cleanOldLogs] Fatal error:", err.message || err);
   }
 }
 
-// 🕒 Paleidžiam iškart
+// 🕒 Execute immediately
 cleanLogs();
 
-// 🔁 Kartojam kas 24h
+// 🔁 Schedule next cleanups every 24h
 setInterval(cleanLogs, LOOP_INTERVAL_MS);
