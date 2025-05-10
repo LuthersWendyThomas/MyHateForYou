@@ -1,5 +1,3 @@
-// 📦 core/handlers/mainHandler.js | IMMORTAL v99999999 — BULLETPROOF SYNCED FINAL
-
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages, userOrders } from "../../state/userState.js";
 import { safeStart } from "./finalHandler.js";
@@ -25,24 +23,25 @@ export function registerMainHandler(bot) {
     if (!bot || !id || typeof text !== "string") return;
 
     const uid = String(id).trim();
-    text = text.toString().trim().slice(0, 4096); // Normalize input
+    text = normalizeText(text);
 
     try {
       markUserActive(uid);
 
       const session = userSessions[uid] ||= { step: 1, createdAt: Date.now() };
+      session.lastText = text; // optional trace
       const isAdmin = uid === String(BOT.ADMIN_ID);
 
-      // ✅ 1. Security gate (flood/ban checks)
+      // ✅ 1. Security gate (ban/flood)
       if (!(await canProceed(uid, bot, text))) return;
 
-      // ✅ 2. Hard restart (/start or Telegram Start)
-      if (text.toLowerCase() === "/start") {
+      // ✅ 2. Hard restart
+      if (text === "/start") {
         console.log(`🚀 Restart from ${uid}`);
         return await safeStart(bot, uid);
       }
 
-      // ✅ 3. Admin step-based actions
+      // ✅ 3. Admin input
       if (session.adminStep) {
         try {
           return await handleAdminAction(bot, msg, userSessions, userOrders);
@@ -57,38 +56,30 @@ export function registerMainHandler(bot) {
         }
       }
 
-      // ✅ 4. Menu routing (excluding START)
+      // ✅ 4. Main menu routing
       switch (text) {
         case MENU_BUTTONS.BUY:
-          return await startOrder(bot, uid, userMessages);
-
+          return await safeCall(() => startOrder(bot, uid, userMessages));
         case MENU_BUTTONS.PROFILE:
-          return await sendProfile(bot, uid, userMessages);
-
+          return await safeCall(() => sendProfile(bot, uid, userMessages));
         case MENU_BUTTONS.ORDERS:
-          return await sendOrders(bot, uid, uid, userMessages);
-
+          return await safeCall(() => sendOrders(bot, uid, uid, userMessages));
         case MENU_BUTTONS.HELP:
-          return await sendHelp(bot, uid, userMessages);
-
+          return await safeCall(() => sendHelp(bot, uid, userMessages));
         case MENU_BUTTONS.STATS:
-          if (isAdmin) return await sendStats(bot, uid, userMessages);
+          if (isAdmin) return await safeCall(() => sendStats(bot, uid, userMessages));
           break;
-
         case MENU_BUTTONS.ADMIN:
-          if (isAdmin) return await openAdminPanel(bot, uid);
+          if (isAdmin) return await safeCall(() => openAdminPanel(bot, uid));
           break;
       }
 
-      // ✅ 5. Step-based flow (1–9)
-      if (typeof session.step === "number" && session.step >= 1 && session.step <= 9) {
-        return await handleStep(bot, uid, text, userMessages);
+      // ✅ 5. Step-based logic
+      if (typeof session.step !== "number" || session.step < 1 || session.step > 9) {
+        console.warn(`⚠️ [Corrupt step] Resetting → ${uid}`);
+        session.step = 1;
       }
-
-      // 🧯 6. Fallback to safe restart
-      console.warn(`⚠️ [Fallback triggered] Resetting session for ${uid}`);
-      session.step = 1;
-      return await safeStart(bot, uid);
+      return await safeCall(() => handleStep(bot, uid, text, userMessages));
 
     } catch (err) {
       console.error("❌ [MainHandler crash]:", err.message || err);
@@ -103,4 +94,22 @@ export function registerMainHandler(bot) {
       }
     }
   });
+}
+
+/**
+ * 🔁 Normalizes and locks input text (safe slice/trim)
+ */
+function normalizeText(txt) {
+  return txt?.toString().trim().slice(0, 4096).toLowerCase();
+}
+
+/**
+ * 🛡️ Calls a function with isolated error guard
+ */
+async function safeCall(fn) {
+  try {
+    return await fn();
+  } catch (err) {
+    console.error("❌ [safeCall error]:", err.message || err);
+  }
 }
