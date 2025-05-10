@@ -7,33 +7,35 @@ import { BOT } from "../../config/config.js";
 const FINAL_CLEANUP_TIMEOUT_MS = 27 * 60 * 1000;
 
 /**
- * 🚚 Starts delivery simulation for courier/drop
+ * 🚚 Starts delivery simulation
  */
 export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) {
-  try {
-    const uid = String(id);
-    if (!bot || !uid) throw new Error("Missing bot or ID");
+  const uid = String(id);
+  if (!bot || !uid) return;
 
+  try {
     const session = userSessions[uid] ||= { step: 9, createdAt: Date.now() };
-    if (session.deliveryInProgress) return;
+    if (session.deliveryInProgress) {
+      debug(`⚠️ [simulateDelivery] Already in progress for ${uid}`);
+      return;
+    }
 
     session.deliveryInProgress = true;
     session.step = 9;
 
-    const isCourier = method.toLowerCase() === "courier";
-
-    const steps = isCourier
+    const courier = method.toLowerCase() === "courier";
+    const steps = courier
       ? [
           ["✅ Order confirmed!\n⏳ Preparing the shipment for the courier...", 0],
-          ["🚚 The courier has moved!\nEstimated arrival: ~20min.", 5 * 60 * 1000],
-          ["✅ Courier near the location!\n⚠️ Wait for precise instructions.", 10 * 60 * 1000],
+          ["🚚 Courier has moved!\nEstimated arrival: ~20min.", 5 * 60 * 1000],
+          ["✅ Courier near location!\n⚠️ Wait for precise instructions.", 10 * 60 * 1000],
           ["✅ Delivery almost complete.\nPrepare for pickup.", 18 * 60 * 1000],
           ["📬 *Package delivered successfully.*\nStay safe."]
         ]
       : [
           ["✅ Order confirmed!\n⏳ Drop point is being prepared...", 0],
-          ["📦 Drop travels to the location!\nEstimated placement: ~20min.", 5 * 60 * 1000],
-          ["✅ Drop almost on the spot!\n⚠️ Wait for coordinates.", 14 * 60 * 1000],
+          ["📦 Drop travels to the location!\nPlacement: ~20min.", 5 * 60 * 1000],
+          ["✅ Drop almost on spot!\n⚠️ Wait for coordinates.", 14 * 60 * 1000],
           ["📍 Drop placed.\nFollow the instructions you receive.", 19 * 60 * 1000],
           ["📬 *Package delivered successfully.*\nStay safe."]
         ];
@@ -41,15 +43,11 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
     for (let i = 0; i < steps.length; i++) {
       const [text, delay = i * 60000] = steps[i];
       const isFinal = i === steps.length - 1;
-
-      if (isFinal) {
-        scheduleFinalStep(bot, uid, text, delay, userMsgs);
-      } else {
-        scheduleStep(bot, uid, text, delay, userMsgs);
-      }
+      isFinal
+        ? scheduleFinalStep(bot, uid, text, delay, userMsgs)
+        : scheduleStep(bot, uid, text, delay, userMsgs);
     }
 
-    // Safety cleanup if final step fails
     if (activeTimers[uid]) clearTimeout(activeTimers[uid]);
     activeTimers[uid] = setTimeout(() => {
       triggerFinalCleanup(bot, uid, userMsgs);
@@ -57,26 +55,20 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
     }, FINAL_CLEANUP_TIMEOUT_MS);
 
   } catch (err) {
-    console.error("❌ [simulateDelivery error]:", err.message);
+    console.error("❌ [simulateDelivery error]:", err.message || err);
   }
 }
 
-/**
- * 💬 Standard delivery message
- */
 function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
   setTimeout(async () => {
     try {
       await bot.sendChatAction(id, "typing").catch(() => {});
-      await new Promise(res => setTimeout(res, 600));
+      await wait(600);
 
-      const msg = await sendAndTrack(
-        bot,
-        id,
-        text,
-        { parse_mode: "Markdown", disable_notification: true },
-        userMsgs
-      );
+      const msg = await sendAndTrack(bot, id, text, {
+        parse_mode: "Markdown",
+        disable_notification: true
+      }, userMsgs);
 
       if (shouldAutoDelete(id) && msg?.message_id) {
         setTimeout(() => {
@@ -89,22 +81,16 @@ function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
   }, delayMs);
 }
 
-/**
- * ✅ Final delivery message + triggers cleanup
- */
 function scheduleFinalStep(bot, id, text, delayMs = 0, userMsgs = {}) {
   setTimeout(async () => {
     try {
       await bot.sendChatAction(id, "typing").catch(() => {});
-      await new Promise(res => setTimeout(res, 600));
+      await wait(600);
 
-      const msg = await sendAndTrack(
-        bot,
-        id,
-        text,
-        { parse_mode: "Markdown", disable_notification: false },
-        userMsgs
-      );
+      const msg = await sendAndTrack(bot, id, text, {
+        parse_mode: "Markdown",
+        disable_notification: false
+      }, userMsgs);
 
       if (shouldAutoDelete(id) && msg?.message_id) {
         setTimeout(() => {
@@ -112,28 +98,25 @@ function scheduleFinalStep(bot, id, text, delayMs = 0, userMsgs = {}) {
         }, 15000);
       }
 
-      setTimeout(() => {
-        triggerFinalCleanup(bot, id, userMsgs);
-      }, 7000);
-
+      setTimeout(() => triggerFinalCleanup(bot, id, userMsgs), 7000);
     } catch (err) {
       console.error("❌ [scheduleFinalStep error]:", err.message);
     }
   }, delayMs);
 }
 
-/**
- * 🧼 Full session cleanup after delivery (autodelete + autoban)
- */
 async function triggerFinalCleanup(bot, id, userMsgs = {}) {
   try {
     const uid = String(id);
     if (!bot || !uid) return;
 
     const session = userSessions[uid];
-    if (session?.cleanupScheduled) return;
-    userSessions[uid] = { ...session, cleanupScheduled: true };
+    if (session?.cleanupScheduled) {
+      debug(`⚠️ [triggerFinalCleanup] Already triggered for ${uid}`);
+      return;
+    }
 
+    userSessions[uid] = { ...session, cleanupScheduled: true };
     const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
 
     if (autodeleteEnabled?.status && !isAdmin && Array.isArray(userMsgs[uid])) {
@@ -163,17 +146,24 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
     }
 
     delete userSessions[uid];
-    console.log(`🧼 Final delivery cleanup complete → ${uid}`);
+    debug(`🧼 Final delivery cleanup complete → ${uid}`);
   } catch (err) {
     console.error("❌ [triggerFinalCleanup error]:", err.message);
   }
 }
 
-/**
- * Utility: Check if autodelete is allowed for user
- */
 function shouldAutoDelete(id) {
   const uid = String(id);
   const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
   return autodeleteEnabled?.status && !isAdmin;
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function debug(...args) {
+  if (process.env.DEBUG_MESSAGES === "true") {
+    console.log(...args);
+  }
 }
