@@ -1,4 +1,4 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v999999999999 — GODMODE ALIASED SYNCED + BULLETPROOF v2.0
+// 📦 utils/fetchCryptoPrice.js | FINAL IMMORTAL v999999999999.∞ — GODMODE ALIASED SYNCED + BULLETPROOF v2.1
 
 import fetch from "node-fetch";
 import { rateLimiter } from "./rateLimiter.js";
@@ -11,7 +11,7 @@ const locks = {};
 const SUPPORTED = {
   BTC:   { gecko: "bitcoin",      coincap: "bitcoin" },
   ETH:   { gecko: "ethereum",     coincap: "ethereum" },
-  MATIC: { gecko: "polygon-pos",  coincap: "polygon" },
+  MATIC: { gecko: "matic-network",  coincap: "matic" },
   SOL:   { gecko: "solana",       coincap: "solana" }
 };
 
