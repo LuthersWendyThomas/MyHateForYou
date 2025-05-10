@@ -1,4 +1,5 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v3_999999999999.∞ — GODMODE BULLETPROOF MATIC FIXED EDITION
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v3_999999999999.∞
+// GODMODE BULLETPROOF MATIC FIXED + QR + SYNC + ADMIN + SESSION LOCK
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -29,24 +30,24 @@ async function fetchWithRetry(fn, retries = 5, baseDelay = 1500) {
       return await fn();
     } catch (err) {
       lastErr = err;
-      console.warn(`⚠️ [fetchWithRetry ${i + 1}/${retries}]: ${err.message}`);
+      console.warn(`⚠️ [fetchWithRetry ${i + 1}/${retries}]:`, err.message);
     }
   }
   throw lastErr;
 }
 
-async function sendSafe(botMethod, ...args) {
+async function sendSafe(fn, ...args) {
   for (let i = 0; i < 3; i++) {
     try {
-      return await botMethod(...args);
+      return await fn(...args);
     } catch (err) {
       if (err.response?.statusCode === 429 || err.message?.includes("429")) {
         const delay = (i + 1) * 2000;
-        console.warn(`⏳ Telegram rate limited → wait ${delay}ms`);
+        console.warn(`⏳ Telegram rate limit hit → waiting ${delay}ms`);
         await wait(delay);
         continue;
       }
-      console.warn("⚠️ [sendSafe error]:", err.message || err);
+      console.warn("⚠️ [sendSafe error]:", err.message);
     }
   }
   return null;
@@ -114,8 +115,8 @@ export async function handlePayment(bot, id, userMessages) {
 
     const timer = setTimeout(() => {
       console.warn(`⌛️ Payment expired: ${id}`);
-      delete paymentTimers[id];
       delete userSessions[id];
+      delete paymentTimers[id];
     }, 30 * 60 * 1000);
 
     s.paymentTimer = timer;
@@ -182,8 +183,8 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
 
     if (s.paymentTimer) clearTimeout(s.paymentTimer);
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
-    delete paymentTimers[id];
     delete s.paymentTimer;
+    delete paymentTimers[id];
 
     userOrders[id] = (userOrders[id] || 0) + 1;
 
