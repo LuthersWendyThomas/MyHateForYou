@@ -1,37 +1,38 @@
-// 📦 utils/rateLimiter.js | IMMORTAL FINAL v999999999999 — ULTRA RATE GUARD + MEMGUARD + DEBUG SYNC
+// 📦 utils/rateLimiter.js | IMMORTAL FINAL v999999999999999 — GODMODE RATE SHIELD + AUTO MEMGUARD + DEBUG SYNCED
 
 const limits = new Map();
-const DELAY = 1000;     // 1 sek per valiutą
-const JITTER = 200;     // iki 200ms random
-const MAX_TRACK = 1000; // max 1000 entries
+const DELAY = 1000;       // ⏱ pagrindinis delay tarp užklausų (ms)
+const JITTER = 200;       // 🔀 random papildomas delay
+const MAX_TRACK = 1000;   // 🧠 max entries apsaugai nuo memory leak
+const CLEAN_THRESHOLD = 60000; // ⌛ entry senėjimo limitas (60s)
 
 /**
- * ⏳ Apsaugo nuo per dažno kvietimo pagal valiutą
+ * ⏳ Apsaugo nuo per dažno valiutų kvietimo (Gecko/CoinCap/RPC)
  * @param {string} currency - pvz. "btc", "eth", "matic", "sol"
  */
 export async function rateLimiter(currency) {
-  const key = String(currency || "").trim().toLowerCase();
+  const raw = String(currency || "").trim();
+  const key = raw.toLowerCase();
   if (!key) return;
 
   const now = Date.now();
   const last = limits.get(key) || 0;
-  const sinceLast = now - last;
-  const waitTime = DELAY - sinceLast;
+  const elapsed = now - last;
+  const baseDelay = DELAY - elapsed;
 
-  if (waitTime > 0) {
+  if (baseDelay > 0) {
     const extra = Math.floor(Math.random() * JITTER);
-    const totalWait = waitTime + extra;
-    debug(`⏳ [RATE LIMIT] ${key} → delaying ${totalWait}ms`);
-    await wait(totalWait);
+    const totalDelay = baseDelay + extra;
+    debug(`⏳ [RATE LIMIT] ${key} → delaying ${totalDelay}ms`);
+    await wait(totalDelay);
   }
 
   limits.set(key, now);
 
-  // 🧹 Auto-clean if memory fills up (older than 60s)
   if (limits.size > MAX_TRACK) {
     let cleaned = 0;
     for (const [k, t] of limits.entries()) {
-      if (now - t > 60000) {
+      if (now - t > CLEAN_THRESHOLD) {
         limits.delete(k);
         cleaned++;
       }
@@ -42,10 +43,16 @@ export async function rateLimiter(currency) {
   }
 }
 
+/**
+ * ⏱ Delay helper
+ */
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * 🪵 Debug logger (respects DEBUG_MESSAGES=true)
+ */
 function debug(...args) {
   if (process.env.DEBUG_MESSAGES === "true") {
     console.log(...args);
