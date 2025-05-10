@@ -54,10 +54,10 @@ export function initBotInstance() {
 // ===============================
 // 💳 Wallets — required
 export const WALLETS = {
-  btc: requiredEnv(process.env.BTC_WALLET, "BTC_WALLET"),
-  eth: requiredEnv(process.env.ETH_WALLET, "ETH_WALLET"),
-  sol: requiredEnv(process.env.SOL_WALLET, "SOL_WALLET"),
-  matic: requiredEnv(process.env.MATIC_WALLET, "MATIC_WALLET")
+  BTC: requiredEnv(process.env.BTC_WALLET, "BTC_WALLET"),
+  ETH: requiredEnv(process.env.ETH_WALLET, "ETH_WALLET"),
+  SOL: requiredEnv(process.env.SOL_WALLET, "SOL_WALLET"),
+  MATIC: requiredEnv(process.env.MATIC_WALLET, "MATIC_WALLET")
 };
 
 // ===============================
