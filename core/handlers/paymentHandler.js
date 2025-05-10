@@ -13,7 +13,7 @@ import { BOT, ALIASES } from "../../config/config.js";
 const SUPPORTED = {
   BTC:   { gecko: "bitcoin",      coincap: "bitcoin" },
   ETH:   { gecko: "ethereum",     coincap: "ethereum" },
-  MATIC: { gecko: "polygon-pos",  coincap: "polygon" },
+  MATIC: { gecko: "matic-network",  coincap: "matic" },
   SOL:   { gecko: "solana",       coincap: "solana" }
 };
 
