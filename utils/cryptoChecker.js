@@ -3,10 +3,10 @@ import fs from "fs";
 import path from "path";
 import { API, BOT } from "../config/config.js";
 
-// 🔒 Log failas
+// 📍 Log failo vieta
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
-// ✅ Palaikomi tinklai (pagal fetchCryptoPrice.js mapping)
+// ✅ Palaikomi tinklai pagal fetchCryptoPrice.js mapping
 const SUPPORTED = {
   BTC: true,
   ETH: true,
@@ -15,12 +15,12 @@ const SUPPORTED = {
 };
 
 /**
- * ✅ Tikrina ar wallet'e yra lėšų pagal valiutą
+ * ✅ Pagrindinė funkcija — tikrina ar yra pakankamai lėšų nurodytam tinkle
  */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
   try {
-    const amount = parseFloat(expectedAmount);
     const cur = String(currency || "").toUpperCase().trim();
+    const amount = parseFloat(expectedAmount);
 
     if (
       !wallet || typeof wallet !== "string" || wallet.length < 8 ||
@@ -32,7 +32,6 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
     }
 
     let result = false;
-
     switch (cur) {
       case "BTC":
         result = await checkBTC(wallet, amount);
@@ -71,21 +70,19 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 }
 
 /**
- * ✅ BTC (blockchain.info API, satoshis → BTC)
+ * ✅ BTC balansas (blockchain.info API, satoshis → BTC)
  */
 async function checkBTC(address, expected) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-
     const res = await fetch(`${API.BTC_RPC}${address}`, { signal: controller.signal });
     clearTimeout(timeout);
 
     const satoshis = parseInt(await res.text());
+    if (!Number.isFinite(satoshis)) throw new Error("Invalid BTC satoshis");
+
     const btc = satoshis / 1e8;
-
-    if (!Number.isFinite(btc)) throw new Error("BTC result not finite");
-
     return btc >= expected;
   } catch (err) {
     console.error("❌ [BTC error]:", err.message || err);
@@ -94,7 +91,7 @@ async function checkBTC(address, expected) {
 }
 
 /**
- * ✅ ETH / MATIC — EVM tinklai (wei → eth)
+ * ✅ ETH / MATIC balansas per JSON-RPC (wei → ETH/MATIC)
  */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
@@ -114,19 +111,18 @@ async function checkEVM(address, expected, rpcUrl, label) {
     });
     clearTimeout(timeout);
 
-    const data = await res.json();
-    const hex = data?.result;
-
+    const json = await res.json();
+    const hex = json?.result;
     if (!hex || typeof hex !== "string") {
-      throw new Error("Invalid or missing EVM balance hex");
+      throw new Error("Invalid hex balance from EVM RPC");
     }
 
     const wei = parseInt(hex, 16);
-    const eth = wei / 1e18;
+    const value = wei / 1e18;
 
-    if (!Number.isFinite(eth)) throw new Error("Parsed EVM balance not finite");
+    if (!Number.isFinite(value)) throw new Error("Invalid EVM parsed balance");
 
-    return eth >= expected;
+    return value >= expected;
   } catch (err) {
     console.error(`❌ [${label} error]:`, err.message || err);
     return false;
@@ -134,7 +130,7 @@ async function checkEVM(address, expected, rpcUrl, label) {
 }
 
 /**
- * ✅ Solana (lamports → SOL)
+ * ✅ SOL balansas per RPC (lamports → SOL)
  */
 async function checkSOL(address, expected) {
   try {
@@ -154,12 +150,12 @@ async function checkSOL(address, expected) {
     });
     clearTimeout(timeout);
 
-    const data = await res.json();
-    const lamports = data?.result?.value;
+    const json = await res.json();
+    const lamports = json?.result?.value;
+
+    if (!Number.isFinite(lamports)) throw new Error("Invalid lamports");
+
     const sol = lamports / 1e9;
-
-    if (!Number.isFinite(sol)) throw new Error("Parsed lamports not finite");
-
     return sol >= expected;
   } catch (err) {
     console.error("❌ [SOL error]:", err.message || err);
@@ -168,12 +164,13 @@ async function checkSOL(address, expected) {
 }
 
 /**
- * 📄 Log failas
+ * 🧾 Įrašo patikrinimo rezultatą į .log
  */
 function log(wallet, currency, amount, status) {
   try {
-    if (!fs.existsSync(path.dirname(logPath))) {
-      fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    const dir = path.dirname(logPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
 
     const timestamp = new Date().toISOString();
