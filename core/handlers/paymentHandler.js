@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1_999999999 — ULTRA BULLETPROOF ALIASED GODMODE
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1_999999999 — ULTRA BULLETPROOF ALIASED GODMODE SYNCED
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -10,7 +10,6 @@ import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT, ALIASES } from "../../config/config.js";
 
-// ✅ Oficialūs palaikomi
 const SUPPORTED = {
   BTC: { gecko: "bitcoin", coincap: "bitcoin" },
   ETH: { gecko: "ethereum", coincap: "ethereum" },
@@ -182,7 +181,11 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
   try {
     await sendAndTrack(bot, id, "⏳ Verifying payment on the blockchain...", {}, userMessages);
 
-    const confirmed = await fetchWithRetry(() => checkPayment(s.wallet, s.currency, s.expectedAmount, bot));
+    const normalized = ALIASES[s.currency.toLowerCase()] || s.currency.toUpperCase();
+    const confirmed = await fetchWithRetry(() =>
+      checkPayment(s.wallet, normalized, s.expectedAmount, bot)
+    );
+
     if (!confirmed) {
       return sendKeyboard(bot, id, "❌ Payment not yet detected. Try again or cancel:", [
         [{ text: "✅ CONFIRM" }],
