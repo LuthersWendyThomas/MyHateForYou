@@ -1,4 +1,4 @@
-// 📦 core/handlers/stepHandler.js | IMMORTAL FINAL v999999999 — ULTRA BULLETPROOF FLOW + FULL SYNC
+// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999 — REGION-SYNCED DIAMOND BUILD
 
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
@@ -8,20 +8,8 @@ import { sendKeyboard, sendAndTrack } from "../../helpers/messageUtils.js";
 import { punish } from "../../utils/punishUser.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
 import { resetSession, safeStart } from "./finalHandler.js";
+import { REGION_MAP, getRegionKeyboard, getCityKeyboard } from "../../config/regions.js";
 
-// 🌍 Region → City hierarchy
-const regionMap = {
-  "🗽 East Coast": ["New York", "Boston", "Philadelphia", "Baltimore", "Washington", "Charlotte"],
-  "🌴 West Coast": ["Los Angeles", "San Diego", "San Jose", "San Francisco"],
-  "🛢️ South": ["Houston", "Dallas", "Austin", "San Antonio", "Atlanta", "Miami", "El Paso", "Jacksonville", "Fort Worth", "Nashville", "Memphis"],
-  "⛰️ Midwest": ["Chicago", "Detroit", "Indianapolis", "Columbus", "Louisville"],
-  "🌲 Northwest": ["Seattle", "Portland", "Denver"],
-  "🏜️ Southwest": ["Phoenix", "Las Vegas", "Oklahoma City"]
-};
-
-/**
- * 🧠 Handles dynamic user flow per step
- */
 export async function handleStep(bot, id, text, userMessages) {
   const uid = String(id);
   const input = (text || "").trim();
@@ -51,25 +39,30 @@ export async function handleStep(bot, id, text, userMessages) {
 
   try {
     switch (s.step) {
-      case 1:
-        if (!regionMap[input]) return punish(bot, uid, userMessages);
+      case 1: {
+        if (!REGION_MAP[input]?.active) return punish(bot, uid, userMessages);
         s.region = input;
         s.step = 1.2;
         return renderStep(bot, uid, s.step, userMessages);
+      }
 
-      case 1.2:
-        if (!regionMap[s.region]?.includes(input)) return punish(bot, uid, userMessages);
-        s.city = input;
+      case 1.2: {
+        const selectedCity = input.replace(/^🚫 /, "");
+        const cities = REGION_MAP[s.region]?.cities;
+        if (!cities || !cities[selectedCity]) return punish(bot, uid, userMessages);
+        s.city = selectedCity;
         s.step = 2;
         return renderStep(bot, uid, s.step, userMessages);
+      }
 
-      case 2:
+      case 2: {
         const method = deliveryMethods.find(m => m.label === input);
         if (!method) return punish(bot, uid, userMessages);
         s.deliveryMethod = method.key;
         s.deliveryFee = method.fee;
         s.step = 3;
         return renderStep(bot, uid, s.step, userMessages);
+      }
 
       case 3:
         if (!products[input]) return punish(bot, uid, userMessages);
@@ -77,14 +70,15 @@ export async function handleStep(bot, id, text, userMessages) {
         s.step = 4;
         return renderStep(bot, uid, s.step, userMessages);
 
-      case 4:
+      case 4: {
         const prod = products[s.category]?.find(p => p.name === input);
         if (!prod) return punish(bot, uid, userMessages);
         s.product = prod;
         s.step = 5;
         return renderStep(bot, uid, s.step, userMessages);
+      }
 
-      case 5:
+      case 5: {
         const qty = input?.match(/^[^\s(]+/)?.[0];
         const price = s.product?.prices?.[qty];
         if (!price || isNaN(parseInt(qty))) return punish(bot, uid, userMessages);
@@ -93,14 +87,16 @@ export async function handleStep(bot, id, text, userMessages) {
         s.totalPrice = price + s.deliveryFee;
         s.step = 6;
         return renderStep(bot, uid, s.step, userMessages);
+      }
 
-      case 6:
+      case 6: {
         const wallet = WALLETS[input];
         if (!wallet || wallet.length < 8) return punish(bot, uid, userMessages);
         s.currency = input;
         s.wallet = wallet;
         s.step = 7;
         return renderStep(bot, uid, s.step, userMessages);
+      }
 
       case 7:
         if (input !== "✅ CONFIRM") return punish(bot, uid, userMessages);
@@ -130,25 +126,16 @@ export async function handleStep(bot, id, text, userMessages) {
   }
 }
 
-/**
- * 📲 UI rendering per step
- */
 function renderStep(bot, id, step, userMessages) {
   const s = userSessions[id] ||= { step: 1 };
 
   try {
     switch (step) {
       case 1:
-        return sendKeyboard(bot, id, "🗺 *Select your region:*", [
-          ...Object.keys(regionMap).map(r => [{ text: r }]),
-          [{ text: "🔙 Back" }]
-        ], userMessages);
+        return sendKeyboard(bot, id, "🗺 *Select your region:*", getRegionKeyboard(), userMessages);
 
       case 1.2:
-        return sendKeyboard(bot, id, `🏙 *Choose your city in ${s.region}:*`, [
-          ...regionMap[s.region].map(c => [{ text: c }]),
-          [{ text: "🔙 Back" }]
-        ], userMessages);
+        return sendKeyboard(bot, id, `🏙 *Choose your city in ${s.region}:*`, getCityKeyboard(s.region), userMessages);
 
       case 2:
         return sendKeyboard(bot, id, "🚚 *Choose delivery method:*", [
@@ -185,14 +172,18 @@ function renderStep(bot, id, step, userMessages) {
 
       case 7:
         return sendKeyboard(bot, id,
-          `🧾 *Order summary:*\n\n` +
-          `• City: ${s.city}\n` +
-          `• Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)\n` +
-          `• Category: ${s.category}\n` +
-          `• Product: ${s.product?.name}\n` +
-          `• Quantity: ${s.quantity}\n` +
-          `• Payment: ${s.currency}\n\n` +
-          `💰 Total: *${s.totalPrice.toFixed(2)}$*\n\n✅ Confirm to proceed.`,
+          `🧾 *Order summary:*
+
+• City: ${s.city}
+• Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)
+• Category: ${s.category}
+• Product: ${s.product?.name}
+• Quantity: ${s.quantity}
+• Payment: ${s.currency}
+
+💰 Total: *${s.totalPrice.toFixed(2)}$*
+
+✅ Confirm to proceed.`,
           [[{ text: "✅ CONFIRM" }], [{ text: "🔙 Back" }]],
           userMessages
         );
