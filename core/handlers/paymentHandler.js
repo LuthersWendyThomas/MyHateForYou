@@ -1,5 +1,3 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v999999999999999 — DIAMOND SYNC + RATE GUARD LOCK
-
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
@@ -10,12 +8,16 @@ import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
 
-// 🔁 Delay helper
+/**
+ * ⏳ Async wait helper
+ */
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// 🔁 Safe fetch with exponential backoff
+/**
+ * 🔁 Safe fetch with retry + exponential backoff
+ */
 async function fetchWithRetry(apiCall, retries = 3, baseDelay = 1500) {
   let lastErr;
   for (let i = 0; i <= retries; i++) {
@@ -29,7 +31,9 @@ async function fetchWithRetry(apiCall, retries = 3, baseDelay = 1500) {
   throw lastErr;
 }
 
-// ✅ Telegram-safe sender (anti 429)
+/**
+ * 📬 Telegram-safe sender with anti-429
+ */
 async function sendSafe(botMethod, ...args) {
   for (let i = 0; i < 3; i++) {
     try {
@@ -37,7 +41,7 @@ async function sendSafe(botMethod, ...args) {
     } catch (err) {
       if (err.response?.statusCode === 429 || err.message?.includes("429")) {
         const delay = (i + 1) * 2000;
-        console.warn(`⏳ Telegram rate limited → retry in ${delay}ms`);
+        console.warn(`⏳ Telegram rate limited → retrying in ${delay}ms`);
         await wait(delay);
         continue;
       }
@@ -47,7 +51,9 @@ async function sendSafe(botMethod, ...args) {
   }
 }
 
-// ✅ Secure exchange rate fetch
+/**
+ * 💰 Secure exchange rate fetch with retry
+ */
 async function getSafeRate(currency) {
   try {
     const rate = await fetchWithRetry(() => fetchCryptoPrice(currency));
@@ -165,7 +171,7 @@ export async function handlePaymentCancel(bot, id, userMessages) {
 }
 
 /**
- * ✅ Step 9: Confirm payment & start delivery
+ * ✅ Step 9: Confirm payment on-chain and simulate delivery
  */
 export async function handlePaymentConfirmation(bot, id, userMessages) {
   const s = userSessions[id];
@@ -206,7 +212,9 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
 
     const adminId = String(BOT.ADMIN_ID || "");
     if (adminId && bot?.sendMessage) {
-      await sendSafe(() => bot.sendMessage(adminId, `✅ New successful payment from \`${s.wallet}\``, { parse_mode: "Markdown" }));
+      await sendSafe(() =>
+        bot.sendMessage(adminId, `✅ New successful payment from \`${s.wallet}\``, { parse_mode: "Markdown" })
+      );
     }
 
     return simulateDelivery(bot, id);
