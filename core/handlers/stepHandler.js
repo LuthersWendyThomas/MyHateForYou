@@ -1,4 +1,4 @@
-// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999.∞ — REGION-SYNCED DIAMOND BUILD + DISCOUNT SYNC + ADMIN IMPORTS + PROMOCODE
+// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999.∞ — REGION-SYNCED DIAMOND BUILD + DISCOUNT SYNC + ADMIN IMPORTS + PROMOCODE + POLYGON FIX
 
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
@@ -219,8 +219,7 @@ function renderStep(bot, id, step, userMessages) {
         return sendKeyboard(bot, id, "💳 *Choose payment network:*", wallets, userMessages);
 
       case 7:
-        const discountInfo = s.promoCode ? `🏷️ Promo: *${s.promoCode}* — ${s.appliedDiscount || 0}%
-` : "🏷️ Promo: None\n";
+        const discountInfo = s.promoCode ? `🏷️ Promo: *${s.promoCode}* — ${s.appliedDiscount || 0}%\n` : "🏷️ Promo: None\n";
         const totalLine = `💰 Total: *${s.totalPrice.toFixed(2)}$*`;
 
         return sendKeyboard(bot, id,
