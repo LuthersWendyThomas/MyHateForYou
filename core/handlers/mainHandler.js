@@ -34,13 +34,13 @@ export function registerMainHandler(bot) {
       // ✅ 1. Security gate (flood/ban checks)
       if (!(await canProceed(uid, bot, text))) return;
 
-      // ✅ 2. Hard restart (telegram start + /start)
-      if (text.toLowerCase() === "/start") {
-        console.log(`🚀 Restart from ${uid}`);
+      // ✅ 2. Hard restart
+      if (text.toLowerCase() === "/start" || text === MENU_BUTTONS.START) {
+        console.log(🚀 Restart from ${uid});
         return await safeStart(bot, uid);
       }
 
-      // ✅ 3. Admin step-based actions
+      // ✅ 3. Admin action in progress (step-based)
       if (session.adminStep) {
         try {
           return await handleAdminAction(bot, msg, userSessions, userOrders);
@@ -55,7 +55,7 @@ export function registerMainHandler(bot) {
         }
       }
 
-      // ✅ 4. Menu button routing
+      // ✅ 4. Menu routing
       switch (text) {
         case MENU_BUTTONS.BUY:
           return await startOrder(bot, uid, userMessages);
@@ -78,13 +78,13 @@ export function registerMainHandler(bot) {
           break;
       }
 
-      // ✅ 5. Step-based flow (1–9)
+      // ✅ 5. Step-based order flow
       if (typeof session.step === "number" && session.step >= 1 && session.step <= 9) {
         return await handleStep(bot, uid, text, userMessages);
       }
 
-      // 🧯 6. Fallback to safe restart
-      console.warn(`⚠️ [Fallback triggered] Resetting session for ${uid}`);
+      // 🧯 6. Fallback → reset to safeStart
+      console.warn(⚠️ [Fallback] Resetting session for ${uid});
       session.step = 1;
       return await safeStart(bot, uid);
 
