@@ -1,4 +1,4 @@
-// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.∞ — BULLETPROOF SYNC + LIVE USER COUNT + DISCOUNT CONTROL
+// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.∞ — BULLETPROOF SYNC + LIVE USER COUNT + DISCOUNT CONTROL + FULL IMPORT
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import {
@@ -18,6 +18,18 @@ import {
   removeDiscount,
   DISCOUNT_TYPES
 } from "../config/discounts.js";
+import { allCategories, allProductNames, getCategoryMap } from "../config/products.js";
+import { allRegions, allCities } from "../config/regions.js";
+
+// ✅ FULL SYNCED IMPORT FOR ADMIN USAGE (discounts.js, products.js, regions.js)
+const ALL_DISCOUNT_KEYS = {
+  user: () => Object.keys(userSessions),
+  code: () => [], // Codes are set manually
+  region: () => allRegions,
+  city: () => allCities,
+  category: () => allCategories,
+  product: () => allProductNames
+};
 
 export async function openAdminPanel(bot, id) {
   try {
@@ -151,15 +163,7 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
 
         s.adminStep = "discount_manage";
         return await sendAndTrack(bot, id,
-          `🏷️ *Discounts:*
-
-${info}
-
-✍️ *Input format:* 
-\`type key active percent\`
-
-*Example:* \`user 123456789 1 20\`
-Available types: *${DISCOUNT_TYPES.join(" | ")}*`,
+          `🏷️ *Discounts:*\n\n${info}\n\n✍️ *Input format:* \n\`type key active percent\`\n\n*Example:* \`user 123456789 1 20\`\nAvailable types: *${DISCOUNT_TYPES.join(" | ")}*`,
           { parse_mode: "Markdown" }, {});
       }
 
