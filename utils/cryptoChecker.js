@@ -35,16 +35,16 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 
     let result = false;
     switch (cur) {
-      case "BTC":
+      case "btc":
         result = await checkBTC(wallet, amount);
         break;
-      case "ETH":
-        result = await checkEVM(wallet, amount, API.ETHEREUM_RPC, "ETH");
+      case "eth":
+        result = await checkEVM(wallet, amount, API.ETHEREUM_RPC, "eth");
         break;
-      case "MATIC":
-        result = await checkEVM(wallet, amount, API.MATIC_RPC, "MATIC");
+      case "matic":
+        result = await checkEVM(wallet, amount, API.MATIC_RPC, "matic");
         break;
-      case "SOL":
+      case "sol":
         result = await checkSOL(wallet, amount);
         break;
       default:
