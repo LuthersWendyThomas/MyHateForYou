@@ -1,4 +1,4 @@
-// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v999999999 — ULTRA BULLETPROOF SYNC + CONFIG ALIASES
+// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v999999999 — GODMODE BULLETPROOF SYNC + CONFIG ALIASES
 
 import fetch from "node-fetch";
 import fs from "fs";
@@ -7,7 +7,7 @@ import { API, BOT, ALIASES } from "../config/config.js";
 
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
-// ✅ Oficialiai palaikomos valiutos
+// ✅ Tiksliai palaikomos valiutos
 const SUPPORTED = {
   BTC: true,
   ETH: true,
@@ -16,7 +16,7 @@ const SUPPORTED = {
 };
 
 /**
- * 🔍 Patikrina ar vartotojas tikrai apmokėjo užsakymą (pagal valiutą)
+ * 🔍 Patikrina ar vartotojo mokėjimas atitiko (blockchain)
  */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
   const curInput = String(currency || "").trim().toLowerCase();
@@ -70,7 +70,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 }
 
 /**
- * 🔎 BTC balanso patikrinimas per blockchain.info
+ * 🔎 BTC: blockchain.info balance check (satoshis → BTC)
  */
 async function checkBTC(address, expected) {
   try {
@@ -91,7 +91,7 @@ async function checkBTC(address, expected) {
 }
 
 /**
- * 🔎 ETH / MATIC balansas per RPC (wei → ETH/MATIC)
+ * 🔎 ETH / MATIC per JSON-RPC — universalus EVM balanso patikrinimas
  */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
@@ -129,7 +129,7 @@ async function checkEVM(address, expected, rpcUrl, label) {
 }
 
 /**
- * 🔎 SOL balanso tikrinimas per RPC (lamports → SOL)
+ * 🔎 SOLANA RPC patikrinimas (lamports → SOL)
  */
 async function checkSOL(address, expected) {
   try {
@@ -162,7 +162,7 @@ async function checkSOL(address, expected) {
 }
 
 /**
- * 📁 Įrašo log'ą į failą
+ * 📁 Įrašo patikros rezultatą į log failą
  */
 function log(wallet, currency, amount, status) {
   try {
