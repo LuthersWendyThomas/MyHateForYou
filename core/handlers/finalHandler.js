@@ -1,4 +1,4 @@
-// 📦 core/handlers/finalHandler.js | IMMORTAL v9999999999999 — LOCKABLE SYNCED BULLETPROOF FINAL
+// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v9999999999999.∞ — LOCKABLE SYNCED BULLETPROOF FINAL
 
 import fs from "fs/promises";
 import path from "path";
@@ -8,6 +8,9 @@ import { clearTimers, clearUserMessages, resetUser } from "../../state/stateMana
 import { userSessions, userMessages, activeUsers, paymentTimers } from "../../state/userState.js";
 import { simulateDelivery } from "./deliveryHandler.js";
 
+/**
+ * 🚀 Resets session and restarts from beginning (/start)
+ */
 export async function safeStart(bot, id) {
   const uid = String(id);
   if (!bot || !uid) return;
@@ -69,6 +72,9 @@ export async function safeStart(bot, id) {
   }
 }
 
+/**
+ * ✅ Finalizes successful order + resets session
+ */
 export async function finishOrder(bot, id) {
   const uid = String(id);
   try {
@@ -100,12 +106,18 @@ export async function finishOrder(bot, id) {
   }
 }
 
+/**
+ * 🧼 Clears all session-related state for user
+ */
 export async function resetSession(id) {
   const uid = String(id);
   await fullSessionReset(uid);
   console.log(`🧼 Session fully cleared: ${uid}`);
 }
 
+/**
+ * 🔁 Full teardown for user state (timers, cache, sessions)
+ */
 async function fullSessionReset(uid) {
   try {
     await clearTimers(uid);
@@ -133,6 +145,9 @@ async function fullSessionReset(uid) {
   }
 }
 
+/**
+ * 📸 Greeting caption with full info
+ */
 function greetingText(count) {
   return `
 🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
@@ -159,6 +174,9 @@ function greetingText(count) {
 `.trim();
 }
 
+/**
+ * 💬 Text fallback if greeting.jpg missing
+ */
 function fallbackText(count) {
   return `
 🇺🇸 *BalticPharmacyBot* — now live in 30+ US cities  
