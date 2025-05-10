@@ -1,4 +1,4 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v99999999 — ULTRA BULLETPROOF
+// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v999999999999 — GODMODE ALIASED BULLETPROOF
 
 import fetch from "node-fetch";
 import { rateLimiter } from "./rateLimiter.js";
@@ -6,6 +6,19 @@ import { rateLimiter } from "./rateLimiter.js";
 const CACHE_TTL = 5 * 60 * 1000; // 5 min
 const cache = {};
 const locks = {};
+
+// 🔐 Valiutų alias'ai (leidžia naudoti ir 'polygon', ir 'matic')
+const ALIASES = {
+  bitcoin: "BTC",
+  ethereum: "ETH",
+  polygon: "MATIC",
+  "polygon-pos": "MATIC",
+  solana: "SOL",
+  btc: "BTC",
+  eth: "ETH",
+  matic: "MATIC",
+  sol: "SOL"
+};
 
 // 🔐 TIKSLŪS CoinGecko + CoinCap ID’ai
 const SUPPORTED = {
@@ -18,46 +31,46 @@ const SUPPORTED = {
 export async function fetchCryptoPrice(currency) {
   if (!currency) return null;
 
-  const clean = String(currency).trim().toLowerCase();
-  const ids = SUPPORTED[clean];
+  const alias = ALIASES[String(currency).trim().toLowerCase()] || String(currency).trim().toUpperCase();
+  const ids = SUPPORTED[alias];
   if (!ids) {
     console.warn(`⚠️ Nepalaikoma valiuta: "${currency}"`);
     return null;
   }
 
-  await rateLimiter(clean); // ⛔️ Rate guard
+  await rateLimiter(alias); // ⛔️ Rate guard
 
-  if (locks[clean]) return await locks[clean];
+  if (locks[alias]) return await locks[alias];
 
-  const promise = _fetchCryptoPriceInternal(clean, ids);
-  locks[clean] = promise;
+  const promise = _fetchCryptoPriceInternal(alias, ids);
+  locks[alias] = promise;
 
   try {
     return await promise;
   } catch (err) {
-    console.error(`❌ [fetchCryptoPrice fatal → ${clean}]:`, err.message);
+    console.error(`❌ [fetchCryptoPrice fatal → ${alias}]:`, err.message);
     return null;
   } finally {
-    delete locks[clean];
+    delete locks[alias];
   }
 }
 
-async function _fetchCryptoPriceInternal(clean, ids) {
+async function _fetchCryptoPriceInternal(key, ids) {
   const now = Date.now();
-  const cached = cache[clean];
+  const cached = cache[key];
 
   if (cached && now - cached.timestamp < CACHE_TTL) {
-    debug(`♻️ [CACHE] ${clean.toUpperCase()} → ${cached.rate}€`);
+    debug(`♻️ [CACHE] ${key} → ${cached.rate}€`);
     return cached.rate;
   }
 
-  const geckoRate = await fetchWithRetry(() => fetchFromCoinGecko(ids.gecko), `CoinGecko → ${clean}`);
-  if (geckoRate) return saveToCache(clean, geckoRate);
+  const geckoRate = await fetchWithRetry(() => fetchFromCoinGecko(ids.gecko), `CoinGecko → ${key}`);
+  if (geckoRate) return saveToCache(key, geckoRate);
 
-  const capRate = await fetchWithRetry(() => fetchFromCoinCap(ids.coincap), `CoinCap → ${clean}`);
-  if (capRate) return saveToCache(clean, capRate);
+  const capRate = await fetchWithRetry(() => fetchFromCoinCap(ids.coincap), `CoinCap → ${key}`);
+  if (capRate) return saveToCache(key, capRate);
 
-  throw new Error(`❌ Failed to fetch ${clean.toUpperCase()} from both APIs`);
+  throw new Error(`❌ Failed to fetch ${key} from both APIs`);
 }
 
 // 📡 Retry wrapper with exponential backoff
@@ -123,7 +136,7 @@ async function fetchFromCoinCap(id) {
 
 function saveToCache(currency, rate) {
   cache[currency] = { rate, timestamp: Date.now() };
-  debug(`💰 [CACHE SET] ${currency.toUpperCase()} → ${rate}€`);
+  debug(`💰 [CACHE SET] ${currency} → ${rate}€`);
   return rate;
 }
 
