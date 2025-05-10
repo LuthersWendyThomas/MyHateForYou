@@ -1,4 +1,4 @@
-// 📦 helpers/keyboardConstants.js | IMMORTAL FINAL v99999999 — SYNC DIAMOND+LOCKED (NO START)
+// 📦 helpers/keyboardConstants.js | IMMORTAL FINAL v99999999 — SYNC DIAMOND+LOCKED
 
 import { BOT } from "../config/config.js";
 
@@ -23,6 +23,7 @@ export const MENU_BUTTONS = {
 export const MAIN_KEYBOARD = {
   reply_markup: {
     keyboard: [
+      [{ text: MENU_BUTTONS.START }],
       [{ text: MENU_BUTTONS.BUY }, { text: MENU_BUTTONS.HELP }],
       [{ text: MENU_BUTTONS.PROFILE }, { text: MENU_BUTTONS.ORDERS }],
       [{ text: MENU_BUTTONS.STATS }, { text: MENU_BUTTONS.ADMIN }]
@@ -45,6 +46,7 @@ export function getMainMenu(id) {
   const isAdmin = uid && adminId && uid === adminId;
 
   const base = [
+    [{ text: MENU_BUTTONS.START }],
     [{ text: MENU_BUTTONS.BUY }, { text: MENU_BUTTONS.HELP }],
     [{ text: MENU_BUTTONS.PROFILE }, { text: MENU_BUTTONS.ORDERS }]
   ];
