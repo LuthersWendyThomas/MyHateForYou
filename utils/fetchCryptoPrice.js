@@ -1,16 +1,16 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL v99999999 — BULLETPROOF SYNC LOCKED+
+// 📦 utils/fetchCryptoPrice.js | FINAL IMMORTAL v999999999 — MATIC+BULLETPROOF FIX
 
 import fetch from "node-fetch";
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 min
+const CACHE_TTL = 5 * 60 * 1000;
 const cache = {};
 
-// ✅ Supported currency mapping (used by APIs)
+// 🔒 Mapping for each currency per API
 const SUPPORTED = {
-  btc: "bitcoin",
-  eth: "ethereum",
-  matic: "polygon-pos",
-  sol: "solana"
+  btc: { gecko: "bitcoin", coincap: "bitcoin" },
+  eth: { gecko: "ethereum", coincap: "ethereum" },
+  matic: { gecko: "polygon-pos", coincap: "polygon" },
+  sol: { gecko: "solana", coincap: "solana" }
 };
 
 /**
@@ -20,8 +20,8 @@ export async function fetchCryptoPrice(currency) {
   if (!currency) return null;
 
   const clean = String(currency).trim().toLowerCase();
-  const mapped = SUPPORTED[clean];
-  if (!mapped) {
+  const mapping = SUPPORTED[clean];
+  if (!mapping) {
     console.warn(`⚠️ Unsupported currency: ${currency}`);
     return null;
   }
@@ -33,14 +33,14 @@ export async function fetchCryptoPrice(currency) {
   }
 
   try {
-    const price = await fetchFromCoinGecko(mapped);
+    const price = await fetchFromCoinGecko(mapping.gecko);
     if (price) return saveToCache(clean, price);
   } catch (err) {
     console.warn(`⚠️ [CoinGecko error]: ${err.message}`);
   }
 
   try {
-    const price = await fetchFromCoinCap(mapped);
+    const price = await fetchFromCoinCap(mapping.coincap);
     if (price) return saveToCache(clean, price);
   } catch (err) {
     console.warn(`⚠️ [CoinCap error]: ${err.message}`);
@@ -50,14 +50,14 @@ export async function fetchCryptoPrice(currency) {
 }
 
 /**
- * 🔁 CoinGecko with retry logic (3x)
+ * 🔁 CoinGecko (3x retry) — EUR
  */
 async function fetchFromCoinGecko(id) {
   const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`;
 
   for (let i = 0; i < 3; i++) {
     try {
-      if (i > 0) await wait(i * 800); // Delay grows
+      if (i > 0) await wait(i * 800);
       const res = await fetch(url, {
         headers: { Accept: "application/json" }
       });
@@ -72,11 +72,9 @@ async function fetchFromCoinGecko(id) {
       const json = await res.json();
       const price = parseFloat(json?.[id]?.eur);
 
-      if (Number.isFinite(price) && price > 0) {
-        return +price.toFixed(2);
-      }
-    } catch (e) {
-      console.warn(`❌ [CoinGecko retry error]: ${e.message}`);
+      if (Number.isFinite(price) && price > 0) return +price.toFixed(2);
+    } catch (err) {
+      console.warn(`❌ [CoinGecko retry error]: ${err.message}`);
     }
   }
 
@@ -96,25 +94,22 @@ async function fetchFromCoinCap(id) {
 
   const json = await res.json();
   const usd = parseFloat(json?.data?.priceUsd);
-
   if (!Number.isFinite(usd) || usd <= 0) {
-    throw new Error("CoinCap returned invalid USD price");
+    throw new Error("Invalid USD price from CoinCap");
   }
 
-  const eurRate = 1.07; // Static conversion — can be dynamic later
+  const eurRate = 1.07;
   return +(usd / eurRate).toFixed(2);
 }
 
 /**
- * 💾 Cache save helper
+ * 💾 Save to in-memory cache
  */
 function saveToCache(currency, rate) {
   cache[currency] = { rate, timestamp: Date.now() };
-
   if (process.env.DEBUG_MESSAGES === "true") {
     console.log(`💰 [CACHE] ${currency.toUpperCase()} → ${rate}€`);
   }
-
   return rate;
 }
 
