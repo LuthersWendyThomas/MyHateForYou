@@ -10,10 +10,10 @@ const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
 // ✅ Palaikomi tinklai (tiksliai suderinti su fetchCryptoPrice.js)
 const SUPPORTED = {
-  btv: true,
-  eth: true,
-  matic: true,
-  sol: true
+  BTC: true,
+  ETH: true,
+  MATIC: true,
+  SOL: true
 };
 
 /**
@@ -35,16 +35,16 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 
     let result = false;
     switch (cur) {
-      case "btc":
+      case "BTC":
         result = await checkBTC(wallet, amount);
         break;
-      case "eth":
-        result = await checkEVM(wallet, amount, API.ETHEREUM_RPC, "eth");
+      case "ETH":
+        result = await checkEVM(wallet, amount, API.ETHEREUM_RPC, "ETH");
         break;
-      case "matic":
-        result = await checkEVM(wallet, amount, API.MATIC_RPC, "matic");
+      case "MATIC":
+        result = await checkEVM(wallet, amount, API.MATIC_RPC, "MATIC");
         break;
-      case "sol":
+      case "SOL":
         result = await checkSOL(wallet, amount);
         break;
       default:
