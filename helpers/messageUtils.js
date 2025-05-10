@@ -1,4 +1,4 @@
-// 📦 helpers/messageUtils.js | FINAL IMMORTAL ULTRALOCKED v999999999999 SYNC-GODMODE
+// 📦 helpers/messageUtils.js | FINAL IMMORTAL ULTRALOCKED v999999999999.99 — SYNC-GODMODE TITAN
 
 import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
@@ -9,7 +9,7 @@ const CLEANUP_TIMEOUT_MS = 27 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 4096;
 
 /**
- * ✅ Send a tracked message
+ * ✅ Core: tracked message sender
  */
 export const sendAndTrack = async (bot, id, text, options = {}, messages = userMessages) => {
   if (!bot || !id || !text?.trim()) return null;
@@ -21,13 +21,10 @@ export const sendAndTrack = async (bot, id, text, options = {}, messages = userM
     for (const chunk of chunks) {
       if (!chunk?.length) continue;
 
-      const msg = await bot.sendMessage(id, chunk, {
+      const msg = await safeSend(bot, id, chunk, {
         parse_mode: "Markdown",
         disable_web_page_preview: true,
         ...options
-      }).catch(e => {
-        console.warn("⚠️ [sendMessage error]:", e.message);
-        return null;
       });
 
       if (msg?.message_id) {
@@ -48,9 +45,36 @@ export const sendAndTrack = async (bot, id, text, options = {}, messages = userM
   }
 };
 
-/**
- * ✅ Send photo with tracking
- */
+export const sendKeyboard = async (bot, id, text, keyboard, messages = userMessages) => {
+  return await sendAndTrack(bot, id, text, {
+    reply_markup: {
+      keyboard,
+      resize_keyboard: true,
+      one_time_keyboard: false,
+      selective: true
+    }
+  }, messages);
+};
+
+export const sendMessageWithTracking = sendKeyboard;
+
+export const sendPlain = async (bot, id, text, messages = userMessages) => {
+  if (!bot || !id || !text?.trim()) return null;
+
+  const chunks = splitMessage(text);
+  let firstMsg = null;
+
+  for (const chunk of chunks) {
+    if (!chunk?.length) continue;
+    const msg = await safeSend(bot, id, chunk);
+    if (msg?.message_id) trackMessage(id, msg.message_id, messages);
+    if (!firstMsg && msg) firstMsg = msg;
+  }
+
+  scheduleCleanup(bot, id, messages);
+  return firstMsg;
+};
+
 export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages = userMessages) => {
   if (!bot || !id || !photo) return null;
 
@@ -79,54 +103,42 @@ export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages =
 };
 
 /**
- * ✅ Send keyboard-based reply
+ * ✅ Safe universal send wrapper (with logging)
  */
-export const sendKeyboard = async (bot, id, text, keyboard, messages = userMessages) => {
-  return await sendAndTrack(bot, id, text, {
-    reply_markup: {
-      keyboard,
-      resize_keyboard: true,
-      one_time_keyboard: false,
-      selective: true
-    }
-  }, messages);
-};
-
-export const sendMessageWithTracking = sendKeyboard;
-
-/**
- * ✅ Send basic unstyled message
- */
-export const sendPlain = async (bot, id, text, messages = userMessages) => {
-  if (!bot || !id || !text?.trim()) return null;
-
+export async function safeSend(bot, id, text, options = {}) {
   try {
-    const chunks = splitMessage(text);
-    let firstMsg = null;
-
-    for (const chunk of chunks) {
-      if (!chunk?.length) continue;
-
-      const msg = await bot.sendMessage(id, chunk).catch(e => {
-        console.warn("⚠️ [sendPlain error]:", e.message);
-        return null;
-      });
-
-      if (msg?.message_id) trackMessage(id, msg.message_id, messages);
-      if (!firstMsg && msg) firstMsg = msg;
-    }
-
-    scheduleCleanup(bot, id, messages);
-    return firstMsg;
+    return await bot.sendMessage(id, text, options);
   } catch (err) {
-    console.error("❌ [sendPlain error]:", err.message);
+    console.warn(`⚠️ [safeSend] Failed → ${err.message}`);
     return null;
   }
-};
+}
 
 /**
- * 🔖 Track message ID per user
+ * ✅ Silent fire-and-forget message
  */
+export async function tryNotify(bot, id, text) {
+  try {
+    if (!bot || !id || !text) return;
+    await bot.sendMessage(id, text, { disable_notification: true }).catch(() => {});
+  } catch {}
+}
+
+/**
+ * ✅ User-facing alert that never crashes
+ */
+export async function safeAlert(bot, id, text) {
+  try {
+    return await bot.sendMessage(id, text, {
+      parse_mode: "Markdown",
+      disable_web_page_preview: true
+    });
+  } catch (err) {
+    console.warn("⚠️ [safeAlert failed]:", err.message);
+    return null;
+  }
+}
+
 function trackMessage(id, messageId, messages = userMessages) {
   const uid = String(id).trim();
   if (!uid || !messageId) return;
@@ -137,16 +149,12 @@ function trackMessage(id, messageId, messages = userMessages) {
   }
 }
 
-/**
- * 🧹 Schedules cleanup & autoban (if enabled)
- */
 function scheduleCleanup(bot, id, messages = userMessages) {
   if (!autodeleteEnabled.status && !autobanEnabled.status) return;
 
   const uid = String(id).trim();
   const session = userSessions[uid];
   if (!session || session.cleanupScheduled) return;
-
   if (BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID)) return;
 
   session.cleanupScheduled = true;
@@ -183,9 +191,6 @@ function scheduleCleanup(bot, id, messages = userMessages) {
   }, CLEANUP_TIMEOUT_MS);
 }
 
-/**
- * 🔪 Safe splitting of long Telegram messages
- */
 function splitMessage(text) {
   if (!text || typeof text !== "string") return [""];
   const parts = [];
