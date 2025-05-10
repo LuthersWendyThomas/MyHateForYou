@@ -1,11 +1,11 @@
-// 🛡️ core/security.js | FINAL BULLETPROOF v99999999.9 — TITANLOCK DIAMOND SHIELD EDITION
+// 🛡️ core/security.js | IMMORTAL FINAL v999999999 — TITANLOCK DIAMOND BULLETPROOF SYNCED EDITION
 
 import { isBanned, banUser } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { antiSpam, antiFlood, bannedUntil } from "../state/userState.js";
 import { BOT } from "../config/config.js";
 
-// 🔧 Config
+// 🔐 Anti-spam / anti-flood thresholds
 const SPAM_INTERVAL_MS = 3300;
 const FLOOD_LIMIT = 6;
 const FLOOD_WINDOW_MS = 11000;
@@ -14,17 +14,17 @@ const MAX_MESSAGE_LENGTH = 600;
 const MAX_INPUT_FREQUENCY = 4;
 const MAX_DISTINCT_INPUTS = 20;
 
-const recentTexts = {}; // { userId: [text1, text2, ...] }
+const recentTexts = {}; // { userId: [msg1, msg2, ...] }
 
 /**
- * 🛡️ Checks if ID is admin
+ * 🔐 Is this user the admin?
  */
 function isAdmin(id) {
   return BOT.ADMIN_ID && String(id) === String(BOT.ADMIN_ID);
 }
 
 /**
- * ⏱️ Spam check (too fast repeated interactions)
+ * ⏱️ Too frequent message sending
  */
 export function isSpamming(id) {
   if (!id || isAdmin(id)) return false;
@@ -37,7 +37,7 @@ export function isSpamming(id) {
 }
 
 /**
- * 🌊 Flood detection — too many messages in short time
+ * 🌊 Detects if user is flooding input
  */
 export async function handleFlood(id, bot) {
   if (!id || isAdmin(id)) return false;
@@ -59,7 +59,7 @@ export async function handleFlood(id, bot) {
       await sendAndTrack(
         bot,
         id,
-        "⛔ *Too many actions!*\nYour account has been temporarily muted for *4 minutes*.",
+        "⛔ *Too many actions!*\nYou’ve been muted for *4 minutes*.",
         { parse_mode: "Markdown" }
       );
 
@@ -73,7 +73,7 @@ export async function handleFlood(id, bot) {
 }
 
 /**
- * 🔇 Checks if user is muted
+ * 🔇 Checks if user is temporarily muted
  */
 export function isMuted(id) {
   if (!id || isAdmin(id)) return false;
@@ -91,19 +91,18 @@ export function isMuted(id) {
 }
 
 /**
- * ⚠️ Detects dangerous messages: long, repeated, scripted
+ * 🚫 Dangerous content detector (length, repetition)
  */
 function isMessageDangerous(id, rawText) {
   if (!id || isAdmin(id)) return false;
 
-  const clean = (rawText || "").toString().trim();
+  const clean = String(rawText || "").trim();
   if (!clean) return true;
   if (clean.length > MAX_MESSAGE_LENGTH) return true;
 
   const uid = String(id);
   const history = recentTexts[uid] ||= [];
 
-  // Limit stored history
   if (history.length >= MAX_DISTINCT_INPUTS) {
     history.shift();
   }
@@ -115,7 +114,7 @@ function isMessageDangerous(id, rawText) {
 }
 
 /**
- * ✅ MASTER GATEKEEPER — central decision on whether to allow input
+ * ✅ Central input decision: allow or block
  */
 export async function canProceed(id, bot, text = "") {
   try {
@@ -129,7 +128,7 @@ export async function canProceed(id, bot, text = "") {
 
     return true;
   } catch (err) {
-    console.error("❌ [canProceed error]:", err.message || err);
+    console.error("❌ [canProceed error]:", err.message);
     return false;
   }
 }
