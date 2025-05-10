@@ -10,7 +10,7 @@ import { userSessions, userMessages, activeUsers, paymentTimers } from "../../st
 import { simulateDelivery } from "./deliveryHandler.js";
 
 /**
- * 🚀 Starts fresh session (/start)
+ * 🚀 Starts a new session (/start)
  */
 export async function safeStart(bot, id) {
   const uid = String(id);
@@ -25,7 +25,7 @@ export async function safeStart(bot, id) {
     };
 
     activeUsers.add(uid);
-    const count = activeUsers.count || activeUsers.size || 1;
+    const count = activeUsers.size || 1;
 
     const greetingPath = path.join(process.cwd(), "assets", "greeting.jpg");
     let buffer = null;
@@ -36,13 +36,22 @@ export async function safeStart(bot, id) {
       console.warn("⚠️ [safeStart] greeting.jpg missing:", e.message);
     }
 
-    const msg = buffer && buffer.byteLength > 10
-      ? await sendPhotoAndTrack(bot, uid, buffer, {
+    if (buffer && buffer.byteLength > 10) {
+      return await sendPhotoAndTrack(
+        bot,
+        uid,
+        buffer,
+        {
           caption: greetingText(count),
           parse_mode: "Markdown",
           reply_markup: getMainMenu(uid)
-        }, userMessages)
-      : await sendAndTrack(bot, uid,
+        },
+        userMessages
+      );
+    } else {
+      return await sendAndTrack(
+        bot,
+        uid,
         `✅ Welcome to *BalticPharmacyBot*!\n\n${fallbackText(count)}`,
         {
           parse_mode: "Markdown",
@@ -50,11 +59,13 @@ export async function safeStart(bot, id) {
         },
         userMessages
       );
+    }
 
-    return msg;
   } catch (err) {
     console.error("❌ [safeStart error]:", err.message);
-    return await sendAndTrack(bot, uid,
+    return await sendAndTrack(
+      bot,
+      uid,
       "⚠️ Session start failed. Please try again or type /start.",
       {},
       userMessages
@@ -97,7 +108,7 @@ export async function finishOrder(bot, id) {
 }
 
 /**
- * 🧼 Clears and resets session state
+ * 🧼 Resets the session state
  */
 export async function resetSession(id) {
   const uid = String(id);
@@ -106,7 +117,7 @@ export async function resetSession(id) {
 }
 
 /**
- * 🧯 Full internal reset for timers, messages, and session flags
+ * 🧯 Fully resets all user-related session data
  */
 async function fullSessionReset(uid) {
   try {
@@ -136,7 +147,7 @@ async function fullSessionReset(uid) {
 }
 
 /**
- * 📸 Dynamic greeting caption
+ * 📸 Returns the greeting caption with full bot info
  */
 function greetingText(count) {
   return `
@@ -165,7 +176,7 @@ function greetingText(count) {
 }
 
 /**
- * 💬 Text fallback when image unavailable
+ * 💬 Text fallback when greeting image is missing
  */
 function fallbackText(count) {
   return `
