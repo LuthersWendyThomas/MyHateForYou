@@ -9,10 +9,10 @@ const locks = {};
 
 // 🔐 TIKSLŪS CoinGecko + CoinCap ID’ai
 const SUPPORTED = {
-  btc:   { gecko: "bitcoin",      coincap: "bitcoin" },
-  eth:   { gecko: "ethereum",     coincap: "ethereum" },
-  matic: { gecko: "polygon-pos",  coincap: "polygon" },
-  sol:   { gecko: "solana",       coincap: "solana" }
+  BTC:   { gecko: "bitcoin",      coincap: "bitcoin" },
+  ETH:   { gecko: "ethereum",     coincap: "ethereum" },
+  MATIC: { gecko: "polygon-pos",  coincap: "polygon" },
+  SOL:   { gecko: "solana",       coincap: "solana" }
 };
 
 export async function fetchCryptoPrice(currency) {
