@@ -1,4 +1,4 @@
-// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.∞ — BULLETPROOF SYNC + LIVE USER COUNT + DISCOUNT CONTROL + FULL IMPORT
+// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.∞ — BULLETPROOF SYNC + LIVE USER COUNT + DISCOUNT CONTROL + FULL IMPORT + TOGGLE SYSTEM
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import {
@@ -18,18 +18,17 @@ import {
   removeDiscount,
   DISCOUNT_TYPES
 } from "../config/discounts.js";
-import { allCategories, allProductNames, getCategoryMap } from "../config/products.js";
-import { allRegions, allCities } from "../config/regions.js";
-
-// ✅ FULL SYNCED IMPORT FOR ADMIN USAGE (discounts.js, products.js, regions.js)
-const ALL_DISCOUNT_KEYS = {
-  user: () => Object.keys(userSessions),
-  code: () => [], // Codes are set manually
-  region: () => allRegions,
-  city: () => allCities,
-  category: () => allCategories,
-  product: () => allProductNames
-};
+import {
+  allCategories,
+  allProductNames,
+  getCategoryMap,
+  products
+} from "../config/products.js";
+import {
+  allRegions,
+  allCities,
+  REGION_MAP
+} from "../config/regions.js";
 
 export async function openAdminPanel(bot, id) {
   try {
@@ -40,6 +39,7 @@ export async function openAdminPanel(bot, id) {
       [{ text: "✅ UNBAN user" }, { text: "🧹 Clear BANs" }],
       [{ text: "📋 Banned list" }, { text: "⏱️ Temp bans" }],
       [{ text: "🏷️ Manage Discounts" }],
+      [{ text: "🟢 Toggle Items" }],
       [{ text: "🔙 Back" }]
     ];
 
@@ -107,6 +107,37 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
       return await sendAndTrack(bot, id, `✅ *${type}* discount updated → \`${keyRaw || "(global)"}\` = *${pct}%* (${active ? "ON" : "OFF"})`, { parse_mode: "Markdown" }, {});
     }
 
+    if (s.adminStep === "toggle_manage") {
+      const [target, statusRaw] = text.split(" ");
+      const status = statusRaw === "1";
+
+      if (REGION_MAP[target]) {
+        REGION_MAP[target].active = status;
+      } else if (allCities.includes(target)) {
+        for (const region of Object.values(REGION_MAP)) {
+          if (region.cities?.[target] !== undefined) {
+            region.cities[target] = status;
+            break;
+          }
+        }
+      } else if (allCategories.includes(target)) {
+        for (const p of products[target] || []) {
+          p.active = status;
+        }
+      } else if (allProductNames.includes(target)) {
+        const cat = getCategoryMap[target];
+        if (cat) {
+          const product = products[cat]?.find(p => p.name === target);
+          if (product) product.active = status;
+        }
+      } else {
+        return await sendAndTrack(bot, id, `❌ Unknown item: \`${target}\``, { parse_mode: "Markdown" }, {});
+      }
+
+      delete s.adminStep;
+      return await sendAndTrack(bot, id, `🟢 Toggle updated: \`${target}\` → ${status ? "ON ✅" : "OFF ❌"}`, { parse_mode: "Markdown" }, {});
+    }
+
     switch (text) {
       case "📊 STATISTICS":
       case "📅 Today":
@@ -164,6 +195,28 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
         s.adminStep = "discount_manage";
         return await sendAndTrack(bot, id,
           `🏷️ *Discounts:*\n\n${info}\n\n✍️ *Input format:* \n\`type key active percent\`\n\n*Example:* \`user 123456789 1 20\`\nAvailable types: *${DISCOUNT_TYPES.join(" | ")}*`,
+          { parse_mode: "Markdown" }, {});
+      }
+
+      case "🟢 Toggle Items": {
+        s.adminStep = "toggle_manage";
+        return await sendAndTrack(bot, id,
+          `🟢 *Toggle items ON/OFF*\n
+Available targets:
+• Regions: ${allRegions.length}
+• Cities: ${allCities.length}
+• Categories: ${allCategories.length}
+• Products: ${allProductNames.length}
+
+✍️ *Input format:* 
+\`name 1\` = ON
+\`name 0\` = OFF
+
+*Examples:*
+\`New York 0\`
+\`🔥 Zaza (Exotic Indoor) 1\`
+\`🌿 Cannabis 0\`
+\`🗽 East Coast 1\``,
           { parse_mode: "Markdown" }, {});
       }
 
