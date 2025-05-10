@@ -1,3 +1,5 @@
+// 📦 core/handlers/mainHandler.js | IMMORTAL v99999999 — BULLETPROOF SYNCED FINAL
+
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages, userOrders } from "../../state/userState.js";
 import { safeStart } from "./finalHandler.js";
@@ -34,7 +36,7 @@ export function registerMainHandler(bot) {
       // ✅ 1. Security gate (flood/ban checks)
       if (!(await canProceed(uid, bot, text))) return;
 
-      // ✅ 2. Hard restart (telegram start + /start)
+      // ✅ 2. Hard restart (/start or Telegram Start)
       if (text.toLowerCase() === "/start") {
         console.log(`🚀 Restart from ${uid}`);
         return await safeStart(bot, uid);
@@ -55,7 +57,7 @@ export function registerMainHandler(bot) {
         }
       }
 
-      // ✅ 4. Menu button routing
+      // ✅ 4. Menu routing (excluding START)
       switch (text) {
         case MENU_BUTTONS.BUY:
           return await startOrder(bot, uid, userMessages);
