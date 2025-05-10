@@ -75,6 +75,20 @@ export const API = {
 };
 
 // ===============================
+// 🔄 Unified Currency Aliases (used across system)
+export const ALIASES = {
+  bitcoin: "BTC",
+  ethereum: "ETH",
+  polygon: "MATIC",
+  "polygon-pos": "MATIC",
+  solana: "SOL",
+  btc: "BTC",
+  eth: "ETH",
+  matic: "MATIC",
+  sol: "SOL"
+};
+
+// ===============================
 // ⚙️ Feature flags (boolean-safe)
 export const FLAGS = {
   AUTOBAN_ENABLED: String(process.env.AUTOBAN_ENABLED).trim().toLowerCase() === "true",
