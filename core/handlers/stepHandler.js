@@ -1,4 +1,4 @@
-// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999 — REGION-SYNCED DIAMOND BUILD + DISCOUNT SYNC
+// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999.∞ — REGION-SYNCED DIAMOND BUILD + DISCOUNT SYNC + ADMIN IMPORTS
 
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
@@ -48,7 +48,7 @@ export async function handleStep(bot, id, text, userMessages) {
       }
 
       case 1.2: {
-        const selectedCity = input.replace(/^\uD83D\uDEAB /, "");
+        const selectedCity = input.replace(/^🚫 /, "");
         const cities = REGION_MAP[s.region]?.cities;
         if (!cities || !cities[selectedCity]) return punish(bot, uid, userMessages);
         s.city = selectedCity;
@@ -80,12 +80,13 @@ export async function handleStep(bot, id, text, userMessages) {
       }
 
       case 5: {
-        const qty = input?.match(/^[^\s(]+/)?.[0];
+        const qty = input?.match(/^[^\s(]+/)?[0];
         const basePrice = s.product?.prices?.[qty];
         if (!basePrice || isNaN(parseInt(qty))) return punish(bot, uid, userMessages);
 
         const discount = resolveDiscount({
           userId: uid,
+          region: s.region,
           city: s.city,
           category: s.category,
           productName: s.product?.name
@@ -185,6 +186,7 @@ function renderStep(bot, id, step, userMessages) {
         return sendKeyboard(bot, id,
           `🧾 *Order summary:*
 
+• Region: ${s.region}
 • City: ${s.city}
 • Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)
 • Category: ${s.category}
