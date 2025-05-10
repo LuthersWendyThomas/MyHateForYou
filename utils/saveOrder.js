@@ -1,11 +1,11 @@
-// 📦 utils/saveOrder.js | FINAL IMMORTAL v3.1 — BULLETPROOF-LOCKED SYNC EDITION
+// 📦 utils/saveOrder.js | IMMORTAL FINAL v4.0 — ULTRA BULLETPROOF LOCKED + SMART BACKUP
 
 import fs from "fs/promises";
 import path from "path";
 
 const ordersDir = path.resolve("./data");
 const ordersFile = path.join(ordersDir, "orders.json");
-const backupFile = path.join(ordersDir, "orders.bak.json");
+const backupFile = path.join(ordersDir, `orders.bak.${Date.now()}.json`);
 
 /**
  * 📁 Ensures the /data folder exists
@@ -19,7 +19,7 @@ async function ensureDataDir() {
 }
 
 /**
- * ✅ Saves a new order (used on payment confirm)
+ * ✅ Saves a new order (called on successful payment)
  */
 export async function saveOrder(userId, city, product, amount) {
   try {
@@ -35,25 +35,25 @@ export async function saveOrder(userId, city, product, amount) {
     };
 
     const orders = await loadOrders();
-    if (!Array.isArray(orders)) throw new Error("Invalid orders format");
+    if (!Array.isArray(orders)) throw new Error("Orders data corrupted");
 
     orders.push(newOrder);
     await safeWriteJSON(ordersFile, orders);
 
     console.log("✅ Order saved:", newOrder);
   } catch (err) {
-    console.error("❌ [saveOrder error]:", err?.message || err);
+    console.error("❌ [saveOrder error]:", err.message || err);
   }
 }
 
 /**
- * 📊 Provides revenue stats for admin/user
+ * 📊 Revenue/statistics for user/admin
  */
 export async function getStats(type = "admin", userId = null) {
   try {
     const orders = await loadOrders();
     const now = new Date();
-    const todayStr = now.toISOString().split("T")[0];
+    const today = now.toISOString().split("T")[0];
     const stats = defaultStats();
 
     const relevant = (type === "user" && userId)
@@ -61,46 +61,46 @@ export async function getStats(type = "admin", userId = null) {
       : orders;
 
     for (const order of relevant) {
-      const amount = parseFloat(order.amount || 0);
-      if (!Number.isFinite(amount)) continue;
+      const amt = parseFloat(order.amount || 0);
+      if (!Number.isFinite(amt)) continue;
 
       const date = new Date(order.date);
       const daysAgo = (now - date) / (1000 * 60 * 60 * 24);
 
-      stats.total += amount;
-      if (order.date.startsWith(todayStr)) stats.today += amount;
-      if (daysAgo <= 7) stats.week += amount;
+      stats.total += amt;
+      if (order.date.startsWith(today)) stats.today += amt;
+      if (daysAgo <= 7) stats.week += amt;
       if (
         date.getMonth() === now.getMonth() &&
         date.getFullYear() === now.getFullYear()
       ) {
-        stats.month += amount;
+        stats.month += amt;
       }
     }
 
     return stats;
   } catch (err) {
-    console.error("❌ [getStats error]:", err?.message || err);
+    console.error("❌ [getStats error]:", err.message || err);
     return defaultStats();
   }
 }
 
 /**
- * 📦 Loads all saved orders
+ * 📦 Loads saved orders safely
  */
 async function loadOrders() {
   try {
     const raw = await fs.readFile(ordersFile, "utf8");
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
+  } catch (err) {
     console.warn("⚠️ [loadOrders fallback]: empty list returned");
     return [];
   }
 }
 
 /**
- * 🧼 Sanitizes strings (city, product)
+ * 🧼 Basic sanitizer
  */
 function sanitize(str) {
   return String(str || "")
@@ -111,14 +111,14 @@ function sanitize(str) {
 }
 
 /**
- * 📈 Returns default zero stats object
+ * 📈 Default stats model
  */
 function defaultStats() {
   return { today: 0, week: 0, month: 0, total: 0 };
 }
 
 /**
- * 💾 Safe write to file (backup fallback if fail)
+ * 💾 Smart file writer w/ backup on failure
  */
 async function safeWriteJSON(filePath, data) {
   try {
@@ -127,11 +127,11 @@ async function safeWriteJSON(filePath, data) {
   } catch (err) {
     console.error("❌ [safeWriteJSON error]:", err.message);
     try {
-      const backup = JSON.stringify(data, null, 2);
-      await fs.writeFile(backupFile, backup, "utf8");
-      console.warn("⚠️ Backup saved to:", backupFile);
+      const fallback = JSON.stringify(data, null, 2);
+      await fs.writeFile(backupFile, fallback, "utf8");
+      console.warn("⚠️ Backup written to:", backupFile);
     } catch (backupErr) {
-      console.error("❌ [backupWrite error]:", backupErr.message || backupErr);
+      console.error("❌ [backupWrite failed]:", backupErr.message || backupErr);
     }
   }
 }
