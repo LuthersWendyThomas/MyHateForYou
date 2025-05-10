@@ -1,20 +1,7 @@
-// 📦 utils/generateQR.js | IMMORTAL v3.2 — BULLETPROOF INLINE+QR ALIAS SYNC FINAL
+// 📦 utils/generateQR.js | IMMORTAL v3.2 — ULTRA BULLETPROOF INLINE+QR ALIAS GODMODE
 
 import QRCode from "qrcode";
-import { WALLETS } from "../config/config.js";
-
-// 🔄 Aliases: leidžia naudoti polygon, polygon-pos, matic ir pan.
-const ALIASES = {
-  bitcoin: "BTC",
-  ethereum: "ETH",
-  polygon: "MATIC",
-  "polygon-pos": "MATIC",
-  solana: "SOL",
-  btc: "BTC",
-  eth: "ETH",
-  matic: "MATIC",
-  sol: "SOL"
-};
+import { WALLETS, ALIASES } from "../config/config.js";
 
 /**
  * ✅ Generates QR code PNG buffer for crypto payment
