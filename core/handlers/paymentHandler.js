@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | FINAL v1_000_001 — BULLETPROOF LOCKED SYNC
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1_11111111111 — ULTRA BULLETPROOF GODMODE
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -10,7 +10,6 @@ import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
 
-// ✅ Vieningas palaikomų valiutų objektas (SYNC su fetchCryptoPrice.js ir cryptoChecker.js)
 const SUPPORTED = {
   BTC: { gecko: "bitcoin", coincap: "bitcoin" },
   ETH: { gecko: "ethereum", coincap: "ethereum" },
@@ -18,13 +17,11 @@ const SUPPORTED = {
   SOL: { gecko: "solana", coincap: "solana" }
 };
 
-// ⏳ Delay
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// 🔁 Safe fetch wrapper (retry + exponential backoff)
-async function fetchWithRetry(fn, retries = 3, baseDelay = 1500) {
+async function fetchWithRetry(fn, retries = 5, baseDelay = 1500) {
   let lastErr;
   for (let i = 0; i <= retries; i++) {
     try {
@@ -32,12 +29,12 @@ async function fetchWithRetry(fn, retries = 3, baseDelay = 1500) {
       return await fn();
     } catch (err) {
       lastErr = err;
+      console.warn(`⚠️ [fetchWithRetry ${i + 1}/${retries}]:`, err.message);
     }
   }
   throw lastErr;
 }
 
-// 📬 Telegram-safe sender
 async function sendSafe(botMethod, ...args) {
   for (let i = 0; i < 3; i++) {
     try {
@@ -50,15 +47,14 @@ async function sendSafe(botMethod, ...args) {
         continue;
       }
       console.warn("⚠️ [sendSafe error]:", err.message || err);
-      break;
     }
   }
+  return null;
 }
 
-// 💰 Get crypto ↔ USD rate safely
 async function getSafeRate(currency) {
   try {
-    const coin = SUPPORTED[currency.toLowerCase()];
+    const coin = SUPPORTED[currency.toUpperCase()];
     if (!coin) throw new Error(`Unsupported currency: "${currency}"`);
 
     const rate = await fetchWithRetry(() => fetchCryptoPrice(coin.gecko));
@@ -71,7 +67,6 @@ async function getSafeRate(currency) {
   }
 }
 
-// 🧾 Step 7: Generate QR + await payment
 export async function handlePayment(bot, id, userMessages) {
   const s = userSessions[id];
   if (!s || s.step !== 7 || s.paymentInProgress) {
@@ -86,19 +81,19 @@ export async function handlePayment(bot, id, userMessages) {
       throw new Error("Missing or invalid payment session data");
     }
 
-    if (!SUPPORTED[s.currency.toLowerCase()]) {
-      throw new Error(`Unsupported currency "${s.currency}".`);
+    const upperCurrency = s.currency.toUpperCase();
+    if (!SUPPORTED[upperCurrency]) {
+      throw new Error(`Unsupported currency "${upperCurrency}".`);
     }
 
-    const rate = await getSafeRate(s.currency);
+    const rate = await getSafeRate(upperCurrency);
     const amount = +(usd / rate).toFixed(6);
-
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new Error("Invalid crypto amount calculated");
     }
 
     s.expectedAmount = amount;
-    const qr = await generateQR(s.currency.toLowerCase(), amount, s.wallet);
+    const qr = await generateQR(upperCurrency, amount, s.wallet);
     if (!qr || !(qr instanceof Buffer)) throw new Error("QR generation failed");
 
     s.step = 8;
@@ -111,7 +106,7 @@ export async function handlePayment(bot, id, userMessages) {
 • Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)
 • Location: ${s.city}
 
-💰 ${usd.toFixed(2)}$ ≈ ${amount} ${s.currency}
+💰 ${usd.toFixed(2)}$ ≈ ${amount} ${upperCurrency}
 🏦 Wallet: \`${s.wallet}\`
 
 ⏱ Estimated delivery: ~30 minutes
@@ -145,7 +140,6 @@ export async function handlePayment(bot, id, userMessages) {
   }
 }
 
-// 🛑 Step 8: Cancel payment
 export async function handlePaymentCancel(bot, id, userMessages) {
   const s = userSessions[id];
   if (!s || s.step !== 8 || !s.paymentInProgress) {
@@ -175,7 +169,6 @@ export async function handlePaymentCancel(bot, id, userMessages) {
   }
 }
 
-// ✅ Step 9: Confirm blockchain payment
 export async function handlePaymentConfirmation(bot, id, userMessages) {
   const s = userSessions[id];
   const valid = s && s.step === 9 && s.wallet && s.currency && s.expectedAmount;
@@ -187,7 +180,7 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
   try {
     await sendAndTrack(bot, id, "⏳ Verifying payment on the blockchain...", {}, userMessages);
 
-    const confirmed = await checkPayment(s.wallet, s.currency, s.expectedAmount, bot);
+    const confirmed = await fetchWithRetry(() => checkPayment(s.wallet, s.currency, s.expectedAmount, bot));
     if (!confirmed) {
       return sendKeyboard(bot, id, "❌ Payment not yet detected. Try again or cancel:", [
         [{ text: "✅ CONFIRM" }],
