@@ -1,15 +1,6 @@
-// 📦 config/products.js | FINAL IMMORTAL v999999999 — PRODUCT-SYNC + DISCOUNT-AWARE + STATUS-CONTROLLED
+// 📦 config/products.js | FINAL IMMORTAL v999999999.999 — PRODUCT-SYNC + DISCOUNT + UI READY
 
 import { resolveDiscount, DISCOUNTS } from "./discounts.js";
-
-/**
- * 🛒 Master product catalog with control toggles
- * Each product includes:
- * - `active` flag
- * - price map (by quantity/format)
- *
- * System uses `resolveDiscount({ userId, city, category, productName })`
- */
 
 export const products = {
   "🌿 Cannabis": [
@@ -56,12 +47,7 @@ export const products = {
 };
 
 /**
- * 🧠 Get formatted product name (with discount tag if any)
- * @param {Object} opts
- * @param {string} opts.userId
- * @param {string} opts.city
- * @param {string} opts.category
- * @returns {Array} — list of buttons: { text }
+ * 🎯 Generate keyboard for available products in category
  */
 export function getProductKeyboard({ userId, city, category }) {
   const list = products[category] || [];
