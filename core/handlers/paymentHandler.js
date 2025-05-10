@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v3_999999999999 — GODMODE BULLETPROOF MATIC FIXED EDITION
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v3_999999999999.∞ — GODMODE BULLETPROOF MATIC FIXED EDITION
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -11,10 +11,10 @@ import { userSessions, userOrders, paymentTimers } from "../../state/userState.j
 import { BOT, ALIASES } from "../../config/config.js";
 
 const SUPPORTED = {
-  BTC:   { gecko: "bitcoin",      coincap: "bitcoin" },
-  ETH:   { gecko: "ethereum",     coincap: "ethereum" },
+  BTC:   { gecko: "bitcoin",        coincap: "bitcoin" },
+  ETH:   { gecko: "ethereum",       coincap: "ethereum" },
   MATIC: { gecko: "matic-network",  coincap: "matic" },
-  SOL:   { gecko: "solana",       coincap: "solana" }
+  SOL:   { gecko: "solana",         coincap: "solana" }
 };
 
 function wait(ms) {
