@@ -1,9 +1,9 @@
-// 📦 utils/rateLimiter.js | IMMORTAL FINAL v999999999 — ULTRA RATE GUARD
+// 📦 utils/rateLimiter.js | IMMORTAL FINAL v999999999999 — ULTRA RATE GUARD + MEMGUARD + DEBUG SYNC
 
 const limits = new Map();
-const DELAY = 1000; // 1 sek per valiutą
-const JITTER = 200; // papildomas random delay (iki 200ms)
-const MAX_TRACK = 1000; // max 1000 unikalių valiutų (apsauga nuo memory leak)
+const DELAY = 1000;     // 1 sek per valiutą
+const JITTER = 200;     // iki 200ms random
+const MAX_TRACK = 1000; // max 1000 entries
 
 /**
  * ⏳ Apsaugo nuo per dažno kvietimo pagal valiutą
@@ -25,12 +25,19 @@ export async function rateLimiter(currency) {
     await wait(totalWait);
   }
 
-  limits.set(key, Date.now());
+  limits.set(key, now);
 
-  // 💡 Valo senas valiutas, kad išvengtų atminties perpildymo
+  // 🧹 Auto-clean if memory fills up (older than 60s)
   if (limits.size > MAX_TRACK) {
+    let cleaned = 0;
     for (const [k, t] of limits.entries()) {
-      if (now - t > 60000) limits.delete(k);
+      if (now - t > 60000) {
+        limits.delete(k);
+        cleaned++;
+      }
+    }
+    if (cleaned > 0) {
+      debug(`🧹 [rateLimiter cleanup] Removed ${cleaned} old entries`);
     }
   }
 }
