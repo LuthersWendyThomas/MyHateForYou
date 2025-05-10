@@ -1,29 +1,27 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL v999999999999 FINAL+ LOCKED UNTOUCHABLE
+// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v999999999999 — BULLETPROOF LOCKED
 
 import fetch from "node-fetch";
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000;
 const cache = {};
 
-// ✅ API-specific ID mappings
+// ✅ Unified ID mapping for both CoinGecko and CoinCap
 const SUPPORTED = {
-  btc: { gecko: "bitcoin", coincap: "bitcoin" },
-  eth: { gecko: "ethereum", coincap: "ethereum" },
-  matic: { gecko: "polygon", coincap: "polygon" },
-  sol: { gecko: "solana", coincap: "solana" }
+  btc: "bitcoin",
+  eth: "ethereum",
+  matic: "polygon",
+  sol: "solana"
 };
 
 /**
- * ✅ Public method — returns EUR price for selected crypto
- * @param {string} currency - e.g. "btc", "eth", "matic", "sol"
- * @returns {number|null}
+ * ✅ Public function — returns EUR price for selected crypto
  */
 export async function fetchCryptoPrice(currency) {
   if (!currency) return null;
 
   const clean = String(currency).trim().toLowerCase();
-  const mapping = SUPPORTED[clean];
-  if (!mapping) {
+  const id = SUPPORTED[clean];
+  if (!id) {
     console.warn(`⚠️ Unsupported currency: "${currency}"`);
     return null;
   }
@@ -39,7 +37,7 @@ export async function fetchCryptoPrice(currency) {
 
   // ✅ CoinGecko first
   try {
-    const rate = await fetchFromCoinGecko(mapping.gecko);
+    const rate = await fetchFromCoinGecko(id);
     if (rate) return saveToCache(clean, rate);
   } catch (err) {
     console.warn(`⚠️ [CoinGecko failed for ${clean}]: ${err.message}`);
@@ -47,7 +45,7 @@ export async function fetchCryptoPrice(currency) {
 
   // 🔁 CoinCap fallback
   try {
-    const rate = await fetchFromCoinCap(mapping.coincap);
+    const rate = await fetchFromCoinCap(id);
     if (rate) return saveToCache(clean, rate);
   } catch (err) {
     console.warn(`⚠️ [CoinCap failed for ${clean}]: ${err.message}`);
@@ -57,14 +55,14 @@ export async function fetchCryptoPrice(currency) {
 }
 
 /**
- * 🔁 CoinGecko (3x retry, 1500ms+ delay)
+ * 🔁 CoinGecko API (3x retry, 1500ms+ delay)
  */
 async function fetchFromCoinGecko(id) {
   const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`;
 
   for (let i = 0; i < 3; i++) {
     try {
-      if (i > 0) await wait(i * 1500); // 1.5s, 3s, ...
+      if (i > 0) await wait(i * 1500);
       const res = await fetch(url, { headers: { Accept: "application/json" } });
 
       if (res.status === 429) {
