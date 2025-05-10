@@ -1,3 +1,5 @@
+// 📦 core/handlers/finalHandler.js | IMMORTAL v9999999999999 — LOCKABLE SYNCED BULLETPROOF FINAL
+
 import fs from "fs/promises";
 import path from "path";
 import { sendAndTrack, sendPhotoAndTrack } from "../../helpers/messageUtils.js";
@@ -6,9 +8,6 @@ import { clearTimers, clearUserMessages, resetUser } from "../../state/stateMana
 import { userSessions, userMessages, activeUsers, paymentTimers } from "../../state/userState.js";
 import { simulateDelivery } from "./deliveryHandler.js";
 
-/**
- * ✅ Fully resets and restarts the user session (entrypoint for /start)
- */
 export async function safeStart(bot, id) {
   const uid = String(id);
   if (!bot || !uid) return;
@@ -22,28 +21,30 @@ export async function safeStart(bot, id) {
     };
 
     activeUsers.add(uid);
-    const count = activeUsers.count;
+    const count = activeUsers.count || activeUsers.size || 1;
 
     const greetingPath = path.join(process.cwd(), "assets", "greeting.jpg");
+    let buffer = null;
 
     try {
-      const buffer = await fs.readFile(greetingPath);
-      if (buffer?.length > 0) {
-        return await sendPhotoAndTrack(
-          bot,
-          uid,
-          buffer,
-          {
-            caption: greetingText(count),
-            parse_mode: "Markdown",
-            reply_markup: getMainMenu(uid)
-          },
-          userMessages
-        );
-      }
-      throw new Error("Empty image buffer");
-    } catch (imgErr) {
-      console.warn("⚠️ greeting.jpg not found or unreadable:", imgErr.message);
+      buffer = await fs.readFile(greetingPath);
+    } catch (e) {
+      console.warn("⚠️ [safeStart] greeting.jpg missing:", e.message);
+    }
+
+    if (buffer && buffer.byteLength > 10) {
+      return await sendPhotoAndTrack(
+        bot,
+        uid,
+        buffer,
+        {
+          caption: greetingText(count),
+          parse_mode: "Markdown",
+          reply_markup: getMainMenu(uid)
+        },
+        userMessages
+      );
+    } else {
       return await sendAndTrack(
         bot,
         uid,
@@ -68,9 +69,6 @@ export async function safeStart(bot, id) {
   }
 }
 
-/**
- * ✅ Finalizes order and triggers delivery
- */
 export async function finishOrder(bot, id) {
   const uid = String(id);
   try {
@@ -102,31 +100,23 @@ export async function finishOrder(bot, id) {
   }
 }
 
-/**
- * ✅ Clears all timers and memory for the session
- */
 export async function resetSession(id) {
   const uid = String(id);
   await fullSessionReset(uid);
   console.log(`🧼 Session fully cleared: ${uid}`);
 }
 
-/**
- * 🔁 Fully clears everything related to the user: timers, payments, memory
- */
 async function fullSessionReset(uid) {
   try {
     await clearTimers(uid);
     await clearUserMessages(uid);
     await resetUser(uid);
 
-    // Extra kill-switch: clear payment timers
     if (paymentTimers[uid]) {
       clearTimeout(paymentTimers[uid]);
       delete paymentTimers[uid];
     }
 
-    // Remove hanging flags from past flows
     if (userSessions[uid]) {
       delete userSessions[uid].paymentInProgress;
       delete userSessions[uid].deliveryInProgress;
@@ -134,12 +124,15 @@ async function fullSessionReset(uid) {
       delete userSessions[uid].paymentTimer;
       delete userSessions[uid].expectedAmount;
     }
+
+    if (process.env.DEBUG_MESSAGES === "true") {
+      console.log(`🧯 [fullSessionReset] Complete for ${uid}`);
+    }
   } catch (err) {
-    console.error("❌ [fullSessionReset error]:", err.message);
+    console.error("❌ [fullSessionReset error]:", err.message || err);
   }
 }
 
-// 🖼️ Greeting with image
 function greetingText(count) {
   return `
 🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
@@ -166,7 +159,6 @@ function greetingText(count) {
 `.trim();
 }
 
-// 📝 Fallback version (no image)
 function fallbackText(count) {
   return `
 🇺🇸 *BalticPharmacyBot* — now live in 30+ US cities  
