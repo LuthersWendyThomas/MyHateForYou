@@ -1,26 +1,29 @@
-// 📦 state/userState.js | FINAL IMMORTAL BULLETPROOF LOCKED v999999999.0
+// 📦 state/userState.js | FINAL IMMORTAL BULLETPROOF LOCKED v999999999.999
+
+import fs from "fs";
+import path from "path";
 
 // ==============================
 // 🔁 User sessions and progress tracking
 // ==============================
 
-export const userSessions = {};   // { [userId]: { step, city, product, ... } }
-export const userOrders = {};     // { [userId]: number }
-export const userMessages = {};   // { [userId]: [messageId, ...] }
+export const userSessions = {};     // { [userId]: { step, city, product, ... } }
+export const userOrders = {};       // { [userId]: number }
+export const userMessages = {};     // { [userId]: [messageId, ...] }
 
 // ==============================
-// 🛡️ Security and time-based data
+// 🛡️ Security and time-based state
 // ==============================
 
-export const activeTimers = {};     // Delivery cleanup
-export const paymentTimers = {};    // Payment expiry
-export const failedAttempts = {};   // Invalid input tracker
+export const activeTimers = {};     // Cleanup timers (delivery end)
+export const paymentTimers = {};    // Payment timers
+export const failedAttempts = {};   // Input violation count
 export const bannedUntil = {};      // { userId: timestampMs }
-export const antiSpam = {};         // { userId: timestampMs }
-export const antiFlood = {};        // { userId: [timestamps] }
+export const antiSpam = {};         // { userId: lastActionTimestamp }
+export const antiFlood = {};        // { userId: { count, start } }
 
 // ==============================
-// 📊 Real-time activity monitor
+// 📊 Real-time session activity monitor
 // ==============================
 
 export const activeUsers = {
@@ -50,12 +53,9 @@ export const activeUsers = {
 };
 
 // ==============================
-// 🔧 State management helpers
+// 🔧 Utility helpers — sync'd across system
 // ==============================
 
-/**
- * ✅ Clears all state & timers for a user
- */
 export function clearUserSession(id) {
   const uid = safeString(id);
   if (!uid) return;
@@ -71,16 +71,15 @@ export function clearUserSession(id) {
     antiSpam,
     antiFlood
   ].forEach(store => {
-    if (uid in store) delete store[uid];
+    if (store?.[uid] !== undefined) {
+      delete store[uid];
+    }
   });
 
   activeUsers.remove(uid);
-  console.log(`🧼 Session fully cleared for ${uid}`);
+  console.log(`🧼 Session fully cleared → ${uid}`);
 }
 
-/**
- * ✅ Starts a fresh session (step 1)
- */
 export function safeStartSession(id) {
   const uid = safeString(id);
   if (!uid) return;
@@ -91,12 +90,9 @@ export function safeStartSession(id) {
   };
 
   activeUsers.add(uid);
-  console.log(`✅ New session started for ${uid}`);
+  console.log(`✅ Session started → ${uid}`);
 }
 
-/**
- * ✅ Tracks failed inputs and bans after 5
- */
 export function trackFailedAttempts(id) {
   const uid = safeString(id);
   if (!uid) return;
@@ -105,13 +101,10 @@ export function trackFailedAttempts(id) {
 
   if (failedAttempts[uid] >= 5) {
     bannedUntil[uid] = Date.now() + 15 * 60 * 1000;
-    console.warn(`⛔️ ${uid} autobanned for too many failed inputs.`);
+    console.warn(`⛔️ ${uid} autobanned (too many failed inputs)`);
   }
 }
 
-/**
- * ✅ Clears user timers (delivery + payment)
- */
 export function clearTimersForUser(id) {
   const uid = safeString(id);
   if (!uid) return;
@@ -119,20 +112,52 @@ export function clearTimersForUser(id) {
   if (activeTimers[uid]) {
     clearTimeout(activeTimers[uid]);
     delete activeTimers[uid];
-    console.log(`🕒 ⛔️ Active timer cleared → ${uid}`);
+    console.log(`🕒 Active timer cleared → ${uid}`);
   }
 
   if (paymentTimers[uid]) {
     clearTimeout(paymentTimers[uid]);
     delete paymentTimers[uid];
-    console.log(`💳 ⛔️ Payment timer cleared → ${uid}`);
+    console.log(`💳 Payment timer cleared → ${uid}`);
   }
 }
 
-/**
- * 🧠 Utility: validates and cleans any ID
- */
 function safeString(id) {
   const str = String(id || "").trim();
   return str && str !== "undefined" && str !== "null" ? str : null;
+}
+
+// ==============================
+// 📤 EXPORT: userStats → logs/userStats-TIMESTAMP.json
+// ==============================
+
+export function exportUserStats() {
+  try {
+    const now = new Date();
+    const ts = now.toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+    const fileName = `userStats-${ts}.json`;
+    const filePath = path.join("logs", fileName);
+
+    const exportData = {};
+
+    for (const id of Object.keys(userSessions)) {
+      exportData[id] = {
+        step: userSessions[id]?.step ?? null,
+        city: userSessions[id]?.city ?? null,
+        product: userSessions[id]?.product?.name ?? null,
+        orders: userOrders[id] ?? 0,
+        bannedUntil: bannedUntil[id] ?? null,
+        lastMsgCount: Array.isArray(userMessages[id]) ? userMessages[id].length : 0
+      };
+    }
+
+    if (!fs.existsSync("logs")) fs.mkdirSync("logs", { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
+
+    console.log(`📤 [exportUserStats] Exported to: ${filePath}`);
+    return filePath;
+  } catch (err) {
+    console.error("❌ [exportUserStats error]:", err.message);
+    return null;
+  }
 }
