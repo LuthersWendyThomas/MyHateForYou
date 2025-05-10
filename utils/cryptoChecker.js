@@ -1,12 +1,14 @@
+// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v999999999999 — BULLETPROOF SYNC LOCKED
+
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 import { API, BOT } from "../config/config.js";
 
-// 📍 Log failo vieta
+// 📍 Log failas
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
-// ✅ Palaikomi tinklai pagal fetchCryptoPrice.js mapping
+// ✅ Palaikomi tinklai (atspindi fetchCryptoPrice.js ID mapping)
 const SUPPORTED = {
   BTC: true,
   ETH: true,
@@ -15,7 +17,7 @@ const SUPPORTED = {
 };
 
 /**
- * ✅ Pagrindinė funkcija — tikrina ar yra pakankamai lėšų nurodytam tinkle
+ * ✅ Tikrina ar wallet'e pakanka lėšų (pagal tinklą ir valiutą)
  */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
   try {
@@ -52,7 +54,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 
     log(wallet, cur, amount, result ? "✅ PAID" : "❌ NOT PAID");
 
-    if (result && bot && BOT.ADMIN_ID) {
+    if (result && bot?.sendMessage && BOT.ADMIN_ID) {
       const time = new Date().toLocaleString("en-GB");
       bot.sendMessage(
         BOT.ADMIN_ID,
@@ -70,7 +72,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 }
 
 /**
- * ✅ BTC balansas (blockchain.info API, satoshis → BTC)
+ * ✅ BTC (blockchain.info API, satoshis → BTC)
  */
 async function checkBTC(address, expected) {
   try {
@@ -91,13 +93,12 @@ async function checkBTC(address, expected) {
 }
 
 /**
- * ✅ ETH / MATIC balansas per JSON-RPC (wei → ETH/MATIC)
+ * ✅ ETH / MATIC balansas per RPC (wei → ETH/MATIC)
  */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-
     const res = await fetch(rpcUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -114,13 +115,13 @@ async function checkEVM(address, expected, rpcUrl, label) {
     const json = await res.json();
     const hex = json?.result;
     if (!hex || typeof hex !== "string") {
-      throw new Error("Invalid hex balance from EVM RPC");
+      throw new Error("Invalid hex from EVM RPC");
     }
 
     const wei = parseInt(hex, 16);
     const value = wei / 1e18;
 
-    if (!Number.isFinite(value)) throw new Error("Invalid EVM parsed balance");
+    if (!Number.isFinite(value)) throw new Error("Invalid parsed EVM balance");
 
     return value >= expected;
   } catch (err) {
@@ -136,7 +137,6 @@ async function checkSOL(address, expected) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-
     const res = await fetch(API.SOLANA_RPC, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -152,7 +152,6 @@ async function checkSOL(address, expected) {
 
     const json = await res.json();
     const lamports = json?.result?.value;
-
     if (!Number.isFinite(lamports)) throw new Error("Invalid lamports");
 
     const sol = lamports / 1e9;
@@ -164,18 +163,16 @@ async function checkSOL(address, expected) {
 }
 
 /**
- * 🧾 Įrašo patikrinimo rezultatą į .log
+ * 🧾 Įrašo log į failą
  */
 function log(wallet, currency, amount, status) {
   try {
     const dir = path.dirname(logPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    const timestamp = new Date().toISOString();
-    const line = `${timestamp} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
-    fs.appendFileSync(logPath, line, "utf8");
+    const time = new Date().toISOString();
+    const entry = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
+    fs.appendFileSync(logPath, entry, "utf8");
   } catch (err) {
     console.warn("⚠️ [log error]:", err.message || err);
   }
