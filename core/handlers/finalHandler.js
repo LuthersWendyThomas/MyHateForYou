@@ -1,4 +1,5 @@
-// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v9999999999999.∞ — LOCKABLE SYNCED BULLETPROOF FINAL
+// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v9999999999999.∞
+// LOCKABLE SYNCED BULLETPROOF FINAL + GREETING + RESET + DELIVERY
 
 import fs from "fs/promises";
 import path from "path";
@@ -9,7 +10,7 @@ import { userSessions, userMessages, activeUsers, paymentTimers } from "../../st
 import { simulateDelivery } from "./deliveryHandler.js";
 
 /**
- * 🚀 Resets session and restarts from beginning (/start)
+ * 🚀 Starts fresh session (/start)
  */
 export async function safeStart(bot, id) {
   const uid = String(id);
@@ -35,22 +36,13 @@ export async function safeStart(bot, id) {
       console.warn("⚠️ [safeStart] greeting.jpg missing:", e.message);
     }
 
-    if (buffer && buffer.byteLength > 10) {
-      return await sendPhotoAndTrack(
-        bot,
-        uid,
-        buffer,
-        {
+    const msg = buffer && buffer.byteLength > 10
+      ? await sendPhotoAndTrack(bot, uid, buffer, {
           caption: greetingText(count),
           parse_mode: "Markdown",
           reply_markup: getMainMenu(uid)
-        },
-        userMessages
-      );
-    } else {
-      return await sendAndTrack(
-        bot,
-        uid,
+        }, userMessages)
+      : await sendAndTrack(bot, uid,
         `✅ Welcome to *BalticPharmacyBot*!\n\n${fallbackText(count)}`,
         {
           parse_mode: "Markdown",
@@ -58,13 +50,11 @@ export async function safeStart(bot, id) {
         },
         userMessages
       );
-    }
 
+    return msg;
   } catch (err) {
     console.error("❌ [safeStart error]:", err.message);
-    return await sendAndTrack(
-      bot,
-      uid,
+    return await sendAndTrack(bot, uid,
       "⚠️ Session start failed. Please try again or type /start.",
       {},
       userMessages
@@ -73,7 +63,7 @@ export async function safeStart(bot, id) {
 }
 
 /**
- * ✅ Finalizes successful order + resets session
+ * ✅ Finalizes successful order and restarts session
  */
 export async function finishOrder(bot, id) {
   const uid = String(id);
@@ -107,7 +97,7 @@ export async function finishOrder(bot, id) {
 }
 
 /**
- * 🧼 Clears all session-related state for user
+ * 🧼 Clears and resets session state
  */
 export async function resetSession(id) {
   const uid = String(id);
@@ -116,7 +106,7 @@ export async function resetSession(id) {
 }
 
 /**
- * 🔁 Full teardown for user state (timers, cache, sessions)
+ * 🧯 Full internal reset for timers, messages, and session flags
  */
 async function fullSessionReset(uid) {
   try {
@@ -146,7 +136,7 @@ async function fullSessionReset(uid) {
 }
 
 /**
- * 📸 Greeting caption with full info
+ * 📸 Dynamic greeting caption
  */
 function greetingText(count) {
   return `
@@ -175,7 +165,7 @@ function greetingText(count) {
 }
 
 /**
- * 💬 Text fallback if greeting.jpg missing
+ * 💬 Text fallback when image unavailable
  */
 function fallbackText(count) {
   return `
