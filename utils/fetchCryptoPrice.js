@@ -1,4 +1,4 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v999999999999 — GODMODE ALIASED BULLETPROOF SYNCED
+// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v999999999999 — GODMODE ALIASED SYNCED + BULLETPROOF
 
 import fetch from "node-fetch";
 import { rateLimiter } from "./rateLimiter.js";
@@ -8,7 +8,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 min
 const cache = {};
 const locks = {};
 
-// 🔐 TIKSLŪS CoinGecko + CoinCap ID’ai (sync with all system)
+// ✅ Sinchronizuotas palaikymas visose sistemose
 const SUPPORTED = {
   BTC:   { gecko: "bitcoin",      coincap: "bitcoin" },
   ETH:   { gecko: "ethereum",     coincap: "ethereum" },
@@ -19,27 +19,27 @@ const SUPPORTED = {
 export async function fetchCryptoPrice(currency) {
   if (!currency) return null;
 
-  const alias = ALIASES[String(currency).trim().toLowerCase()] || String(currency).trim().toUpperCase();
-  const ids = SUPPORTED[alias];
+  const normalized = ALIASES[String(currency).trim().toLowerCase()] || String(currency).trim().toUpperCase();
+  const ids = SUPPORTED[normalized];
   if (!ids) {
     console.warn(`⚠️ Nepalaikoma valiuta: "${currency}"`);
     return null;
   }
 
-  await rateLimiter(alias); // ⛔️ Rate guard
+  await rateLimiter(normalized); // 🛡️ Anti-spam protection
 
-  if (locks[alias]) return await locks[alias];
+  if (locks[normalized]) return await locks[normalized];
 
-  const promise = _fetchCryptoPriceInternal(alias, ids);
-  locks[alias] = promise;
+  const promise = _fetchCryptoPriceInternal(normalized, ids);
+  locks[normalized] = promise;
 
   try {
     return await promise;
   } catch (err) {
-    console.error(`❌ [fetchCryptoPrice fatal → ${alias}]:`, err.message);
+    console.error(`❌ [fetchCryptoPrice fatal → ${normalized}]:`, err.message);
     return null;
   } finally {
-    delete locks[alias];
+    delete locks[normalized];
   }
 }
 
@@ -61,7 +61,6 @@ async function _fetchCryptoPriceInternal(key, ids) {
   throw new Error(`❌ Failed to fetch ${key} from both APIs`);
 }
 
-// 📡 Retry wrapper with exponential backoff
 async function fetchWithRetry(fn, label, retries = 3, baseDelay = 1500) {
   let lastErr;
   for (let i = 0; i < retries; i++) {
@@ -118,7 +117,7 @@ async function fetchFromCoinCap(id) {
   const usd = parseFloat(json?.data?.priceUsd);
   if (!Number.isFinite(usd) || usd <= 0) throw new Error("Invalid CoinCap price");
 
-  const eurRate = 1.07; // optional: real-time FX rate in future
+  const eurRate = 1.07; // 💡 Galima reali valiutų konversija ateityje
   return +(usd / eurRate).toFixed(2);
 }
 
