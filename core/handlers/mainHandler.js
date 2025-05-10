@@ -1,4 +1,5 @@
-// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v9999999999999.∞ — FULLY LOCKED DEPLOY GODMODE
+// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v9999999999999.∞
+// FULLY LOCKED DEPLOY GODMODE + ADMIN + FLOW + FALLBACK + SECURE SYNC
 
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages, userOrders } from "../../state/userState.js";
@@ -29,36 +30,37 @@ export function registerMainHandler(bot) {
 
     try {
       markUserActive(uid);
+
       const session = userSessions[uid] ||= { step: 1, createdAt: Date.now() };
       session.lastText = text;
 
       const isAdmin = uid === String(BOT.ADMIN_ID);
 
-      // ✅ 1. Ban/flood security check
-      if (!(await canProceed(uid, bot, text))) return;
+      // ✅ 1. Security: ban/flood check
+      const allowed = await canProceed(uid, bot, text);
+      if (!allowed) return;
 
-      // ✅ 2. Full restart
+      // ✅ 2. Hard reset
       if (text === "/start") {
-        console.log(`🚀 Restart from ${uid}`);
+        console.log(`🚀 /start from ${uid}`);
         return await safeStart(bot, uid);
       }
 
-      // ✅ 3. Admin input state
+      // ✅ 3. Admin step (if in input mode)
       if (session.adminStep) {
         try {
           return await handleAdminAction(bot, msg, userSessions, userOrders);
         } catch (err) {
           console.error("❌ [AdminStep error]:", err.message || err);
           session.adminStep = null;
-          return await bot.sendMessage(
-            uid,
-            "❗️ Admin error. Returning to admin panel.",
-            { parse_mode: "Markdown", reply_markup: MAIN_KEYBOARD }
-          );
+          return await bot.sendMessage(uid, "❗️ Admin error. Returning to panel.", {
+            parse_mode: "Markdown",
+            reply_markup: MAIN_KEYBOARD
+          });
         }
       }
 
-      // ✅ 4. Main menu routing
+      // ✅ 4. Static menu routing
       switch (text) {
         case MENU_BUTTONS.BUY:
           return await safeCall(() => startOrder(bot, uid, userMessages));
@@ -76,38 +78,36 @@ export function registerMainHandler(bot) {
           break;
       }
 
-      // ✅ 5. Step-based logic (shopping flow)
+      // ✅ 5. Dynamic step-based flow
       if (typeof session.step !== "number" || session.step < 1 || session.step > 9) {
-        console.warn(`⚠️ [Corrupt step] Resetting → ${uid}`);
+        console.warn(`⚠️ Corrupt step reset → ${uid}`);
         session.step = 1;
       }
 
       return await safeCall(() => handleStep(bot, uid, text, userMessages));
-
     } catch (err) {
       console.error("❌ [MainHandler crash]:", err.message || err);
       try {
-        return await bot.sendMessage(
-          uid,
-          "❗️ Internal error occurred.\nTry again or type /start.",
-          { parse_mode: "Markdown", reply_markup: MAIN_KEYBOARD }
-        );
-      } catch (fail) {
-        console.warn("⚠️ [Fallback send failed]:", fail.message);
+        return await bot.sendMessage(uid, "❗️ Internal error occurred.\nTry again or type /start.", {
+          parse_mode: "Markdown",
+          reply_markup: MAIN_KEYBOARD
+        });
+      } catch (fallbackErr) {
+        console.warn("⚠️ [Fallback send failed]:", fallbackErr.message);
       }
     }
   });
 }
 
 /**
- * 🔁 Cleans and locks user input for safe matching
+ * 🧼 Clean and trim input for safe flow matching
  */
 function normalizeText(txt) {
   return txt?.toString().trim().slice(0, 4096).toLowerCase();
 }
 
 /**
- * 🧱 Protected function call with full error insulation
+ * 🛡️ Safe isolated call with crash logging
  */
 async function safeCall(fn) {
   try {
