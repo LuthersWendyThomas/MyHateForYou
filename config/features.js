@@ -1,34 +1,38 @@
-// 📦 config/features.js | BalticPharma V2 — FINAL IMMORTAL FEATURE MIRROR 2025.4
+// 📦 config/features.js | FINAL IMMORTAL v2025.999999 — BULLETPROOF FEATURE SYNCED
 
 import { FLAGS } from "./config.js";
 
-//
 // ===============================
-// 🛡️ Security toggles (controlled via .env)
+// 🛡️ Security Flags — Controlled via .env
 // ===============================
-//
 
 export const autobanEnabled = {
-  status: FLAGS.AUTOBAN_ENABLED,
-  description: "Automatically block the user after delivery (25–27 min)."
+  status: !!FLAGS.AUTOBAN_ENABLED,
+  description: "🚫 Automatically ban user ~25–27min after delivery completion."
 };
 
 export const autodeleteEnabled = {
-  status: FLAGS.AUTODELETE_ENABLED,
-  description: "Automatically delete all messages after delivery (25–27 min)."
+  status: !!FLAGS.AUTODELETE_ENABLED,
+  description: "🧼 Auto-delete all user messages after delivery (~25–27min)."
 };
 
-//
 // ===============================
-// 🚚 Delivery methods (used in stepHandler + deliveryHandler)
+// 🚚 Delivery Methods — Used in stepHandler & simulateDelivery
 // ===============================
-//
 
 export const deliveryMethods = [
-  { label: "📍 Drop (5$)", key: "drop", fee: 5 },
-  { label: "🚚 Courier (10$)", key: "courier", fee: 10 }
+  {
+    label: "📍 Drop (5$)",
+    key: "drop",
+    fee: 5,
+    description: "An anonymous drop point near your city center."
+  },
+  {
+    label: "🚚 Courier (10$)",
+    key: "courier",
+    fee: 10,
+    description: "A courier meets you at a discreet location nearby."
+  }
 ];
 
-//
-// ✅ No more cities[] export — cities now handled via regionMap in stepHandler
-//
+// ✅ Cities now embedded in regionMap (stepHandler.js) — no need for static cities[]
