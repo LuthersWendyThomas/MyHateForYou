@@ -1,7 +1,20 @@
-// 📦 utils/generateQR.js | IMMORTAL v3.1 — BULLETPROOF INLINE+QR FINAL LOCKED EDITION
+// 📦 utils/generateQR.js | IMMORTAL v3.2 — BULLETPROOF INLINE+QR ALIAS SYNC FINAL
 
 import QRCode from "qrcode";
 import { WALLETS } from "../config/config.js";
+
+// 🔄 Aliases: leidžia naudoti polygon, polygon-pos, matic ir pan.
+const ALIASES = {
+  bitcoin: "BTC",
+  ethereum: "ETH",
+  polygon: "MATIC",
+  "polygon-pos": "MATIC",
+  solana: "SOL",
+  btc: "BTC",
+  eth: "ETH",
+  matic: "MATIC",
+  sol: "SOL"
+};
 
 /**
  * ✅ Generates QR code PNG buffer for crypto payment
@@ -13,9 +26,9 @@ export async function generateQR(currency, amount, overrideAddress) {
       return null;
     }
 
-    const cleanCurrency = String(currency).trim().toUpperCase();
+    const normalized = ALIASES[String(currency).toLowerCase()] || String(currency).toUpperCase();
     const parsedAmount = parseFloat(amount);
-    const address = String(overrideAddress || WALLETS[cleanCurrency] || "").trim();
+    const address = String(overrideAddress || WALLETS[normalized] || "").trim();
 
     if (!isValidAddress(address)) {
       console.warn(`⚠️ [generateQR] Invalid address: "${address}"`);
@@ -28,7 +41,7 @@ export async function generateQR(currency, amount, overrideAddress) {
     }
 
     const formatted = parsedAmount.toFixed(6);
-    const uri = `${cleanCurrency.toLowerCase()}:${address}?amount=${formatted}&label=BalticPharmacyBot&message=Order`;
+    const uri = `${normalized.toLowerCase()}:${address}?amount=${formatted}&label=BalticPharmacyBot&message=Order`;
 
     const buffer = await QRCode.toBuffer(uri, {
       type: "png",
@@ -46,7 +59,7 @@ export async function generateQR(currency, amount, overrideAddress) {
     }
 
     if (process.env.DEBUG_MESSAGES === "true") {
-      console.log(`✅ [generateQR] ${cleanCurrency} → ${formatted} → OK`);
+      console.log(`✅ [generateQR] ${normalized} → ${formatted} → OK`);
     }
 
     return buffer;
@@ -60,20 +73,20 @@ export async function generateQR(currency, amount, overrideAddress) {
  * ✅ Generates message with copyable crypto address inline button
  */
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
-  const cleanCurrency = String(currency || "").toUpperCase();
+  const normalized = ALIASES[String(currency || "").toLowerCase()] || String(currency).toUpperCase();
   const parsedAmount = parseFloat(amount);
   const formattedAmount = Number.isFinite(parsedAmount)
     ? parsedAmount.toFixed(6)
     : "?.??????";
 
-  const address = String(overrideAddress || WALLETS[cleanCurrency] || "").trim();
+  const address = String(overrideAddress || WALLETS[normalized] || "").trim();
   const valid = isValidAddress(address) ? address : "[Invalid address]";
 
   const message = `
 💳 *Payment details:*
 
-• Network: *${cleanCurrency}*
-• Amount: *${formattedAmount} ${cleanCurrency}*
+• Network: *${normalized}*
+• Amount: *${formattedAmount} ${normalized}*
 • Address: \`${valid}\`
 
 ⏱️ *Expected payment within 30 minutes.*
