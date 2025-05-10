@@ -5,11 +5,11 @@ const CACHE_TTL = 5 * 60 * 1000;
 const cache = {};
 const locks = {};
 
-// ✅ TIKSLŪS API ID: CoinGecko + CoinCap
+// 🔐 CoinGecko + CoinCap ID mapping
 const SUPPORTED = {
   btc:   { gecko: "bitcoin",      coincap: "bitcoin" },
   eth:   { gecko: "ethereum",     coincap: "ethereum" },
-  matic: { gecko: "polygon-pos",  coincap: "polygon" }, // FIXED HERE
+  matic: { gecko: "polygon-pos",  coincap: "polygon" },
   sol:   { gecko: "solana",       coincap: "solana" }
 };
 
@@ -48,6 +48,7 @@ async function _fetchCryptoPriceInternal(clean, ids) {
     return cached.rate;
   }
 
+  // CoinGecko pirmas bandymas
   try {
     const geckoRate = await fetchFromCoinGecko(ids.gecko);
     if (geckoRate) return saveToCache(clean, geckoRate);
@@ -55,6 +56,7 @@ async function _fetchCryptoPriceInternal(clean, ids) {
     console.warn(`⚠️ [CoinGecko klaida → ${clean}]: ${err.message}`);
   }
 
+  // CoinCap fallback
   try {
     const capRate = await fetchFromCoinCap(ids.coincap);
     if (capRate) return saveToCache(clean, capRate);
@@ -65,12 +67,14 @@ async function _fetchCryptoPriceInternal(clean, ids) {
   return null;
 }
 
+// ✅ CoinGecko (v3) endpoint su `coins/markets` (tiksliausias ir stabilesnis)
 async function fetchFromCoinGecko(id) {
-  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`;
+  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=eur&ids=${id}`;
 
   for (let i = 0; i < 3; i++) {
     try {
       if (i > 0) await wait(i * 1000);
+
       const res = await fetch(url, {
         headers: {
           Accept: "application/json",
@@ -86,16 +90,15 @@ async function fetchFromCoinGecko(id) {
       if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
 
       const json = await res.json();
-      const price = parseFloat(json?.[id]?.eur);
-
       if (process.env.DEBUG_MESSAGES === "true") {
         console.log(`📡 [Gecko ${id}] →`, json);
       }
 
+      const price = parseFloat(json?.[0]?.current_price);
       if (Number.isFinite(price) && price > 0) {
         return +price.toFixed(2);
       } else {
-        throw new Error(`⚠️ CoinGecko returned invalid price for "${id}"`);
+        throw new Error(`⚠️ CoinGecko invalid price for "${id}"`);
       }
     } catch (err) {
       console.warn(`❌ [Gecko attempt ${i + 1}] → ${err.message}`);
@@ -105,6 +108,7 @@ async function fetchFromCoinGecko(id) {
   return null;
 }
 
+// ✅ CoinCap fallback (USD → EUR konversija)
 async function fetchFromCoinCap(id) {
   const url = `https://api.coincap.io/v2/assets/${id}`;
 
@@ -122,12 +126,11 @@ async function fetchFromCoinCap(id) {
   if (!res.ok) throw new Error(`CoinCap HTTP ${res.status}`);
 
   const json = await res.json();
-  const usd = parseFloat(json?.data?.priceUsd);
-
   if (process.env.DEBUG_MESSAGES === "true") {
     console.log(`📡 [CoinCap ${id}] →`, json);
   }
 
+  const usd = parseFloat(json?.data?.priceUsd);
   if (!Number.isFinite(usd) || usd <= 0) {
     throw new Error(`CoinCap returned invalid USD: ${usd}`);
   }
@@ -136,6 +139,7 @@ async function fetchFromCoinCap(id) {
   return +(usd / eurRate).toFixed(2);
 }
 
+// 🧠 Cache store
 function saveToCache(currency, rate) {
   cache[currency] = { rate, timestamp: Date.now() };
   if (process.env.DEBUG_MESSAGES === "true") {
@@ -144,6 +148,7 @@ function saveToCache(currency, rate) {
   return rate;
 }
 
+// 🕓 Delay helper
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
