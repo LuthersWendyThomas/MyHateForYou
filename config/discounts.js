@@ -1,14 +1,16 @@
+// 📦 config/discounts.js | FINAL IMMORTAL v99999999.999 — DISCOUNT-SYNC CORE
+
 import { config } from "dotenv";
 config();
 
-// 🌍 Global discount trigger (used with env code)
+// 🌐 Optional global env-based discount activator
 export const DISCOUNT_CODE = process.env.DISCOUNT_CODE?.trim().toUpperCase() || null;
 
-// ✅ Toggle discounts ON/OFF globally or per scope
+// 🎯 Centralized discount rules
 export const DISCOUNTS = {
   global: {
     active: false,
-    percentage: 10 // % off all products
+    percentage: 10
   },
 
   categories: {
@@ -32,36 +34,42 @@ export const DISCOUNTS = {
   },
 
   users: {
-    "123456789": { active: true, percentage: 25 }, // VIP user
+    "123456789": { active: true, percentage: 25 },
     "987654321": { active: false }
   }
 };
 
 /**
- * 🔢 Helper to resolve best discount for given user/product/etc.
+ * 🧮 Resolves the highest applicable discount for a user/session
+ * @param {Object} args
+ * @param {string} args.userId
+ * @param {string} args.city
+ * @param {string} args.category
+ * @param {string} args.productName
+ * @returns {number} Percentage discount (0–100)
  */
 export function resolveDiscount({ userId, city, category, productName }) {
-  let percent = 0;
+  let max = 0;
 
-  if (DISCOUNTS.global.active) {
-    percent = Math.max(percent, DISCOUNTS.global.percentage || 0);
+  if (DISCOUNTS.global?.active) {
+    max = Math.max(max, DISCOUNTS.global.percentage || 0);
   }
 
   if (city && DISCOUNTS.cities?.[city]?.active) {
-    percent = Math.max(percent, DISCOUNTS.cities[city].percentage || 0);
+    max = Math.max(max, DISCOUNTS.cities[city].percentage || 0);
   }
 
   if (category && DISCOUNTS.categories?.[category]?.active) {
-    percent = Math.max(percent, DISCOUNTS.categories[category].percentage || 0);
+    max = Math.max(max, DISCOUNTS.categories[category].percentage || 0);
   }
 
   if (productName && DISCOUNTS.products?.[productName]?.active) {
-    percent = Math.max(percent, DISCOUNTS.products[productName].percentage || 0);
+    max = Math.max(max, DISCOUNTS.products[productName].percentage || 0);
   }
 
   if (userId && DISCOUNTS.users?.[userId]?.active) {
-    percent = Math.max(percent, DISCOUNTS.users[userId].percentage || 0);
+    max = Math.max(max, DISCOUNTS.users[userId].percentage || 0);
   }
 
-  return percent;
+  return max;
 }
