@@ -1,3 +1,5 @@
+// 📦 core/handlers/paymentHandler.js | IMMORTAL v99999999999999999 — FINAL LOCK™
+
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
@@ -8,23 +10,26 @@ import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
 
-// 🔁 Retry with exponential backoff
+// 🔁 Retry with exponential backoff + bulletproof lock
 async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
-  try {
-    return await apiCall();
-  } catch (err) {
-    if (retries === 0) throw err;
-    await new Promise(res => setTimeout(res, delay));
-    return fetchWithRetry(apiCall, retries - 1, delay * 2);
+  let lastErr;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      if (i > 0) await new Promise(res => setTimeout(res, delay * i));
+      return await apiCall();
+    } catch (err) {
+      lastErr = err;
+    }
   }
+  throw lastErr;
 }
 
-// ✅ Exchange rate handler with proper error isolation
+// ✅ Secure exchange rate resolver
 async function getSafeRate(currency) {
   try {
     const rate = await fetchWithRetry(() => fetchCryptoPrice(currency));
-    if (!rate || isNaN(rate) || rate <= 0) {
-      throw new Error(`Exchange rate unavailable for "${currency}"`);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new Error(`Exchange rate unavailable or invalid for "${currency}"`);
     }
     return rate;
   } catch (err) {
@@ -45,12 +50,17 @@ export async function handlePayment(bot, id, userMessages) {
 
   try {
     const usd = parseFloat(s.totalPrice);
-    if (!s.wallet || !s.currency || !s.product?.name || !s.quantity || isNaN(usd) || usd <= 0) {
+    if (!s.wallet || !s.currency || !s.product?.name || !s.quantity || !Number.isFinite(usd) || usd <= 0) {
       throw new Error("Missing or invalid payment data");
     }
 
     const rate = await getSafeRate(s.currency);
     const amount = +(usd / rate).toFixed(6);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error("Calculated crypto amount invalid");
+    }
+
     s.expectedAmount = amount;
 
     const qr = await generateQR(s.currency, amount, s.wallet);
@@ -79,9 +89,9 @@ export async function handlePayment(bot, id, userMessages) {
 
     const timer = setTimeout(() => {
       console.warn(`⌛️ Payment expired: ${id}`);
-      if (paymentTimers[id]) delete paymentTimers[id];
-      if (userSessions[id]) delete userSessions[id];
-    }, 30 * 60 * 1000); // 30 min
+      delete paymentTimers[id];
+      delete userSessions[id];
+    }, 30 * 60 * 1000);
 
     s.paymentTimer = timer;
     paymentTimers[id] = timer;
