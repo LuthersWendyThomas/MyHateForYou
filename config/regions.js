@@ -1,4 +1,4 @@
-// 📦 config/regions.js | FINAL IMMORTAL v99999999 — TOGGLE-SYNC ENABLED
+// 📦 config/regions.js | FINAL IMMORTAL v99999999.∞ — TOGGLE-SYNC + EXPORT-READY + DISCOUNT-ADMIN-SYNC
 
 export const REGION_MAP = {
   "🗽 East Coast": {
@@ -66,6 +66,20 @@ export const REGION_MAP = {
 };
 
 /**
+ * 📦 Export flat lists for discounts.js sync + AdminPanel UI
+ */
+export const allRegions = Object.keys(REGION_MAP);
+
+export const allCities = allRegions.flatMap(region =>
+  Object.keys(REGION_MAP[region]?.cities || {})
+);
+
+export const getRegionCityPairs = () =>
+  allRegions.flatMap(region =>
+    Object.keys(REGION_MAP[region].cities).map(city => ({ region, city }))
+  );
+
+/**
  * 🧠 UI Helper: convert enabled/disabled cities into Telegram keyboard rows
  */
 export function getCityKeyboard(regionKey) {
@@ -82,8 +96,8 @@ export function getCityKeyboard(regionKey) {
  * 🧠 UI Helper: get region keyboard (only active regions)
  */
 export function getRegionKeyboard() {
-  return Object.entries(REGION_MAP)
-    .filter(([_, val]) => val.active)
-    .map(([key]) => [{ text: key }])
+  return allRegions
+    .filter(region => REGION_MAP[region].active)
+    .map(region => [{ text: region }])
     .concat([[{ text: "🔙 Back" }]]);
 }
