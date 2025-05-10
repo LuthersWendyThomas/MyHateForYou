@@ -1,3 +1,5 @@
+// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v9999999999999.∞ — FULLY LOCKED DEPLOY GODMODE
+
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages, userOrders } from "../../state/userState.js";
 import { safeStart } from "./finalHandler.js";
@@ -13,7 +15,7 @@ import { MENU_BUTTONS, MAIN_KEYBOARD } from "../../helpers/keyboardConstants.js"
 import { markUserActive } from "../sessionManager.js";
 
 /**
- * 🔐 Registers the core handler for all incoming Telegram messages
+ * 🔐 Registers the universal Telegram message handler
  */
 export function registerMainHandler(bot) {
   bot.on("message", async (msg) => {
@@ -27,21 +29,21 @@ export function registerMainHandler(bot) {
 
     try {
       markUserActive(uid);
-
       const session = userSessions[uid] ||= { step: 1, createdAt: Date.now() };
-      session.lastText = text; // optional trace
+      session.lastText = text;
+
       const isAdmin = uid === String(BOT.ADMIN_ID);
 
-      // ✅ 1. Security gate (ban/flood)
+      // ✅ 1. Ban/flood security check
       if (!(await canProceed(uid, bot, text))) return;
 
-      // ✅ 2. Hard restart
+      // ✅ 2. Full restart
       if (text === "/start") {
         console.log(`🚀 Restart from ${uid}`);
         return await safeStart(bot, uid);
       }
 
-      // ✅ 3. Admin input
+      // ✅ 3. Admin input state
       if (session.adminStep) {
         try {
           return await handleAdminAction(bot, msg, userSessions, userOrders);
@@ -74,11 +76,12 @@ export function registerMainHandler(bot) {
           break;
       }
 
-      // ✅ 5. Step-based logic
+      // ✅ 5. Step-based logic (shopping flow)
       if (typeof session.step !== "number" || session.step < 1 || session.step > 9) {
         console.warn(`⚠️ [Corrupt step] Resetting → ${uid}`);
         session.step = 1;
       }
+
       return await safeCall(() => handleStep(bot, uid, text, userMessages));
 
     } catch (err) {
@@ -97,14 +100,14 @@ export function registerMainHandler(bot) {
 }
 
 /**
- * 🔁 Normalizes and locks input text (safe slice/trim)
+ * 🔁 Cleans and locks user input for safe matching
  */
 function normalizeText(txt) {
   return txt?.toString().trim().slice(0, 4096).toLowerCase();
 }
 
 /**
- * 🛡️ Calls a function with isolated error guard
+ * 🧱 Protected function call with full error insulation
  */
 async function safeCall(fn) {
   try {
