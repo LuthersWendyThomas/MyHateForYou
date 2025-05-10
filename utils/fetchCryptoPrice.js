@@ -1,35 +1,31 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v100000000 — MATIC+SYNC+LOCKED
-
 import fetch from "node-fetch";
 
 const CACHE_TTL = 5 * 60 * 1000;
 const cache = {};
 
-// ✅ CoinGecko / CoinCap naudojami ID
+// 🔐 ID mapping: Gecko + CoinCap
 const SUPPORTED = {
-  btc: "bitcoin",
-  eth: "ethereum",
-  matic: "polygon", // CoinGecko ir CoinCap priima "polygon"
-  sol: "solana"
+  btc: { gecko: "bitcoin",      coincap: "bitcoin" },
+  eth: { gecko: "ethereum",     coincap: "ethereum" },
+  matic: { gecko: "polygon-pos", coincap: "polygon" },
+  sol: { gecko: "solana",       coincap: "solana" }
 };
 
 /**
- * 🔄 Gauk kriptovaliutos EUR kursą
+ * ✅ Grąžina EUR kainą pagal valiutą
  */
 export async function fetchCryptoPrice(currency) {
   if (!currency) return null;
 
   const clean = String(currency).trim().toLowerCase();
-  const id = SUPPORTED[clean];
-
-  if (!id) {
+  const ids = SUPPORTED[clean];
+  if (!ids) {
     console.warn(`⚠️ Nepalaikoma valiuta: "${currency}"`);
     return null;
   }
 
   const now = Date.now();
   const cached = cache[clean];
-
   if (cached && now - cached.timestamp < CACHE_TTL) {
     if (process.env.DEBUG_MESSAGES === "true") {
       console.log(`♻️ [CACHE] ${clean.toUpperCase()} → ${cached.rate}€`);
@@ -37,17 +33,17 @@ export async function fetchCryptoPrice(currency) {
     return cached.rate;
   }
 
-  // ⬆️ Pirmiausia bandom CoinGecko
+  // ⬆️ Pirmiausia CoinGecko
   try {
-    const rate = await fetchFromCoinGecko(id);
+    const rate = await fetchFromCoinGecko(ids.gecko);
     if (rate) return saveToCache(clean, rate);
   } catch (err) {
     console.warn(`⚠️ [CoinGecko klaida → ${clean}]: ${err.message}`);
   }
 
-  // ⬇️ Fallback į CoinCap
+  // ⬇️ CoinCap fallback
   try {
-    const rate = await fetchFromCoinCap(id);
+    const rate = await fetchFromCoinCap(ids.coincap);
     if (rate) return saveToCache(clean, rate);
   } catch (err) {
     console.warn(`⚠️ [CoinCap klaida → ${clean}]: ${err.message}`);
@@ -57,14 +53,14 @@ export async function fetchCryptoPrice(currency) {
 }
 
 /**
- * 🔁 CoinGecko retry logika (3 kartai)
+ * 🔁 CoinGecko su retry (3 kartai, 1s+ delay)
  */
 async function fetchFromCoinGecko(id) {
   const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`;
 
   for (let i = 0; i < 3; i++) {
     try {
-      if (i > 0) await wait(i * 1000);
+      if (i > 0) await wait(i * 1000); // delay: 1s, 2s...
       const res = await fetch(url, { headers: { Accept: "application/json" } });
 
       if (res.status === 429) {
@@ -87,7 +83,7 @@ async function fetchFromCoinGecko(id) {
 }
 
 /**
- * 📉 CoinCap atsarginis kursas (USD → EUR)
+ * 📉 CoinCap fallback → USD → EUR
  */
 async function fetchFromCoinCap(id) {
   const url = `https://api.coincap.io/v2/assets/${id}`;
@@ -107,7 +103,7 @@ async function fetchFromCoinCap(id) {
 }
 
 /**
- * 💾 Įrašo į cache
+ * 💾 Įrašo kursą į cache
  */
 function saveToCache(currency, rate) {
   cache[currency] = { rate, timestamp: Date.now() };
@@ -118,7 +114,7 @@ function saveToCache(currency, rate) {
 }
 
 /**
- * 💤 Async delay
+ * ⏳ Async delay (naudojama retry sistemai)
  */
 function wait(ms) {
   return new Promise(res => setTimeout(res, ms));
