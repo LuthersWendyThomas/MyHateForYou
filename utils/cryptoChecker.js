@@ -1,14 +1,25 @@
-// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v1_11111111111 — ULTRA BULLETPROOF SYNC
+// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v1_11111111111 — ULTRA BULLETPROOF SYNC + ALIASES
 
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 import { API, BOT } from "../config/config.js";
 
-// 📍 Log failas
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
-// ✅ Palaikomi tinklai (sinchronizuoti su fetchCryptoPrice.js)
+// ✅ Alias'ai (leidžia lankstumą iš fetchCryptoPrice)
+const ALIASES = {
+  bitcoin: "BTC",
+  ethereum: "ETH",
+  polygon: "MATIC",
+  "polygon-pos": "MATIC",
+  solana: "SOL",
+  btc: "BTC",
+  eth: "ETH",
+  matic: "MATIC",
+  sol: "SOL"
+};
+
 const SUPPORTED = {
   BTC: true,
   ETH: true,
@@ -16,11 +27,9 @@ const SUPPORTED = {
   SOL: true
 };
 
-/**
- * ✅ Tikrina ar nurodytame wallet'e yra pakankamai lėšų (pagal tinklą)
- */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
-  const cur = String(currency || "").toUpperCase().trim();
+  const curInput = String(currency || "").trim().toLowerCase();
+  const cur = ALIASES[curInput] || curInput.toUpperCase();
   const amount = parseFloat(expectedAmount);
 
   if (!wallet || typeof wallet !== "string" || wallet.length < 8 ||
@@ -68,14 +77,10 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
   }
 }
 
-/**
- * ✅ BTC balansas (blockchain.info, satoshis → BTC)
- */
 async function checkBTC(address, expected) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-
     const res = await fetch(`${API.BTC_RPC}${address}`, { signal: controller.signal });
     clearTimeout(timeout);
 
@@ -90,9 +95,6 @@ async function checkBTC(address, expected) {
   }
 }
 
-/**
- * ✅ ETH / MATIC — EVM balansų tikrinimas (wei → ETH/MATIC)
- */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
     const controller = new AbortController();
@@ -113,14 +115,12 @@ async function checkEVM(address, expected, rpcUrl, label) {
 
     const json = await res.json();
     const hex = json?.result;
-
     if (!hex || typeof hex !== "string") {
       throw new Error(`EVM RPC returned invalid hex for ${label}`);
     }
 
     const wei = parseInt(hex, 16);
     const value = wei / 1e18;
-
     if (!Number.isFinite(value)) throw new Error(`Parsed ${label} balance not valid`);
 
     return value >= expected;
@@ -130,9 +130,6 @@ async function checkEVM(address, expected, rpcUrl, label) {
   }
 }
 
-/**
- * ✅ SOL balansas (lamports → SOL)
- */
 async function checkSOL(address, expected) {
   try {
     const controller = new AbortController();
@@ -153,7 +150,6 @@ async function checkSOL(address, expected) {
 
     const json = await res.json();
     const lamports = json?.result?.value;
-
     if (!Number.isFinite(lamports)) throw new Error("Invalid lamports from RPC");
 
     const sol = lamports / 1e9;
@@ -164,9 +160,6 @@ async function checkSOL(address, expected) {
   }
 }
 
-/**
- * 🧾 Log įrašas
- */
 function log(wallet, currency, amount, status) {
   try {
     const dir = path.dirname(logPath);
