@@ -9,7 +9,7 @@ const cache = {};
 const SUPPORTED = {
   btc: { gecko: "bitcoin", coincap: "bitcoin" },
   eth: { gecko: "ethereum", coincap: "ethereum" },
-  matic: { gecko: "polygon-pos", coincap: "polygon" },
+  matic: { gecko: "polygon", coincap: "polygon" },
   sol: { gecko: "solana", coincap: "solana" }
 };
 
