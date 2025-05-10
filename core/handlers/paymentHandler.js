@@ -54,7 +54,8 @@ async function sendSafe(botMethod, ...args) {
 
 async function getSafeRate(currency) {
   try {
-    const coin = SUPPORTED[currency.toUpperCase()];
+    const upper = currency.toUpperCase();
+    const coin = SUPPORTED[upper];
     if (!coin) throw new Error(`Unsupported currency: "${currency}"`);
 
     const rate = await fetchWithRetry(() => fetchCryptoPrice(coin.gecko));
