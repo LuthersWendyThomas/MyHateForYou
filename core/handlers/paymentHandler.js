@@ -1,6 +1,3 @@
-
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v100000000000000 — BULLETPROOF+MATIC FIXED
-
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
@@ -11,7 +8,7 @@ import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
 
-// 🔁 Retry with exponential backoff (stable)
+// 🔁 Retry with exponential backoff (safe)
 async function fetchWithRetry(apiCall, retries = 3, baseDelay = 1500) {
   let lastErr;
   for (let i = 0; i <= retries; i++) {
@@ -23,6 +20,24 @@ async function fetchWithRetry(apiCall, retries = 3, baseDelay = 1500) {
     }
   }
   throw lastErr;
+}
+
+// ✅ Telegram-safe send wrapper (rate limit protection)
+async function sendSafe(botMethod, ...args) {
+  for (let i = 0; i < 3; i++) {
+    try {
+      return await botMethod(...args);
+    } catch (err) {
+      if (err.response?.statusCode === 429 || err.message?.includes("429")) {
+        const delay = (i + 1) * 2000;
+        console.warn(`⏳ Telegram rate limited, retrying in ${delay}ms...`);
+        await wait(delay);
+        continue;
+      }
+      console.warn(`⚠️ [sendSafe error]:`, err.message || err);
+      break;
+    }
+  }
 }
 
 // ✅ Safe rate resolver for any supported crypto
@@ -82,8 +97,8 @@ export async function handlePayment(bot, id, userMessages) {
 ⏱ Estimated delivery: ~30 minutes
 ✅ Scan the QR or copy the address.`.trim();
 
-    await bot.sendChatAction(id, "upload_photo").catch(() => {});
-    await bot.sendPhoto(id, qr, { caption: summary, parse_mode: "Markdown" });
+    await sendSafe(() => bot.sendChatAction(id, "upload_photo"));
+    await sendSafe(() => bot.sendPhoto(id, qr, { caption: summary, parse_mode: "Markdown" }));
 
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
 
@@ -104,8 +119,7 @@ export async function handlePayment(bot, id, userMessages) {
   } catch (err) {
     console.error("❌ [handlePayment error]:", err.message);
     s.paymentInProgress = false;
-    return sendAndTrack(bot, id, `❗️ Payment setup failed.
-*${err.message}*`, {
+    return sendAndTrack(bot, id, `❗️ Payment setup failed.\n*${err.message}*`, {
       parse_mode: "Markdown"
     }, userMessages);
   }
@@ -185,7 +199,7 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
 
     const adminId = String(BOT.ADMIN_ID || "");
     if (adminId && bot?.sendMessage) {
-      await sendAndTrack(bot, adminId, `✅ New successful payment from \`${s.wallet}\``, { parse_mode: "Markdown" });
+      await sendSafe(() => bot.sendMessage(adminId, `✅ New successful payment from \`${s.wallet}\``, { parse_mode: "Markdown" }));
     }
 
     return simulateDelivery(bot, id);
