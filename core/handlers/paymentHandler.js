@@ -1,3 +1,5 @@
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v999999999999 — ULTRA LOCKED FINAL SYNC
+
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
@@ -9,14 +11,14 @@ import { userSessions, userOrders, paymentTimers } from "../../state/userState.j
 import { BOT } from "../../config/config.js";
 
 /**
- * ⏳ Async wait helper
+ * ⏳ Delay helper
  */
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
- * 🔁 Safe fetch with retry + exponential backoff
+ * 🔁 Fetch with retry & backoff
  */
 async function fetchWithRetry(apiCall, retries = 3, baseDelay = 1500) {
   let lastErr;
@@ -32,7 +34,7 @@ async function fetchWithRetry(apiCall, retries = 3, baseDelay = 1500) {
 }
 
 /**
- * 📬 Telegram-safe sender with anti-429
+ * 📬 Safe Telegram sender with anti-429 retry
  */
 async function sendSafe(botMethod, ...args) {
   for (let i = 0; i < 3; i++) {
@@ -41,7 +43,7 @@ async function sendSafe(botMethod, ...args) {
     } catch (err) {
       if (err.response?.statusCode === 429 || err.message?.includes("429")) {
         const delay = (i + 1) * 2000;
-        console.warn(`⏳ Telegram rate limited → retrying in ${delay}ms`);
+        console.warn(`⏳ Telegram rate limited → retry in ${delay}ms`);
         await wait(delay);
         continue;
       }
@@ -52,7 +54,7 @@ async function sendSafe(botMethod, ...args) {
 }
 
 /**
- * 💰 Secure exchange rate fetch with retry
+ * 💰 Rate fetch with retry
  */
 async function getSafeRate(currency) {
   try {
@@ -67,7 +69,7 @@ async function getSafeRate(currency) {
 }
 
 /**
- * 🧾 Step 7: Generate QR and await payment
+ * 🧾 Step 7 — Generate QR + wait payment
  */
 export async function handlePayment(bot, id, userMessages) {
   const s = userSessions[id];
@@ -139,7 +141,7 @@ export async function handlePayment(bot, id, userMessages) {
 }
 
 /**
- * 🛑 Step 8: Cancel payment
+ * 🛑 Step 8 — Cancel payment
  */
 export async function handlePaymentCancel(bot, id, userMessages) {
   const s = userSessions[id];
@@ -171,7 +173,7 @@ export async function handlePaymentCancel(bot, id, userMessages) {
 }
 
 /**
- * ✅ Step 9: Confirm payment on-chain and simulate delivery
+ * ✅ Step 9 — Confirm payment & simulate delivery
  */
 export async function handlePaymentConfirmation(bot, id, userMessages) {
   const s = userSessions[id];
@@ -213,7 +215,9 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
     const adminId = String(BOT.ADMIN_ID || "");
     if (adminId && bot?.sendMessage) {
       await sendSafe(() =>
-        bot.sendMessage(adminId, `✅ New successful payment from \`${s.wallet}\``, { parse_mode: "Markdown" })
+        bot.sendMessage(adminId, `✅ New successful payment from \`${s.wallet}\``, {
+          parse_mode: "Markdown"
+        })
       );
     }
 
