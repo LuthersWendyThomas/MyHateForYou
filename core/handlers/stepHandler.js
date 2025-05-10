@@ -1,4 +1,5 @@
-// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999.∞ — REGION-SYNCED DIAMOND BUILD + DISCOUNT SYNC + ADMIN IMPORTS + PROMOCODE + POLYGON FIX
+// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999.∞
+// REGION-SYNCED DIAMOND BUILD + DISCOUNT SYNC + ADMIN IMPORTS + PROMOCODE + POLYGON READY
 
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
@@ -8,13 +9,12 @@ import { sendKeyboard, sendAndTrack } from "../../helpers/messageUtils.js";
 import { punish } from "../../utils/punishUser.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
 import { resetSession, safeStart } from "./finalHandler.js";
-import { REGION_MAP, getRegionKeyboard, getCityKeyboard, allRegions, allCities } from "../../config/regions.js";
+import { REGION_MAP, getRegionKeyboard, getCityKeyboard } from "../../config/regions.js";
 import { resolveDiscount, DISCOUNTS } from "../../config/discounts.js";
 
 export async function handleStep(bot, id, text, userMessages) {
   const uid = String(id);
   const input = (text || "").trim();
-
   if (!input) return punish(bot, uid, userMessages);
 
   const s = (userSessions[uid] ||= { step: 1, createdAt: Date.now() });
@@ -25,8 +25,7 @@ export async function handleStep(bot, id, text, userMessages) {
         await resetSession(uid);
         return await safeStart(bot, uid);
       }
-
-      s.step = Math.max(1, Math.floor(s.step - 1));
+      s.step = Math.max(1, s.step - 1);
       if (s.step <= 1) {
         delete s.region;
         delete s.city;
@@ -41,52 +40,50 @@ export async function handleStep(bot, id, text, userMessages) {
 
   try {
     switch (s.step) {
-      case 1: {
+      case 1:
         if (!REGION_MAP[input]?.active) return punish(bot, uid, userMessages);
         s.region = input;
         s.step = 1.2;
         return renderStep(bot, uid, s.step, userMessages);
-      }
 
       case 1.2: {
-        const selectedCity = input.replace(/^🚫 /, "");
-        const cities = REGION_MAP[s.region]?.cities;
-        if (!cities || !cities[selectedCity]) return punish(bot, uid, userMessages);
-        s.city = selectedCity;
+        const city = input.replace(/^🚫 /, "");
+        const isValid = REGION_MAP[s.region]?.cities?.[city];
+        if (!isValid) return punish(bot, uid, userMessages);
+        s.city = city;
         s.step = 2;
         return renderStep(bot, uid, s.step, userMessages);
       }
 
-      case 2: {
+      case 2:
         const method = deliveryMethods.find(m => m.label === input);
         if (!method) return punish(bot, uid, userMessages);
         s.deliveryMethod = method.key;
         s.deliveryFee = method.fee;
         s.step = 2.1;
         return renderStep(bot, uid, s.step, userMessages);
-      }
 
-      case 2.1: {
+      case 2.1:
         if (input === "Yes") {
           s.step = 2.2;
           return renderStep(bot, uid, s.step, userMessages);
-        } else if (input === "No") {
+        }
+        if (input === "No") {
           s.step = 3;
           return renderStep(bot, uid, s.step, userMessages);
         }
         return punish(bot, uid, userMessages);
-      }
 
       case 2.2: {
         const code = input.trim().toUpperCase();
-        const entry = DISCOUNTS.codes?.[code];
-        if (!entry || !entry.active) {
+        const promo = DISCOUNTS.codes?.[code];
+        if (!promo || !promo.active) {
           await sendAndTrack(bot, uid, `❌ Promo code invalid or inactive: \`${code}\``, { parse_mode: "Markdown" }, userMessages);
           s.step = 2.1;
           return renderStep(bot, uid, s.step, userMessages);
         }
         s.promoCode = code;
-        await sendAndTrack(bot, uid, `🏷️ Promo code applied: *${code}* = ${entry.percentage}%`, { parse_mode: "Markdown" }, userMessages);
+        await sendAndTrack(bot, uid, `🏷️ Promo code applied: *${code}* = ${promo.percentage}%`, { parse_mode: "Markdown" }, userMessages);
         s.step = 3;
         return renderStep(bot, uid, s.step, userMessages);
       }
@@ -97,18 +94,17 @@ export async function handleStep(bot, id, text, userMessages) {
         s.step = 4;
         return renderStep(bot, uid, s.step, userMessages);
 
-      case 4: {
-        const prod = products[s.category]?.find(p => p.name === input);
-        if (!prod) return punish(bot, uid, userMessages);
-        s.product = prod;
+      case 4:
+        const product = products[s.category]?.find(p => p.name === input);
+        if (!product) return punish(bot, uid, userMessages);
+        s.product = product;
         s.step = 5;
         return renderStep(bot, uid, s.step, userMessages);
-      }
 
       case 5: {
-        const qty = input?.match(/^[^\s(]+/)?[0];
-        const basePrice = s.product?.prices?.[qty];
-        if (!basePrice || isNaN(parseInt(qty))) return punish(bot, uid, userMessages);
+        const qty = input.match(/^[^\s(]+/)?.[0];
+        const price = s.product?.prices?.[qty];
+        if (!price || isNaN(parseFloat(price))) return punish(bot, uid, userMessages);
 
         const discount = resolveDiscount({
           userId: uid,
@@ -116,27 +112,25 @@ export async function handleStep(bot, id, text, userMessages) {
           region: s.region,
           city: s.city,
           category: s.category,
-          productName: s.product?.name
+          productName: s.product.name
         });
 
-        const discountedPrice = basePrice - (basePrice * discount / 100);
-
+        const finalPrice = price - (price * discount / 100);
         s.quantity = qty;
-        s.unitPrice = discountedPrice;
-        s.totalPrice = discountedPrice + s.deliveryFee;
+        s.unitPrice = finalPrice;
+        s.totalPrice = finalPrice + s.deliveryFee;
         s.appliedDiscount = discount;
         s.step = 6;
         return renderStep(bot, uid, s.step, userMessages);
       }
 
-      case 6: {
+      case 6:
         const wallet = WALLETS[input];
-        if (!wallet || wallet.length < 8) return punish(bot, uid, userMessages);
+        if (!wallet) return punish(bot, uid, userMessages);
         s.currency = input;
         s.wallet = wallet;
         s.step = 7;
         return renderStep(bot, uid, s.step, userMessages);
-      }
 
       case 7:
         if (input !== "✅ CONFIRM") return punish(bot, uid, userMessages);
@@ -155,12 +149,12 @@ export async function handleStep(bot, id, text, userMessages) {
         return punish(bot, uid, userMessages);
 
       default:
-        console.warn(`⚠️ [Unknown step=${s.step}] for user ${uid}`);
+        console.warn(`⚠️ Unknown step=${s.step}`);
         await resetSession(uid);
         return await safeStart(bot, uid);
     }
   } catch (err) {
-    console.error("❌ [handleStep fatal]:", err.message);
+    console.error("❌ handleStep error:", err.message);
     await resetSession(uid);
     return await safeStart(bot, uid);
   }
@@ -184,44 +178,40 @@ function renderStep(bot, id, step, userMessages) {
         ], userMessages);
 
       case 2.1:
-        return sendKeyboard(bot, id, "🏷️ *Do you have a promo code?*", [
-          [{ text: "Yes" }, { text: "No" }]
-        ], userMessages);
+        return sendKeyboard(bot, id, "🏷️ *Do you have a promo code?*", [[{ text: "Yes" }, { text: "No" }]], userMessages);
 
       case 2.2:
         return sendKeyboard(bot, id, "🏷️ *Enter your promo code:*", [[{ text: "🖙 Back" }]], userMessages);
 
       case 3:
         return sendKeyboard(bot, id, "📦 *Choose product category:*", [
-          ...allCategories.map(k => [{ text: k }]),
+          ...allCategories.map(c => [{ text: c }]),
           [{ text: "🖙 Back" }]
         ], userMessages);
 
       case 4:
         return sendKeyboard(bot, id, "🥪 *Choose product:*", [
-          ...products[s.category]?.map(p => [{ text: p.name }]),
+          ...products[s.category].map(p => [{ text: p.name }]),
           [{ text: "🖙 Back" }]
         ], userMessages);
 
       case 5:
-        const qtyButtons = Object.entries(s.product?.prices || {}).map(([q, p]) => [{ text: `${q} (${p}$)` }]);
+        const qtyButtons = Object.entries(s.product.prices).map(([qty, price]) => [{ text: `${qty} (${price}$)` }]);
         qtyButtons.push([{ text: "🖙 Back" }]);
         return sendKeyboard(bot, id, "⚖️ *Choose quantity:*", qtyButtons, userMessages);
 
       case 6:
-        const wallets = Object.keys(WALLETS).reduce((rows, key) => {
-          const last = rows[rows.length - 1];
-          if (last && last.length < 2) last.push({ text: key });
-          else rows.push([{ text: key }]);
-          return rows;
+        const wallets = Object.keys(WALLETS).reduce((acc, curr) => {
+          const last = acc[acc.length - 1];
+          if (last && last.length < 2) last.push({ text: curr });
+          else acc.push([{ text: curr }]);
+          return acc;
         }, []);
         wallets.push([{ text: "🖙 Back" }]);
         return sendKeyboard(bot, id, "💳 *Choose payment network:*", wallets, userMessages);
 
       case 7:
-        const discountInfo = s.promoCode ? `🏷️ Promo: *${s.promoCode}* — ${s.appliedDiscount || 0}%\n` : "🏷️ Promo: None\n";
-        const totalLine = `💰 Total: *${s.totalPrice.toFixed(2)}$*`;
-
+        const discountInfo = s.promoCode ? `🏷️ Promo: *${s.promoCode}* — ${s.appliedDiscount}%\n` : "🏷️ Promo: None\n";
         return sendKeyboard(bot, id,
           `🧾 *Order summary:*
 
@@ -229,11 +219,11 @@ function renderStep(bot, id, step, userMessages) {
 • City: ${s.city}
 • Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)
 • Category: ${s.category}
-• Product: ${s.product?.name}
+• Product: ${s.product.name}
 • Quantity: ${s.quantity}
 • Payment: ${s.currency}
 
-${discountInfo}${totalLine}
+${discountInfo}💰 Total: *${s.totalPrice.toFixed(2)}$*
 
 ✅ Confirm to proceed.`,
           [[{ text: "✅ CONFIRM" }], [{ text: "🖙 Back" }]],
@@ -247,12 +237,10 @@ ${discountInfo}${totalLine}
         ], userMessages);
 
       default:
-        console.warn(`⚠️ [renderStep fallback → 1] for ${id}`);
-        userSessions[id] = { step: 1, createdAt: Date.now() };
         return renderStep(bot, id, 1, userMessages);
     }
   } catch (err) {
-    console.error("❌ [renderStep error]:", err.message);
+    console.error("❌ renderStep error:", err.message);
     return sendKeyboard(bot, id, "⚠️ Failed to load step. Try again.", [[{ text: "🔁 Try again" }]], userMessages);
   }
 }
