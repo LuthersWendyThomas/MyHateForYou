@@ -1,20 +1,19 @@
-// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v999999999999 LOCKED+STABILIZED
+// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v9999999999999 — MAX STABILITY LOCKED™
 
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 import { API, BOT } from "../config/config.js";
 
-// 🧾 Log failo kelias
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
 /**
- * ✅ Patikrina ar mokėjimas gautas (bet kuriuo tinklu)
+ * ✅ Tikrina ar mokėjimas buvo gautas
  */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
   try {
     const amount = parseFloat(expectedAmount);
-    const cur = String(currency || "").toUpperCase().trim();
+    const cur = String(currency || "").trim().toUpperCase();
 
     if (
       !wallet || typeof wallet !== "string" || wallet.length < 8 ||
@@ -40,6 +39,9 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
       case "SOL":
         result = await checkSOL(wallet, amount);
         break;
+      default:
+        log(wallet, cur, amount, "❌ UNSUPPORTED");
+        return false;
     }
 
     log(wallet, cur, amount, result ? "✅ PAID" : "❌ NOT PAID");
@@ -62,7 +64,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 }
 
 /**
- * ✅ BTC — balansas per blockchain.info API (satoshis → BTC)
+ * 🔎 BTC — balansas iš blockchain.info (satoshis → BTC)
  */
 async function checkBTC(address, expected) {
   try {
@@ -83,7 +85,7 @@ async function checkBTC(address, expected) {
 }
 
 /**
- * ✅ ETH / MATIC — balansas per JSON-RPC
+ * 🔎 ETH / MATIC — JSON-RPC balansas (wei → eth/matic)
  */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
@@ -107,13 +109,13 @@ async function checkEVM(address, expected, rpcUrl, label) {
     const hex = json?.result;
 
     if (!hex || typeof hex !== "string") {
-      throw new Error("EVM result missing or invalid");
+      throw new Error("Missing or invalid EVM result");
     }
 
     const wei = parseInt(hex, 16);
-    const eth = wei / 1e18;
+    const value = wei / 1e18;
 
-    return Number.isFinite(eth) && eth >= expected;
+    return Number.isFinite(value) && value >= expected;
   } catch (err) {
     console.error(`❌ [${label} error]:`, err.message || err);
     return false;
@@ -121,7 +123,7 @@ async function checkEVM(address, expected, rpcUrl, label) {
 }
 
 /**
- * ✅ SOL — balansas per RPC (lamports → SOL)
+ * 🔎 SOL — balansas lamports → SOL
  */
 async function checkSOL(address, expected) {
   try {
@@ -153,7 +155,7 @@ async function checkSOL(address, expected) {
 }
 
 /**
- * 📝 Loguoja balansų patikrinimus
+ * 📝 Balansų patikrinimų logavimas
  */
 function log(wallet, currency, amount, status) {
   try {
