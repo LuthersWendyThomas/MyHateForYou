@@ -10,10 +10,10 @@ const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
 // ✅ Palaikomi tinklai (tiksliai suderinti su fetchCryptoPrice.js)
 const SUPPORTED = {
-  BTC: true,
-  ETH: true,
-  MATIC: true,
-  SOL: true
+  btv: true,
+  eth: true,
+  matic: true,
+  sol: true
 };
 
 /**
