@@ -1,4 +1,4 @@
-// 📦 utils/cryptoChecker.js | FINAL v3.5 — IMMORTAL BULLETPROOF PAYMENT CORE LOCKED
+// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v999999999999 LOCKED+STABILIZED
 
 import fetch from "node-fetch";
 import fs from "fs";
@@ -9,12 +9,12 @@ import { API, BOT } from "../config/config.js";
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
 /**
- * ✅ Patikrina ar mokėjimas gautas
+ * ✅ Patikrina ar mokėjimas gautas (bet kuriuo tinklu)
  */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
   try {
     const amount = parseFloat(expectedAmount);
-    const cur = currency?.toUpperCase();
+    const cur = String(currency || "").toUpperCase().trim();
 
     if (
       !wallet || typeof wallet !== "string" || wallet.length < 8 ||
@@ -26,6 +26,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
     }
 
     let result = false;
+
     switch (cur) {
       case "BTC":
         result = await checkBTC(wallet, amount);
@@ -61,7 +62,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 }
 
 /**
- * ✅ BTC — tikrina balanso satoshis per blockchain.info
+ * ✅ BTC — balansas per blockchain.info API (satoshis → BTC)
  */
 async function checkBTC(address, expected) {
   try {
@@ -71,7 +72,9 @@ async function checkBTC(address, expected) {
     const res = await fetch(`${API.BTC_RPC}${address}`, { signal: controller.signal });
     clearTimeout(timeout);
 
-    const satoshis = parseInt(await res.text());
+    const text = await res.text();
+    const satoshis = parseInt(text);
+
     return Number.isFinite(satoshis) && (satoshis / 1e8) >= expected;
   } catch (err) {
     console.error("❌ [BTC error]:", err.message || err);
@@ -80,7 +83,7 @@ async function checkBTC(address, expected) {
 }
 
 /**
- * ✅ ETH / MATIC JSON-RPC balansų tikrinimas
+ * ✅ ETH / MATIC — balansas per JSON-RPC
  */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
@@ -100,11 +103,17 @@ async function checkEVM(address, expected, rpcUrl, label) {
     });
     clearTimeout(timeout);
 
-    const data = await res.json();
-    const hex = data?.result;
-    const wei = parseInt(hex, 16);
+    const json = await res.json();
+    const hex = json?.result;
 
-    return Number.isFinite(wei) && (wei / 1e18) >= expected;
+    if (!hex || typeof hex !== "string") {
+      throw new Error("EVM result missing or invalid");
+    }
+
+    const wei = parseInt(hex, 16);
+    const eth = wei / 1e18;
+
+    return Number.isFinite(eth) && eth >= expected;
   } catch (err) {
     console.error(`❌ [${label} error]:`, err.message || err);
     return false;
@@ -112,7 +121,7 @@ async function checkEVM(address, expected, rpcUrl, label) {
 }
 
 /**
- * ✅ SOL — tikrina balansą RPC būdu
+ * ✅ SOL — balansas per RPC (lamports → SOL)
  */
 async function checkSOL(address, expected) {
   try {
@@ -132,10 +141,11 @@ async function checkSOL(address, expected) {
     });
     clearTimeout(timeout);
 
-    const data = await res.json();
-    const lamports = data?.result?.value;
+    const json = await res.json();
+    const lamports = json?.result?.value;
+    const sol = lamports / 1e9;
 
-    return Number.isFinite(lamports) && (lamports / 1e9) >= expected;
+    return Number.isFinite(sol) && sol >= expected;
   } catch (err) {
     console.error("❌ [SOL error]:", err.message || err);
     return false;
@@ -143,7 +153,7 @@ async function checkSOL(address, expected) {
 }
 
 /**
- * 📁 Įrašo rezultatą į `logs/cryptoChecks.log`
+ * 📝 Loguoja balansų patikrinimus
  */
 function log(wallet, currency, amount, status) {
   try {
@@ -152,8 +162,9 @@ function log(wallet, currency, amount, status) {
     }
 
     const time = new Date().toISOString();
-    const entry = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
-    fs.appendFileSync(logPath, entry, "utf8");
+    const line = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
+
+    fs.appendFileSync(logPath, line, "utf8");
   } catch (err) {
     console.warn("⚠️ [log error]:", err.message || err);
   }
