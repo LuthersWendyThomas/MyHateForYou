@@ -1,4 +1,4 @@
-// 📦 state/stateManager.js | FINAL IMMORTAL v999999999.0 — CORE SYSTEM LOCK
+// 📦 state/stateManager.js | FINAL IMMORTAL v999999999.999 — CORE SYSTEM LOCK
 
 import {
   userSessions,
@@ -14,7 +14,7 @@ import {
 } from "./userState.js";
 
 /**
- * ✅ Fully clears all user state, timers, spam flags, and tracking
+ * ✅ Clears all user state, sessions, security flags, and timers
  */
 export function resetUser(id) {
   const uid = safeId(id);
@@ -23,7 +23,15 @@ export function resetUser(id) {
   try {
     clearTimers(uid);
 
-    [userSessions, userOrders, userMessages, failedAttempts, antiSpam, bannedUntil, antiFlood].forEach(store => {
+    [
+      userSessions,
+      userOrders,
+      userMessages,
+      failedAttempts,
+      antiSpam,
+      bannedUntil,
+      antiFlood
+    ].forEach(store => {
       if (store?.[uid] !== undefined) delete store[uid];
     });
 
@@ -38,7 +46,7 @@ export function resetUser(id) {
 }
 
 /**
- * ✅ Clears only activity and security-related data
+ * ✅ Clears only user activity + spam/security flags
  */
 export function clearUserActivity(id) {
   const uid = safeId(id);
@@ -58,7 +66,7 @@ export function clearUserActivity(id) {
 }
 
 /**
- * ✅ Clears only tracked messages (for autodelete)
+ * ✅ Clears only tracked message history (autodelete)
  */
 export function clearUserMessages(id) {
   const uid = safeId(id);
@@ -73,7 +81,7 @@ export function clearUserMessages(id) {
 }
 
 /**
- * ✅ Stops and clears delivery/payment timers + session flags
+ * ✅ Stops delivery/payment timers and removes cleanup flags
  */
 export function clearTimers(id) {
   const uid = safeId(id);
@@ -102,7 +110,7 @@ export function clearTimers(id) {
 }
 
 /**
- * ✅ Total user removal from the system
+ * ✅ Destroys all state + timers for a user (forcibly)
  */
 export function unregisterUser(id) {
   const uid = safeId(id);
@@ -119,7 +127,7 @@ export function unregisterUser(id) {
 }
 
 /**
- * ✅ Sanitizes and validates user ID
+ * 🧠 Safe and clean ID validation
  */
 function safeId(id) {
   const str = String(id ?? "").trim();
