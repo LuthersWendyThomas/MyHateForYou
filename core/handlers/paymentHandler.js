@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1_999999999 — ULTRA BULLETPROOF ALIASED GODMODE SYNCED
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v2_999999999999 — BULLETPROOF GODMODE SYNCED
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -10,6 +10,7 @@ import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT, ALIASES } from "../../config/config.js";
 
+// ✅ Palaikomos valiutos (sinchronizuota su visom sistemom)
 const SUPPORTED = {
   BTC: { gecko: "bitcoin", coincap: "bitcoin" },
   ETH: { gecko: "ethereum", coincap: "ethereum" },
@@ -52,20 +53,16 @@ async function sendSafe(botMethod, ...args) {
   return null;
 }
 
-async function getSafeRate(currency) {
-  try {
-    const normalized = ALIASES[currency.toLowerCase()] || currency.toUpperCase();
-    const coin = SUPPORTED[normalized];
-    if (!coin) throw new Error(`Unsupported currency: "${currency}"`);
+function normalizeCurrency(input) {
+  return ALIASES[String(input).toLowerCase()] || String(input).toUpperCase();
+}
 
-    const rate = await fetchWithRetry(() => fetchCryptoPrice(normalized));
-    if (!Number.isFinite(rate) || rate <= 0) {
-      throw new Error(`Invalid rate for "${currency}"`);
-    }
-    return rate;
-  } catch (err) {
-    throw new Error(`❌ Failed to fetch rate: ${err.message}`);
-  }
+async function getSafeRate(normalized) {
+  const coin = SUPPORTED[normalized];
+  if (!coin) throw new Error(`Unsupported currency: "${normalized}"`);
+  const rate = await fetchWithRetry(() => fetchCryptoPrice(normalized));
+  if (!Number.isFinite(rate) || rate <= 0) throw new Error(`Invalid rate for "${normalized}"`);
+  return rate;
 }
 
 export async function handlePayment(bot, id, userMessages) {
@@ -78,24 +75,20 @@ export async function handlePayment(bot, id, userMessages) {
 
   try {
     const usd = parseFloat(s.totalPrice);
-    if (!s.wallet || !s.currency || !s.product?.name || !s.quantity || !Number.isFinite(usd) || usd <= 0) {
-      throw new Error("Missing or invalid payment session data");
+    if (!s.wallet || !s.currency || !s.product?.name || !s.quantity || !Number.isFinite(usd)) {
+      throw new Error("❌ Missing or invalid payment session data");
     }
 
-    const normalized = ALIASES[s.currency.toLowerCase()] || s.currency.toUpperCase();
-    if (!SUPPORTED[normalized]) {
-      throw new Error(`Unsupported currency "${normalized}".`);
-    }
+    const normalized = normalizeCurrency(s.currency);
+    if (!SUPPORTED[normalized]) throw new Error(`❌ Unsupported currency: "${normalized}"`);
 
     const rate = await getSafeRate(normalized);
     const amount = +(usd / rate).toFixed(6);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      throw new Error("Invalid crypto amount calculated");
-    }
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error("❌ Invalid crypto amount");
 
     s.expectedAmount = amount;
     const qr = await generateQR(normalized, amount, s.wallet);
-    if (!qr || !(qr instanceof Buffer)) throw new Error("QR generation failed");
+    if (!qr || !(qr instanceof Buffer)) throw new Error("❌ QR generation failed");
 
     s.step = 8;
 
@@ -131,7 +124,6 @@ export async function handlePayment(bot, id, userMessages) {
       [{ text: "✅ CONFIRM" }],
       [{ text: "❌ Cancel payment" }]
     ], userMessages);
-
   } catch (err) {
     console.error("❌ [handlePayment error]:", err.message);
     s.paymentInProgress = false;
@@ -147,33 +139,25 @@ export async function handlePaymentCancel(bot, id, userMessages) {
     return sendAndTrack(bot, id, "⚠️ No active payment to cancel.", {}, userMessages);
   }
 
-  try {
-    s.paymentInProgress = false;
+  s.paymentInProgress = false;
 
-    if (s.paymentTimer) {
-      clearTimeout(s.paymentTimer);
-      delete s.paymentTimer;
-    }
-
-    if (paymentTimers[id]) {
-      clearTimeout(paymentTimers[id]);
-      delete paymentTimers[id];
-    }
-
-    delete userSessions[id];
-
-    await sendAndTrack(bot, id, "❌ Payment canceled. Returning to main menu...", {}, userMessages);
-    return setTimeout(() => safeStart(bot, id), 300);
-  } catch (err) {
-    console.error("❌ [handlePaymentCancel error]:", err.message);
-    return safeStart(bot, id);
+  if (s.paymentTimer) {
+    clearTimeout(s.paymentTimer);
+    delete s.paymentTimer;
   }
+  if (paymentTimers[id]) {
+    clearTimeout(paymentTimers[id]);
+    delete paymentTimers[id];
+  }
+
+  delete userSessions[id];
+  await sendAndTrack(bot, id, "❌ Payment canceled. Returning to main menu...", {}, userMessages);
+  return setTimeout(() => safeStart(bot, id), 300);
 }
 
 export async function handlePaymentConfirmation(bot, id, userMessages) {
   const s = userSessions[id];
   const valid = s && s.step === 9 && s.wallet && s.currency && s.expectedAmount;
-
   if (!valid) {
     return sendAndTrack(bot, id, "⚠️ Invalid session. Use /start to begin again.", {}, userMessages);
   }
@@ -181,7 +165,7 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
   try {
     await sendAndTrack(bot, id, "⏳ Verifying payment on the blockchain...", {}, userMessages);
 
-    const normalized = ALIASES[s.currency.toLowerCase()] || s.currency.toUpperCase();
+    const normalized = normalizeCurrency(s.currency);
     const confirmed = await fetchWithRetry(() =>
       checkPayment(s.wallet, normalized, s.expectedAmount, bot)
     );
@@ -200,7 +184,6 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
     delete s.paymentTimer;
 
     userOrders[id] = (userOrders[id] || 0) + 1;
-
     await saveOrder(id, s.city, s.product.name, s.totalPrice).catch(err =>
       console.warn("⚠️ [saveOrder error]:", err.message)
     );
