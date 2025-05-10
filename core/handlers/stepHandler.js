@@ -1,3 +1,5 @@
+// 📦 core/handlers/stepHandler.js | IMMORTAL FINAL v999999999 — ULTRA BULLETPROOF FLOW + FULL SYNC
+
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
 import { products } from "../../config/products.js";
@@ -18,118 +20,118 @@ const regionMap = {
 };
 
 /**
- * 🧠 Handles dynamic step-by-step order flow
+ * 🧠 Handles dynamic user flow per step
  */
 export async function handleStep(bot, id, text, userMessages) {
-  const s = (userSessions[id] ||= { step: 1, createdAt: Date.now() });
-  const input = text?.trim();
+  const uid = String(id);
+  const input = (text || "").trim();
 
-  if (!input || typeof input !== "string") return punish(bot, id, userMessages);
+  if (!input) return punish(bot, uid, userMessages);
 
-  // 🔙 Handle back navigation
+  const s = (userSessions[uid] ||= { step: 1, createdAt: Date.now() });
+
   if (input === "🔙 Back") {
     try {
-      if (s.step === 1) {
-        await resetSession(id);
-        return await safeStart(bot, id);
-      } else {
-        s.step = Math.floor(s.step - 1);
-        if (s.step <= 1) {
-          delete s.region;
-          delete s.city;
-        }
-        return renderStep(bot, id, s.step, userMessages);
+      if (s.step <= 1) {
+        await resetSession(uid);
+        return await safeStart(bot, uid);
       }
+
+      s.step = Math.max(1, Math.floor(s.step - 1));
+      if (s.step <= 1) {
+        delete s.region;
+        delete s.city;
+      }
+      return renderStep(bot, uid, s.step, userMessages);
     } catch (err) {
       console.error("❌ [Back error]:", err.message);
-      return await safeStart(bot, id);
+      return await safeStart(bot, uid);
     }
   }
 
   try {
     switch (s.step) {
       case 1:
-        if (!regionMap[input]) return punish(bot, id, userMessages);
+        if (!regionMap[input]) return punish(bot, uid, userMessages);
         s.region = input;
         s.step = 1.2;
-        return renderStep(bot, id, 1.2, userMessages);
+        return renderStep(bot, uid, s.step, userMessages);
 
       case 1.2:
-        if (!regionMap[s.region]?.includes(input)) return punish(bot, id, userMessages);
+        if (!regionMap[s.region]?.includes(input)) return punish(bot, uid, userMessages);
         s.city = input;
         s.step = 2;
-        return renderStep(bot, id, 2, userMessages);
+        return renderStep(bot, uid, s.step, userMessages);
 
       case 2:
         const method = deliveryMethods.find(m => m.label === input);
-        if (!method) return punish(bot, id, userMessages);
+        if (!method) return punish(bot, uid, userMessages);
         s.deliveryMethod = method.key;
         s.deliveryFee = method.fee;
         s.step = 3;
-        return renderStep(bot, id, 3, userMessages);
+        return renderStep(bot, uid, s.step, userMessages);
 
       case 3:
-        if (!products[input]) return punish(bot, id, userMessages);
+        if (!products[input]) return punish(bot, uid, userMessages);
         s.category = input;
         s.step = 4;
-        return renderStep(bot, id, 4, userMessages);
+        return renderStep(bot, uid, s.step, userMessages);
 
       case 4:
         const prod = products[s.category]?.find(p => p.name === input);
-        if (!prod) return punish(bot, id, userMessages);
+        if (!prod) return punish(bot, uid, userMessages);
         s.product = prod;
         s.step = 5;
-        return renderStep(bot, id, 5, userMessages);
+        return renderStep(bot, uid, s.step, userMessages);
 
       case 5:
         const qty = input?.match(/^[^\s(]+/)?.[0];
         const price = s.product?.prices?.[qty];
-        if (!price || isNaN(parseInt(qty))) return punish(bot, id, userMessages);
+        if (!price || isNaN(parseInt(qty))) return punish(bot, uid, userMessages);
         s.quantity = qty;
         s.unitPrice = price;
         s.totalPrice = price + s.deliveryFee;
         s.step = 6;
-        return renderStep(bot, id, 6, userMessages);
+        return renderStep(bot, uid, s.step, userMessages);
 
       case 6:
         const wallet = WALLETS[input];
-        if (!wallet || typeof wallet !== "string" || wallet.length < 8) return punish(bot, id, userMessages);
+        if (!wallet || wallet.length < 8) return punish(bot, uid, userMessages);
         s.currency = input;
         s.wallet = wallet;
         s.step = 7;
-        return renderStep(bot, id, 7, userMessages);
+        return renderStep(bot, uid, s.step, userMessages);
 
       case 7:
-        if (input !== "✅ CONFIRM") return punish(bot, id, userMessages);
-        return await handlePayment(bot, id, userMessages);
+        if (input !== "✅ CONFIRM") return punish(bot, uid, userMessages);
+        return await handlePayment(bot, uid, userMessages);
 
       case 8:
         if (input === "✅ CONFIRM") {
           s.step = 9;
-          return await handlePaymentConfirmation(bot, id, userMessages);
+          return await handlePaymentConfirmation(bot, uid, userMessages);
         }
         if (input === "❌ Cancel payment") {
-          await sendAndTrack(bot, id, "❌ Payment canceled. Returning to main menu...", {}, userMessages);
-          await resetSession(id);
-          return setTimeout(() => safeStart(bot, id), 300);
+          await sendAndTrack(bot, uid, "❌ Payment canceled. Returning to main menu...", {}, userMessages);
+          await resetSession(uid);
+          return setTimeout(() => safeStart(bot, uid), 300);
         }
-        return punish(bot, id, userMessages);
+        return punish(bot, uid, userMessages);
 
       default:
-        console.warn(`⚠️ [Unknown step=${s.step}] for user ${id}`);
-        await resetSession(id);
-        return await safeStart(bot, id);
+        console.warn(`⚠️ [Unknown step=${s.step}] for user ${uid}`);
+        await resetSession(uid);
+        return await safeStart(bot, uid);
     }
-
   } catch (err) {
-    console.error("❌ [handleStep error]:", err.message);
-    await resetSession(id);
-    return await safeStart(bot, id);
+    console.error("❌ [handleStep fatal]:", err.message);
+    await resetSession(uid);
+    return await safeStart(bot, uid);
   }
 }
 
 /**
- * 🔁 UI rendering per step
+ * 📲 UI rendering per step
  */
 function renderStep(bot, id, step, userMessages) {
   const s = userSessions[id] ||= { step: 1 };
@@ -202,13 +204,12 @@ function renderStep(bot, id, step, userMessages) {
         ], userMessages);
 
       default:
-        console.warn(`⚠️ [renderStep fallback → step=1] for ${id}`);
+        console.warn(`⚠️ [renderStep fallback → 1] for ${id}`);
         userSessions[id] = { step: 1, createdAt: Date.now() };
         return renderStep(bot, id, 1, userMessages);
     }
-
   } catch (err) {
-    console.error("❌ [renderStep crash]:", err.message);
+    console.error("❌ [renderStep error]:", err.message);
     return sendKeyboard(bot, id, "⚠️ Failed to load step. Try again.", [[{ text: "🔁 Try again" }]], userMessages);
   }
 }
