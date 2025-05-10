@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1_11111111111 — ULTRA BULLETPROOF GODMODE
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1_11111111111 — ULTRA BULLETPROOF GODMODE + ALIASES FIX
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -15,6 +15,18 @@ const SUPPORTED = {
   ETH: { gecko: "ethereum", coincap: "ethereum" },
   MATIC: { gecko: "polygon-pos", coincap: "polygon" },
   SOL: { gecko: "solana", coincap: "solana" }
+};
+
+const ALIASES = {
+  bitcoin: "BTC",
+  ethereum: "ETH",
+  polygon: "MATIC",
+  "polygon-pos": "MATIC",
+  solana: "SOL",
+  btc: "BTC",
+  eth: "ETH",
+  matic: "MATIC",
+  sol: "SOL"
 };
 
 function wait(ms) {
@@ -54,11 +66,11 @@ async function sendSafe(botMethod, ...args) {
 
 async function getSafeRate(currency) {
   try {
-    const upper = currency.toUpperCase();
-    const coin = SUPPORTED[upper];
+    const normalized = ALIASES[currency.toLowerCase()] || currency.toUpperCase();
+    const coin = SUPPORTED[normalized];
     if (!coin) throw new Error(`Unsupported currency: "${currency}"`);
 
-    const rate = await fetchWithRetry(() => fetchCryptoPrice(coin.gecko));
+    const rate = await fetchWithRetry(() => fetchCryptoPrice(normalized));
     if (!Number.isFinite(rate) || rate <= 0) {
       throw new Error(`Invalid rate for "${currency}"`);
     }
@@ -82,19 +94,19 @@ export async function handlePayment(bot, id, userMessages) {
       throw new Error("Missing or invalid payment session data");
     }
 
-    const upperCurrency = s.currency.toUpperCase();
-    if (!SUPPORTED[upperCurrency]) {
-      throw new Error(`Unsupported currency "${upperCurrency}".`);
+    const normalizedCurrency = ALIASES[s.currency.toLowerCase()] || s.currency.toUpperCase();
+    if (!SUPPORTED[normalizedCurrency]) {
+      throw new Error(`Unsupported currency "${normalizedCurrency}".`);
     }
 
-    const rate = await getSafeRate(upperCurrency);
+    const rate = await getSafeRate(normalizedCurrency);
     const amount = +(usd / rate).toFixed(6);
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new Error("Invalid crypto amount calculated");
     }
 
     s.expectedAmount = amount;
-    const qr = await generateQR(upperCurrency, amount, s.wallet);
+    const qr = await generateQR(normalizedCurrency, amount, s.wallet);
     if (!qr || !(qr instanceof Buffer)) throw new Error("QR generation failed");
 
     s.step = 8;
@@ -107,7 +119,7 @@ export async function handlePayment(bot, id, userMessages) {
 • Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)
 • Location: ${s.city}
 
-💰 ${usd.toFixed(2)}$ ≈ ${amount} ${upperCurrency}
+💰 ${usd.toFixed(2)}$ ≈ ${amount} ${normalizedCurrency}
 🏦 Wallet: \`${s.wallet}\`
 
 ⏱ Estimated delivery: ~30 minutes
