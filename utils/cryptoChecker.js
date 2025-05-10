@@ -1,19 +1,20 @@
-// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v9999999999999 — MAX STABILITY LOCKED™
+// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v100000000000000 — 24/7 BULLETPROOF
 
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 import { API, BOT } from "../config/config.js";
 
+// 🔒 Log path
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
 /**
- * ✅ Tikrina ar mokėjimas buvo gautas
+ * ✅ Pagrindinis entry — tikrina balansą pagal valiutą
  */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
   try {
     const amount = parseFloat(expectedAmount);
-    const cur = String(currency || "").trim().toUpperCase();
+    const cur = String(currency || "").toUpperCase().trim();
 
     if (
       !wallet || typeof wallet !== "string" || wallet.length < 8 ||
@@ -64,7 +65,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 }
 
 /**
- * 🔎 BTC — balansas iš blockchain.info (satoshis → BTC)
+ * ✅ BTC balansas (satoshis → BTC)
  */
 async function checkBTC(address, expected) {
   try {
@@ -77,7 +78,10 @@ async function checkBTC(address, expected) {
     const text = await res.text();
     const satoshis = parseInt(text);
 
-    return Number.isFinite(satoshis) && (satoshis / 1e8) >= expected;
+    if (!Number.isFinite(satoshis)) throw new Error("Satoshis not a number");
+
+    const btc = satoshis / 1e8;
+    return btc >= expected;
   } catch (err) {
     console.error("❌ [BTC error]:", err.message || err);
     return false;
@@ -85,7 +89,7 @@ async function checkBTC(address, expected) {
 }
 
 /**
- * 🔎 ETH / MATIC — JSON-RPC balansas (wei → eth/matic)
+ * ✅ ETH/MATIC balansas per JSON-RPC (wei → eth)
  */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
@@ -109,7 +113,7 @@ async function checkEVM(address, expected, rpcUrl, label) {
     const hex = json?.result;
 
     if (!hex || typeof hex !== "string") {
-      throw new Error("Missing or invalid EVM result");
+      throw new Error("Invalid EVM hex result");
     }
 
     const wei = parseInt(hex, 16);
@@ -123,7 +127,7 @@ async function checkEVM(address, expected, rpcUrl, label) {
 }
 
 /**
- * 🔎 SOL — balansas lamports → SOL
+ * ✅ SOL balansas per RPC (lamports → SOL)
  */
 async function checkSOL(address, expected) {
   try {
@@ -145,9 +149,11 @@ async function checkSOL(address, expected) {
 
     const json = await res.json();
     const lamports = json?.result?.value;
-    const sol = lamports / 1e9;
 
-    return Number.isFinite(sol) && sol >= expected;
+    if (!Number.isFinite(lamports)) throw new Error("Lamports is not a number");
+
+    const sol = lamports / 1e9;
+    return sol >= expected;
   } catch (err) {
     console.error("❌ [SOL error]:", err.message || err);
     return false;
@@ -155,7 +161,7 @@ async function checkSOL(address, expected) {
 }
 
 /**
- * 📝 Balansų patikrinimų logavimas
+ * 📄 Įrašo patikrinimo rezultatą į logą
  */
 function log(wallet, currency, amount, status) {
   try {
@@ -164,9 +170,8 @@ function log(wallet, currency, amount, status) {
     }
 
     const time = new Date().toISOString();
-    const line = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
-
-    fs.appendFileSync(logPath, line, "utf8");
+    const entry = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
+    fs.appendFileSync(logPath, entry, "utf8");
   } catch (err) {
     console.warn("⚠️ [log error]:", err.message || err);
   }
