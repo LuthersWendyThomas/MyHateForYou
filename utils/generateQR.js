@@ -1,4 +1,4 @@
-// 📦 utils/generateQR.js | IMMORTAL v3.2 — ULTRA BULLETPROOF INLINE+QR ALIAS GODMODE
+// 📦 utils/generateQR.js | IMMORTAL FINAL v3.3 — ULTRA BULLETPROOF INLINE+QR ALIASED GODMODE SYNCED
 
 import QRCode from "qrcode";
 import { WALLETS, ALIASES } from "../config/config.js";
@@ -6,19 +6,15 @@ import { WALLETS, ALIASES } from "../config/config.js";
 /**
  * ✅ Generates QR code PNG buffer for crypto payment
  */
-export async function generateQR(currency, amount, overrideAddress) {
+export async function generateQR(currency, amount, overrideAddress = null) {
   try {
-    if (!currency || amount === undefined || amount === null) {
-      console.warn("⚠️ [generateQR] Missing currency or amount.");
-      return null;
-    }
-
-    const normalized = ALIASES[String(currency).toLowerCase()] || String(currency).toUpperCase();
+    const raw = String(currency || "").toLowerCase();
+    const normalized = ALIASES[raw] || raw.toUpperCase();
     const parsedAmount = parseFloat(amount);
     const address = String(overrideAddress || WALLETS[normalized] || "").trim();
 
     if (!isValidAddress(address)) {
-      console.warn(`⚠️ [generateQR] Invalid address: "${address}"`);
+      console.warn(`⚠️ [generateQR] Invalid address for ${normalized}: "${address}"`);
       return null;
     }
 
@@ -35,10 +31,7 @@ export async function generateQR(currency, amount, overrideAddress) {
       width: 180,
       margin: 1,
       errorCorrectionLevel: "H",
-      color: {
-        dark: "#000000",
-        light: "#FFFFFF"
-      }
+      color: { dark: "#000000", light: "#FFFFFF" }
     });
 
     if (!(buffer instanceof Buffer)) {
@@ -60,7 +53,8 @@ export async function generateQR(currency, amount, overrideAddress) {
  * ✅ Generates message with copyable crypto address inline button
  */
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
-  const normalized = ALIASES[String(currency || "").toLowerCase()] || String(currency).toUpperCase();
+  const raw = String(currency || "").toLowerCase();
+  const normalized = ALIASES[raw] || raw.toUpperCase();
   const parsedAmount = parseFloat(amount);
   const formattedAmount = Number.isFinite(parsedAmount)
     ? parsedAmount.toFixed(6)
