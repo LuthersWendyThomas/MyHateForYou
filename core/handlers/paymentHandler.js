@@ -1,3 +1,5 @@
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v999999999999999 — DIAMOND SYNC + RATE GUARD LOCK
+
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
@@ -8,7 +10,12 @@ import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
 
-// 🔁 Retry with exponential backoff (safe)
+// 🔁 Delay helper
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// 🔁 Safe fetch with exponential backoff
 async function fetchWithRetry(apiCall, retries = 3, baseDelay = 1500) {
   let lastErr;
   for (let i = 0; i <= retries; i++) {
@@ -22,7 +29,7 @@ async function fetchWithRetry(apiCall, retries = 3, baseDelay = 1500) {
   throw lastErr;
 }
 
-// ✅ Telegram-safe send wrapper (rate limit protection)
+// ✅ Telegram-safe sender (anti 429)
 async function sendSafe(botMethod, ...args) {
   for (let i = 0; i < 3; i++) {
     try {
@@ -30,7 +37,7 @@ async function sendSafe(botMethod, ...args) {
     } catch (err) {
       if (err.response?.statusCode === 429 || err.message?.includes("429")) {
         const delay = (i + 1) * 2000;
-        console.warn(`⏳ Telegram rate limited, retrying in ${delay}ms...`);
+        console.warn(`⏳ Telegram rate limited → retry in ${delay}ms`);
         await wait(delay);
         continue;
       }
@@ -40,7 +47,7 @@ async function sendSafe(botMethod, ...args) {
   }
 }
 
-// ✅ Safe rate resolver for any supported crypto
+// ✅ Secure exchange rate fetch
 async function getSafeRate(currency) {
   try {
     const rate = await fetchWithRetry(() => fetchCryptoPrice(currency));
@@ -54,7 +61,7 @@ async function getSafeRate(currency) {
 }
 
 /**
- * 🧾 Step 7 — Generate QR and await payment
+ * 🧾 Step 7: Generate QR and await payment
  */
 export async function handlePayment(bot, id, userMessages) {
   const s = userSessions[id];
@@ -126,7 +133,7 @@ export async function handlePayment(bot, id, userMessages) {
 }
 
 /**
- * 🛑 Step 8 — Cancel payment
+ * 🛑 Step 8: Cancel payment
  */
 export async function handlePaymentCancel(bot, id, userMessages) {
   const s = userSessions[id];
@@ -158,7 +165,7 @@ export async function handlePaymentCancel(bot, id, userMessages) {
 }
 
 /**
- * ✅ Step 9 — Confirm payment on-chain and start delivery
+ * ✅ Step 9: Confirm payment & start delivery
  */
 export async function handlePaymentConfirmation(bot, id, userMessages) {
   const s = userSessions[id];
@@ -208,11 +215,4 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
     console.error("❌ [handlePaymentConfirmation error]:", err.message);
     return sendAndTrack(bot, id, "❗️ Blockchain check failed. Try again later.", {}, userMessages);
   }
-}
-
-/**
- * ⏳ Wait helper
- */
-function wait(ms) {
-  return new Promise(res => setTimeout(res, ms));
 }
