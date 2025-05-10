@@ -1,6 +1,6 @@
-// 📦 config/products.js | FINAL IMMORTAL v999999999.999 — PRODUCT-SYNC + DISCOUNT + UI READY
+// 📦 config/products.js | FINAL IMMORTAL v999999999.∞ — PRODUCT-SYNC + DISCOUNT + UI READY + FULL EXPORT SYNC
 
-import { resolveDiscount, DISCOUNTS } from "./discounts.js";
+import { resolveDiscount } from "./discounts.js";
 
 export const products = {
   "🌿 Cannabis": [
@@ -45,6 +45,12 @@ export const products = {
     { name: "💙 Viagra 100mg", active: true, prices: { "1pc": 6, "3pcs": 15, "5pcs": 25 } }
   ]
 };
+
+export const allCategories = Object.keys(products);
+
+export const allProductNames = allCategories
+  .flatMap(cat => products[cat])
+  .map(p => p.name);
 
 /**
  * 🎯 Generate keyboard for available products in category
