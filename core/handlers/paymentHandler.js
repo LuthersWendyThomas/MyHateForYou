@@ -12,10 +12,10 @@ import { BOT } from "../../config/config.js";
 
 // ✅ Vieningas palaikomų valiutų objektas (SYNC su fetchCryptoPrice.js ir cryptoChecker.js)
 const SUPPORTED = {
-  btc: { gecko: "bitcoin", coincap: "bitcoin" },
-  eth: { gecko: "ethereum", coincap: "ethereum" },
-  matic: { gecko: "polygon-pos", coincap: "polygon" },
-  sol: { gecko: "solana", coincap: "solana" }
+  BTC: { gecko: "bitcoin", coincap: "bitcoin" },
+  ETH: { gecko: "ethereum", coincap: "ethereum" },
+  MATIC: { gecko: "polygon-pos", coincap: "polygon" },
+  SOL: { gecko: "solana", coincap: "solana" }
 };
 
 // ⏳ Delay
