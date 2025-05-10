@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v2_999999999999 — BULLETPROOF GODMODE SYNCED
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v3_999999999999 — GODMODE BULLETPROOF MATIC FIXED EDITION
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -10,12 +10,11 @@ import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT, ALIASES } from "../../config/config.js";
 
-// ✅ Palaikomos valiutos (sinchronizuota su visom sistemom)
 const SUPPORTED = {
-  BTC: { gecko: "bitcoin", coincap: "bitcoin" },
-  ETH: { gecko: "ethereum", coincap: "ethereum" },
-  MATIC: { gecko: "polygon-pos", coincap: "polygon" },
-  SOL: { gecko: "solana", coincap: "solana" }
+  BTC:   { gecko: "bitcoin",      coincap: "bitcoin" },
+  ETH:   { gecko: "ethereum",     coincap: "ethereum" },
+  MATIC: { gecko: "polygon-pos",  coincap: "polygon" },
+  SOL:   { gecko: "solana",       coincap: "solana" }
 };
 
 function wait(ms) {
@@ -30,7 +29,7 @@ async function fetchWithRetry(fn, retries = 5, baseDelay = 1500) {
       return await fn();
     } catch (err) {
       lastErr = err;
-      console.warn(`⚠️ [fetchWithRetry ${i + 1}/${retries}]:`, err.message);
+      console.warn(`⚠️ [fetchWithRetry ${i + 1}/${retries}]: ${err.message}`);
     }
   }
   throw lastErr;
@@ -43,7 +42,7 @@ async function sendSafe(botMethod, ...args) {
     } catch (err) {
       if (err.response?.statusCode === 429 || err.message?.includes("429")) {
         const delay = (i + 1) * 2000;
-        console.warn(`⏳ Telegram rate limited → waiting ${delay}ms`);
+        console.warn(`⏳ Telegram rate limited → wait ${delay}ms`);
         await wait(delay);
         continue;
       }
@@ -57,12 +56,17 @@ function normalizeCurrency(input) {
   return ALIASES[String(input).toLowerCase()] || String(input).toUpperCase();
 }
 
-async function getSafeRate(normalized) {
-  const coin = SUPPORTED[normalized];
-  if (!coin) throw new Error(`Unsupported currency: "${normalized}"`);
-  const rate = await fetchWithRetry(() => fetchCryptoPrice(normalized));
-  if (!Number.isFinite(rate) || rate <= 0) throw new Error(`Invalid rate for "${normalized}"`);
-  return rate;
+async function getSafeRate(currency) {
+  const symbol = normalizeCurrency(currency);
+  const coin = SUPPORTED[symbol];
+  if (!coin) throw new Error(`Unsupported currency: "${symbol}"`);
+
+  const rate = await fetchWithRetry(() => fetchCryptoPrice(symbol));
+  if (!Number.isFinite(rate) || rate <= 0) {
+    throw new Error(`Invalid rate for "${symbol}"`);
+  }
+
+  return { rate, symbol };
 }
 
 export async function handlePayment(bot, id, userMessages) {
@@ -79,15 +83,12 @@ export async function handlePayment(bot, id, userMessages) {
       throw new Error("❌ Missing or invalid payment session data");
     }
 
-    const normalized = normalizeCurrency(s.currency);
-    if (!SUPPORTED[normalized]) throw new Error(`❌ Unsupported currency: "${normalized}"`);
-
-    const rate = await getSafeRate(normalized);
+    const { rate, symbol } = await getSafeRate(s.currency);
     const amount = +(usd / rate).toFixed(6);
     if (!Number.isFinite(amount) || amount <= 0) throw new Error("❌ Invalid crypto amount");
 
     s.expectedAmount = amount;
-    const qr = await generateQR(normalized, amount, s.wallet);
+    const qr = await generateQR(symbol, amount, s.wallet);
     if (!qr || !(qr instanceof Buffer)) throw new Error("❌ QR generation failed");
 
     s.step = 8;
@@ -100,7 +101,7 @@ export async function handlePayment(bot, id, userMessages) {
 • Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)
 • Location: ${s.city}
 
-💰 ${usd.toFixed(2)}$ ≈ ${amount} ${normalized}
+💰 ${usd.toFixed(2)}$ ≈ ${amount} ${symbol}
 🏦 Wallet: \`${s.wallet}\`
 
 ⏱ Estimated delivery: ~30 minutes
@@ -124,6 +125,7 @@ export async function handlePayment(bot, id, userMessages) {
       [{ text: "✅ CONFIRM" }],
       [{ text: "❌ Cancel payment" }]
     ], userMessages);
+
   } catch (err) {
     console.error("❌ [handlePayment error]:", err.message);
     s.paymentInProgress = false;
@@ -145,29 +147,30 @@ export async function handlePaymentCancel(bot, id, userMessages) {
     clearTimeout(s.paymentTimer);
     delete s.paymentTimer;
   }
+
   if (paymentTimers[id]) {
     clearTimeout(paymentTimers[id]);
     delete paymentTimers[id];
   }
 
   delete userSessions[id];
+
   await sendAndTrack(bot, id, "❌ Payment canceled. Returning to main menu...", {}, userMessages);
   return setTimeout(() => safeStart(bot, id), 300);
 }
 
 export async function handlePaymentConfirmation(bot, id, userMessages) {
   const s = userSessions[id];
-  const valid = s && s.step === 9 && s.wallet && s.currency && s.expectedAmount;
-  if (!valid) {
+  if (!(s && s.step === 9 && s.wallet && s.currency && s.expectedAmount)) {
     return sendAndTrack(bot, id, "⚠️ Invalid session. Use /start to begin again.", {}, userMessages);
   }
 
   try {
     await sendAndTrack(bot, id, "⏳ Verifying payment on the blockchain...", {}, userMessages);
 
-    const normalized = normalizeCurrency(s.currency);
+    const symbol = normalizeCurrency(s.currency);
     const confirmed = await fetchWithRetry(() =>
-      checkPayment(s.wallet, normalized, s.expectedAmount, bot)
+      checkPayment(s.wallet, symbol, s.expectedAmount, bot)
     );
 
     if (!confirmed) {
@@ -179,11 +182,11 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
 
     if (s.paymentTimer) clearTimeout(s.paymentTimer);
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
-
     delete paymentTimers[id];
     delete s.paymentTimer;
 
     userOrders[id] = (userOrders[id] || 0) + 1;
+
     await saveOrder(id, s.city, s.product.name, s.totalPrice).catch(err =>
       console.warn("⚠️ [saveOrder error]:", err.message)
     );
