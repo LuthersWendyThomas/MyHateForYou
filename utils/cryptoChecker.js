@@ -1,15 +1,13 @@
-// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v100000000000000 — 24/7 BULLETPROOF
-
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 import { API, BOT } from "../config/config.js";
 
-// 🔒 Log path
+// 🧾 Log failo kelias
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
 /**
- * ✅ Pagrindinis entry — tikrina balansą pagal valiutą
+ * ✅ Tikrina ar wallet'e yra pakankamai lėšų pagal tinklą
  */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
   try {
@@ -41,7 +39,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
         result = await checkSOL(wallet, amount);
         break;
       default:
-        log(wallet, cur, amount, "❌ UNSUPPORTED");
+        log(wallet, cur, amount, "❌ UNSUPPORTED CURRENCY");
         return false;
     }
 
@@ -65,7 +63,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 }
 
 /**
- * ✅ BTC balansas (satoshis → BTC)
+ * ✅ BTC patikrinimas (blockchain.info API, satoshis → BTC)
  */
 async function checkBTC(address, expected) {
   try {
@@ -75,12 +73,11 @@ async function checkBTC(address, expected) {
     const res = await fetch(`${API.BTC_RPC}${address}`, { signal: controller.signal });
     clearTimeout(timeout);
 
-    const text = await res.text();
-    const satoshis = parseInt(text);
-
-    if (!Number.isFinite(satoshis)) throw new Error("Satoshis not a number");
-
+    const satoshis = parseInt(await res.text());
     const btc = satoshis / 1e8;
+
+    if (!Number.isFinite(btc)) throw new Error("BTC result not finite");
+
     return btc >= expected;
   } catch (err) {
     console.error("❌ [BTC error]:", err.message || err);
@@ -89,7 +86,7 @@ async function checkBTC(address, expected) {
 }
 
 /**
- * ✅ ETH/MATIC balansas per JSON-RPC (wei → eth)
+ * ✅ ETH/MATIC (EVM tinklai) patikrinimas (wei → eth)
  */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
@@ -109,17 +106,19 @@ async function checkEVM(address, expected, rpcUrl, label) {
     });
     clearTimeout(timeout);
 
-    const json = await res.json();
-    const hex = json?.result;
+    const data = await res.json();
+    const hex = data?.result;
 
     if (!hex || typeof hex !== "string") {
-      throw new Error("Invalid EVM hex result");
+      throw new Error("Invalid or missing EVM balance hex");
     }
 
     const wei = parseInt(hex, 16);
-    const value = wei / 1e18;
+    const eth = wei / 1e18;
 
-    return Number.isFinite(value) && value >= expected;
+    if (!Number.isFinite(eth)) throw new Error("Parsed EVM balance not finite");
+
+    return eth >= expected;
   } catch (err) {
     console.error(`❌ [${label} error]:`, err.message || err);
     return false;
@@ -127,7 +126,7 @@ async function checkEVM(address, expected, rpcUrl, label) {
 }
 
 /**
- * ✅ SOL balansas per RPC (lamports → SOL)
+ * ✅ Solana tinklas (lamports → SOL)
  */
 async function checkSOL(address, expected) {
   try {
@@ -147,12 +146,12 @@ async function checkSOL(address, expected) {
     });
     clearTimeout(timeout);
 
-    const json = await res.json();
-    const lamports = json?.result?.value;
-
-    if (!Number.isFinite(lamports)) throw new Error("Lamports is not a number");
-
+    const data = await res.json();
+    const lamports = data?.result?.value;
     const sol = lamports / 1e9;
+
+    if (!Number.isFinite(sol)) throw new Error("Parsed lamports not finite");
+
     return sol >= expected;
   } catch (err) {
     console.error("❌ [SOL error]:", err.message || err);
@@ -161,7 +160,7 @@ async function checkSOL(address, expected) {
 }
 
 /**
- * 📄 Įrašo patikrinimo rezultatą į logą
+ * 📄 Įrašo rezultatą į `cryptoChecks.log`
  */
 function log(wallet, currency, amount, status) {
   try {
@@ -169,9 +168,9 @@ function log(wallet, currency, amount, status) {
       fs.mkdirSync(path.dirname(logPath), { recursive: true });
     }
 
-    const time = new Date().toISOString();
-    const entry = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
-    fs.appendFileSync(logPath, entry, "utf8");
+    const timestamp = new Date().toISOString();
+    const line = `${timestamp} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
+    fs.appendFileSync(logPath, line, "utf8");
   } catch (err) {
     console.warn("⚠️ [log error]:", err.message || err);
   }
