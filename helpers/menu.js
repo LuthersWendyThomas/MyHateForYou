@@ -1,4 +1,4 @@
-// 📦 helpers/menu.js | FINAL IMMORTAL v9999999 — SKYLOCKED ADMIN-SAFE SYNC
+// 📦 helpers/menu.js | FINAL IMMORTAL v9999999 — SKYLOCKED ADMIN-SAFE SYNC (NO START)
 
 import { BOT } from "../config/config.js";
 import { MENU_BUTTONS } from "./keyboardConstants.js";
@@ -16,7 +16,6 @@ export function getMainMenu(id) {
   const isAdmin = uid && adminId && uid === adminId;
 
   const baseKeyboard = [
-    [{ text: MENU_BUTTONS.START }],
     [{ text: MENU_BUTTONS.BUY }, { text: MENU_BUTTONS.HELP }],
     [{ text: MENU_BUTTONS.PROFILE }, { text: MENU_BUTTONS.ORDERS }]
   ];
