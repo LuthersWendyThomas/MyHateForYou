@@ -19,7 +19,7 @@ export async function handleStep(bot, id, text, userMessages) {
 
   const s = (userSessions[uid] ||= { step: 1, createdAt: Date.now() });
 
-  if (input === "🔙 Back") {
+  if (input === "🖙 Back") {
     try {
       if (s.step <= 1) {
         await resetSession(uid);
@@ -48,7 +48,7 @@ export async function handleStep(bot, id, text, userMessages) {
       }
 
       case 1.2: {
-        const selectedCity = input.replace(/^🚫 /, "");
+        const selectedCity = input.replace(/^\uD83D\uDEAB /, "");
         const cities = REGION_MAP[s.region]?.cities;
         if (!cities || !cities[selectedCity]) return punish(bot, uid, userMessages);
         s.city = selectedCity;
@@ -143,32 +143,32 @@ function renderStep(bot, id, step, userMessages) {
   try {
     switch (step) {
       case 1:
-        return sendKeyboard(bot, id, "🗺 *Select your region:*", getRegionKeyboard(), userMessages);
+        return sendKeyboard(bot, id, "📜 *Select your region:*", getRegionKeyboard(), userMessages);
 
       case 1.2:
-        return sendKeyboard(bot, id, `🏙 *Choose your city in ${s.region}:*`, getCityKeyboard(s.region), userMessages);
+        return sendKeyboard(bot, id, `🏩 *Choose your city in ${s.region}:*`, getCityKeyboard(s.region), userMessages);
 
       case 2:
         return sendKeyboard(bot, id, "🚚 *Choose delivery method:*", [
           ...deliveryMethods.map(m => [{ text: m.label }]),
-          [{ text: "🔙 Back" }]
+          [{ text: "🖙 Back" }]
         ], userMessages);
 
       case 3:
         return sendKeyboard(bot, id, "📦 *Choose product category:*", [
           ...Object.keys(products).map(k => [{ text: k }]),
-          [{ text: "🔙 Back" }]
+          [{ text: "🖙 Back" }]
         ], userMessages);
 
       case 4:
-        return sendKeyboard(bot, id, "🧪 *Choose product:*", [
+        return sendKeyboard(bot, id, "🥪 *Choose product:*", [
           ...products[s.category]?.map(p => [{ text: p.name }]),
-          [{ text: "🔙 Back" }]
+          [{ text: "🖙 Back" }]
         ], userMessages);
 
       case 5:
         const qtyButtons = Object.entries(s.product?.prices || {}).map(([q, p]) => [{ text: `${q} (${p}$)` }]);
-        qtyButtons.push([{ text: "🔙 Back" }]);
+        qtyButtons.push([{ text: "🖙 Back" }]);
         return sendKeyboard(bot, id, "⚖️ *Choose quantity:*", qtyButtons, userMessages);
 
       case 6:
@@ -178,7 +178,7 @@ function renderStep(bot, id, step, userMessages) {
           else rows.push([{ text: key }]);
           return rows;
         }, []);
-        wallets.push([{ text: "🔙 Back" }]);
+        wallets.push([{ text: "🖙 Back" }]);
         return sendKeyboard(bot, id, "💳 *Choose payment network:*", wallets, userMessages);
 
       case 7:
@@ -195,7 +195,7 @@ function renderStep(bot, id, step, userMessages) {
 💰 Total: *${s.totalPrice.toFixed(2)}$*
 
 ✅ Confirm to proceed.`,
-          [[{ text: "✅ CONFIRM" }], [{ text: "🔙 Back" }]],
+          [[{ text: "✅ CONFIRM" }], [{ text: "🖙 Back" }]],
           userMessages
         );
 
