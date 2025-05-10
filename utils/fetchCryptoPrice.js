@@ -12,7 +12,7 @@ const locks = {};
 const SUPPORTED = {
   BTC:   { gecko: "bitcoin",      coincap: "bitcoin" },
   ETH:   { gecko: "ethereum",     coincap: "ethereum" },
-  MATIC: { gecko: "polygon-pos",  coincap: "polygon" },
+  MATIC: { gecko: "polygon",  coincap: "polygon" },
   SOL:   { gecko: "solana",       coincap: "solana" }
 };
 
