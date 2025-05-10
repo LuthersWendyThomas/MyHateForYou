@@ -9,7 +9,7 @@ const cache = {};
 const SUPPORTED = {
   btc: "bitcoin",
   eth: "ethereum",
-  matic: "polygon",
+  matic: "polygon-pos",
   sol: "solana"
 };
 
