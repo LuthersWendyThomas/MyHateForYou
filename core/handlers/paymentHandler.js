@@ -10,12 +10,12 @@ import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
 
-// 🔁 Retry with exponential backoff + bulletproof lock
-async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
+// 🔁 Retry with exponential backoff (safe + delay)
+async function fetchWithRetry(apiCall, retries = 3, baseDelay = 1500) {
   let lastErr;
   for (let i = 0; i <= retries; i++) {
     try {
-      if (i > 0) await new Promise(res => setTimeout(res, delay * i));
+      if (i > 0) await wait(i * baseDelay);
       return await apiCall();
     } catch (err) {
       lastErr = err;
@@ -24,7 +24,7 @@ async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
   throw lastErr;
 }
 
-// ✅ Secure exchange rate resolver
+// ✅ Safe exchange rate fetcher
 async function getSafeRate(currency) {
   try {
     const rate = await fetchWithRetry(() => fetchCryptoPrice(currency));
@@ -56,7 +56,6 @@ export async function handlePayment(bot, id, userMessages) {
 
     const rate = await getSafeRate(s.currency);
     const amount = +(usd / rate).toFixed(6);
-
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new Error("Calculated crypto amount invalid");
     }
@@ -193,4 +192,11 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
     console.error("❌ [handlePaymentConfirmation error]:", err.message);
     return sendAndTrack(bot, id, "❗️ Blockchain check failed. Try again later.", {}, userMessages);
   }
+}
+
+/**
+ * ⏳ Delay helper
+ */
+function wait(ms) {
+  return new Promise(res => setTimeout(res, ms));
 }
