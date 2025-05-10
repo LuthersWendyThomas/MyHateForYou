@@ -1,15 +1,15 @@
-// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999.∞ — REGION-SYNCED DIAMOND BUILD + DISCOUNT SYNC + ADMIN IMPORTS
+// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999.∞ — REGION-SYNCED DIAMOND BUILD + DISCOUNT SYNC + ADMIN IMPORTS + PROMOCODE
 
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
-import { products } from "../../config/products.js";
+import { products, allCategories } from "../../config/products.js";
 import { userSessions } from "../../state/userState.js";
 import { sendKeyboard, sendAndTrack } from "../../helpers/messageUtils.js";
 import { punish } from "../../utils/punishUser.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
 import { resetSession, safeStart } from "./finalHandler.js";
-import { REGION_MAP, getRegionKeyboard, getCityKeyboard } from "../../config/regions.js";
-import { resolveDiscount } from "../../config/discounts.js";
+import { REGION_MAP, getRegionKeyboard, getCityKeyboard, allRegions, allCities } from "../../config/regions.js";
+import { resolveDiscount, DISCOUNTS } from "../../config/discounts.js";
 
 export async function handleStep(bot, id, text, userMessages) {
   const uid = String(id);
@@ -30,6 +30,7 @@ export async function handleStep(bot, id, text, userMessages) {
       if (s.step <= 1) {
         delete s.region;
         delete s.city;
+        delete s.promoCode;
       }
       return renderStep(bot, uid, s.step, userMessages);
     } catch (err) {
@@ -61,6 +62,31 @@ export async function handleStep(bot, id, text, userMessages) {
         if (!method) return punish(bot, uid, userMessages);
         s.deliveryMethod = method.key;
         s.deliveryFee = method.fee;
+        s.step = 2.1;
+        return renderStep(bot, uid, s.step, userMessages);
+      }
+
+      case 2.1: {
+        if (input === "Yes") {
+          s.step = 2.2;
+          return renderStep(bot, uid, s.step, userMessages);
+        } else if (input === "No") {
+          s.step = 3;
+          return renderStep(bot, uid, s.step, userMessages);
+        }
+        return punish(bot, uid, userMessages);
+      }
+
+      case 2.2: {
+        const code = input.trim().toUpperCase();
+        const entry = DISCOUNTS.codes?.[code];
+        if (!entry || !entry.active) {
+          await sendAndTrack(bot, uid, `❌ Promo code invalid or inactive: \`${code}\``, { parse_mode: "Markdown" }, userMessages);
+          s.step = 2.1;
+          return renderStep(bot, uid, s.step, userMessages);
+        }
+        s.promoCode = code;
+        await sendAndTrack(bot, uid, `🏷️ Promo code applied: *${code}* = ${entry.percentage}%`, { parse_mode: "Markdown" }, userMessages);
         s.step = 3;
         return renderStep(bot, uid, s.step, userMessages);
       }
@@ -86,6 +112,7 @@ export async function handleStep(bot, id, text, userMessages) {
 
         const discount = resolveDiscount({
           userId: uid,
+          code: s.promoCode,
           region: s.region,
           city: s.city,
           category: s.category,
@@ -97,6 +124,7 @@ export async function handleStep(bot, id, text, userMessages) {
         s.quantity = qty;
         s.unitPrice = discountedPrice;
         s.totalPrice = discountedPrice + s.deliveryFee;
+        s.appliedDiscount = discount;
         s.step = 6;
         return renderStep(bot, uid, s.step, userMessages);
       }
@@ -155,9 +183,17 @@ function renderStep(bot, id, step, userMessages) {
           [{ text: "🖙 Back" }]
         ], userMessages);
 
+      case 2.1:
+        return sendKeyboard(bot, id, "🏷️ *Do you have a promo code?*", [
+          [{ text: "Yes" }, { text: "No" }]
+        ], userMessages);
+
+      case 2.2:
+        return sendKeyboard(bot, id, "🏷️ *Enter your promo code:*", [[{ text: "🖙 Back" }]], userMessages);
+
       case 3:
         return sendKeyboard(bot, id, "📦 *Choose product category:*", [
-          ...Object.keys(products).map(k => [{ text: k }]),
+          ...allCategories.map(k => [{ text: k }]),
           [{ text: "🖙 Back" }]
         ], userMessages);
 
@@ -183,6 +219,10 @@ function renderStep(bot, id, step, userMessages) {
         return sendKeyboard(bot, id, "💳 *Choose payment network:*", wallets, userMessages);
 
       case 7:
+        const discountInfo = s.promoCode ? `🏷️ Promo: *${s.promoCode}* — ${s.appliedDiscount || 0}%
+` : "🏷️ Promo: None\n";
+        const totalLine = `💰 Total: *${s.totalPrice.toFixed(2)}$*`;
+
         return sendKeyboard(bot, id,
           `🧾 *Order summary:*
 
@@ -194,7 +234,7 @@ function renderStep(bot, id, step, userMessages) {
 • Quantity: ${s.quantity}
 • Payment: ${s.currency}
 
-💰 Total: *${s.totalPrice.toFixed(2)}$*
+${discountInfo}${totalLine}
 
 ✅ Confirm to proceed.`,
           [[{ text: "✅ CONFIRM" }], [{ text: "🖙 Back" }]],
