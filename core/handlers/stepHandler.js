@@ -1,4 +1,4 @@
-// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999 — REGION-SYNCED DIAMOND BUILD
+// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999 — REGION-SYNCED DIAMOND BUILD + DISCOUNT SYNC
 
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
@@ -9,6 +9,7 @@ import { punish } from "../../utils/punishUser.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
 import { resetSession, safeStart } from "./finalHandler.js";
 import { REGION_MAP, getRegionKeyboard, getCityKeyboard } from "../../config/regions.js";
+import { resolveDiscount } from "../../config/discounts.js";
 
 export async function handleStep(bot, id, text, userMessages) {
   const uid = String(id);
@@ -80,11 +81,21 @@ export async function handleStep(bot, id, text, userMessages) {
 
       case 5: {
         const qty = input?.match(/^[^\s(]+/)?.[0];
-        const price = s.product?.prices?.[qty];
-        if (!price || isNaN(parseInt(qty))) return punish(bot, uid, userMessages);
+        const basePrice = s.product?.prices?.[qty];
+        if (!basePrice || isNaN(parseInt(qty))) return punish(bot, uid, userMessages);
+
+        const discount = resolveDiscount({
+          userId: uid,
+          city: s.city,
+          category: s.category,
+          productName: s.product?.name
+        });
+
+        const discountedPrice = basePrice - (basePrice * discount / 100);
+
         s.quantity = qty;
-        s.unitPrice = price;
-        s.totalPrice = price + s.deliveryFee;
+        s.unitPrice = discountedPrice;
+        s.totalPrice = discountedPrice + s.deliveryFee;
         s.step = 6;
         return renderStep(bot, uid, s.step, userMessages);
       }
