@@ -1,5 +1,8 @@
 // 📦 config/discounts.js | FINAL IMMORTAL GODMODE v99999999999999.2 — FULL AUTO-SYNC + ADMIN READY
 
+import { products } from "./products.js";
+import { REGION_MAP } from "./regions.js";
+
 export const DISCOUNT_TYPES = [
   "global", "user", "code", "region", "city", "category", "product"
 ];
@@ -12,89 +15,27 @@ export const DISCOUNTS = {
 
   users: {},
   codes: {},
-
-  // ✅ Auto-filled from regions.js
-  regions: {
-    "🗽 East Coast": { active: false, percentage: 0 },
-    "🌴 West Coast": { active: false, percentage: 0 },
-    "🛢️ South": { active: false, percentage: 0 },
-    "⛰️ Midwest": { active: false, percentage: 0 },
-    "🌲 Northwest": { active: false, percentage: 0 },
-    "🏜️ Southwest": { active: false, percentage: 0 }
-  },
-
-  cities: {
-    "New York": { active: false, percentage: 0 },
-    "Boston": { active: false, percentage: 0 },
-    "Philadelphia": { active: false, percentage: 0 },
-    "Baltimore": { active: false, percentage: 0 },
-    "Washington": { active: false, percentage: 0 },
-    "Charlotte": { active: false, percentage: 0 },
-    "Los Angeles": { active: false, percentage: 0 },
-    "San Diego": { active: false, percentage: 0 },
-    "San Jose": { active: false, percentage: 0 },
-    "San Francisco": { active: false, percentage: 0 },
-    "Houston": { active: false, percentage: 0 },
-    "Dallas": { active: false, percentage: 0 },
-    "Austin": { active: false, percentage: 0 },
-    "San Antonio": { active: false, percentage: 0 },
-    "Atlanta": { active: false, percentage: 0 },
-    "Miami": { active: false, percentage: 0 },
-    "El Paso": { active: false, percentage: 0 },
-    "Jacksonville": { active: false, percentage: 0 },
-    "Fort Worth": { active: false, percentage: 0 },
-    "Nashville": { active: false, percentage: 0 },
-    "Memphis": { active: false, percentage: 0 },
-    "Chicago": { active: false, percentage: 0 },
-    "Detroit": { active: false, percentage: 0 },
-    "Indianapolis": { active: false, percentage: 0 },
-    "Columbus": { active: false, percentage: 0 },
-    "Louisville": { active: false, percentage: 0 },
-    "Seattle": { active: false, percentage: 0 },
-    "Portland": { active: false, percentage: 0 },
-    "Denver": { active: false, percentage: 0 },
-    "Phoenix": { active: false, percentage: 0 },
-    "Las Vegas": { active: false, percentage: 0 },
-    "Oklahoma City": { active: false, percentage: 0 }
-  },
-
-  // 🔽 Auto-filled from products.js
-  categories: {
-    "🌿 Cannabis": { active: false, percentage: 0 },
-    "❄️ Cocaine": { active: false, percentage: 0 },
-    "💊 Ecstasy": { active: false, percentage: 0 },
-    "🍄 Psychedelics": { active: false, percentage: 0 },
-    "🧬 Extracts": { active: false, percentage: 0 },
-    "💉 Opiates": { active: false, percentage: 0 },
-    "🧪 Pharma": { active: false, percentage: 0 }
-  },
-
-  products: {
-    "🔥 Zaza (Exotic Indoor)": { active: false, percentage: 0 },
-    "💨 Gelato 41 (Top Shelf)": { active: false, percentage: 0 },
-    "🍪 Cookies (Mixed Indoor)": { active: false, percentage: 0 },
-    "🌱 Outdoor Shake": { active: false, percentage: 0 },
-    "❄️ Flake Cocaine (Peruvian)": { active: false, percentage: 0 },
-    "💎 Cocaine HCl (Compressed)": { active: false, percentage: 0 },
-    "💎 MDMA Crystal (97%)": { active: false, percentage: 0 },
-    "🟣 Pressed Pills (Purple Tesla)": { active: false, percentage: 0 },
-    "🔵 Blue Punisher": { active: false, percentage: 0 },
-    "🍄 Golden Teacher Shrooms": { active: false, percentage: 0 },
-    "✨ Penis Envy Shrooms": { active: false, percentage: 0 },
-    "🧠 LSD Tabs (Blotter)": { active: false, percentage: 0 },
-    "🔋 1g Vape Cart (Delta 9)": { active: false, percentage: 0 },
-    "🧪 Live Resin (1g)": { active: false, percentage: 0 },
-    "🧊 Rosin Pressed Hash": { active: false, percentage: 0 },
-    "💊 Roxicodone 30mg (M30)": { active: false, percentage: 0 },
-    "💉 Heroin (East Coast)": { active: false, percentage: 0 },
-    "🔴 Fentanyl Patch 100mcg": { active: false, percentage: 0 },
-    "💤 Xanax 2mg (Bars)": { active: false, percentage: 0 },
-    "⚡ Adderall XR 30mg": { active: false, percentage: 0 },
-    "💙 Viagra 100mg": { active: false, percentage: 0 }
-  }
+  regions: {},
+  cities: {},
+  categories: {},
+  products: {}
 };
 
-// (Rest of the file remains unchanged)
+// 🧠 Auto-sync categories/products from products.js
+for (const category of Object.keys(products)) {
+  DISCOUNTS.categories[category] ||= { active: false, percentage: 0 };
+  for (const product of products[category]) {
+    DISCOUNTS.products[product.name] ||= { active: false, percentage: 0 };
+  }
+}
+
+// 🧠 Auto-sync regions + cities from regions.js
+for (const [region, data] of Object.entries(REGION_MAP)) {
+  DISCOUNTS.regions[region] ||= { active: false, percentage: 0 };
+  for (const city of Object.keys(data.cities)) {
+    DISCOUNTS.cities[city] ||= { active: false, percentage: 0 };
+  }
+}
 
 export function resolveDiscount({ userId, code, region, city, category, productName }) {
   let max = 0;
