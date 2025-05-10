@@ -27,7 +27,7 @@ export async function sendHelp(bot, id, userMessages = {}) {
 
 ⛔ *Any violations = ban / blacklist*
 
-📩 *Support:* *@ThommyBL*
+📩 *Support:* balticpharmausa@gmail.com
 
 ⚠️ If something breaks, use */start* or tap *HELP* again.
     `.trim();
