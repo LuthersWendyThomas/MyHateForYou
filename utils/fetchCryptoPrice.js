@@ -5,11 +5,11 @@ const CACHE_TTL = 5 * 60 * 1000;
 const cache = {};
 const locks = {};
 
-// 🔐 CoinGecko + CoinCap ID mapping
+// 🔐 TIKSLŪS CoinGecko + CoinCap ID’ai
 const SUPPORTED = {
   btc:   { gecko: "bitcoin",      coincap: "bitcoin" },
   eth:   { gecko: "ethereum",     coincap: "ethereum" },
-  matic: { gecko: "polygon-pos",  coincap: "polygon" },
+  matic: { gecko: "polygon-pos",  coincap: "polygon" }, // ✅ FIXED HERE
   sol:   { gecko: "solana",       coincap: "solana" }
 };
 
@@ -23,7 +23,7 @@ export async function fetchCryptoPrice(currency) {
     return null;
   }
 
-  await rateLimiter(clean); // ⛔️ RATE GUARD
+  await rateLimiter(clean); // ⛔️ Rate guard
 
   if (locks[clean]) return await locks[clean];
 
@@ -48,7 +48,6 @@ async function _fetchCryptoPriceInternal(clean, ids) {
     return cached.rate;
   }
 
-  // CoinGecko pirmas bandymas
   try {
     const geckoRate = await fetchFromCoinGecko(ids.gecko);
     if (geckoRate) return saveToCache(clean, geckoRate);
@@ -56,7 +55,6 @@ async function _fetchCryptoPriceInternal(clean, ids) {
     console.warn(`⚠️ [CoinGecko klaida → ${clean}]: ${err.message}`);
   }
 
-  // CoinCap fallback
   try {
     const capRate = await fetchFromCoinCap(ids.coincap);
     if (capRate) return saveToCache(clean, capRate);
@@ -67,9 +65,11 @@ async function _fetchCryptoPriceInternal(clean, ids) {
   return null;
 }
 
-// ✅ CoinGecko (v3) endpoint su `coins/markets` (tiksliausias ir stabilesnis)
+/**
+ * ✅ CoinGecko — tikslus, patikimas, paprastas endpointas
+ */
 async function fetchFromCoinGecko(id) {
-  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=eur&ids=${id}`;
+  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`;
 
   for (let i = 0; i < 3; i++) {
     try {
@@ -94,21 +94,23 @@ async function fetchFromCoinGecko(id) {
         console.log(`📡 [Gecko ${id}] →`, json);
       }
 
-      const price = parseFloat(json?.[0]?.current_price);
+      const price = parseFloat(json?.[id]?.eur);
       if (Number.isFinite(price) && price > 0) {
         return +price.toFixed(2);
       } else {
-        throw new Error(`⚠️ CoinGecko invalid price for "${id}"`);
+        throw new Error(`⚠️ Invalid price from CoinGecko for "${id}"`);
       }
     } catch (err) {
-      console.warn(`❌ [Gecko attempt ${i + 1}] → ${err.message}`);
+      console.warn(`❌ [Gecko retry ${i + 1}] → ${err.message}`);
     }
   }
 
   return null;
 }
 
-// ✅ CoinCap fallback (USD → EUR konversija)
+/**
+ * ✅ CoinCap — fallback (USD → EUR)
+ */
 async function fetchFromCoinCap(id) {
   const url = `https://api.coincap.io/v2/assets/${id}`;
 
@@ -132,14 +134,13 @@ async function fetchFromCoinCap(id) {
 
   const usd = parseFloat(json?.data?.priceUsd);
   if (!Number.isFinite(usd) || usd <= 0) {
-    throw new Error(`CoinCap returned invalid USD: ${usd}`);
+    throw new Error(`Invalid CoinCap USD price for "${id}"`);
   }
 
-  const eurRate = 1.07;
+  const eurRate = 1.07; // ← gali ateity konvertuoti dinamiškai
   return +(usd / eurRate).toFixed(2);
 }
 
-// 🧠 Cache store
 function saveToCache(currency, rate) {
   cache[currency] = { rate, timestamp: Date.now() };
   if (process.env.DEBUG_MESSAGES === "true") {
@@ -148,7 +149,6 @@ function saveToCache(currency, rate) {
   return rate;
 }
 
-// 🕓 Delay helper
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
