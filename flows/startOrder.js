@@ -1,10 +1,10 @@
-// 📦 flows/startOrder.js | IMMORTAL FINAL v9999999 — ULTRA-SYNC TANKLOCK
+// 📦 flows/startOrder.js | IMMORTAL FINAL v99999999 — ULTRA-SYNC TANKLOCK MIRROR
 
 import { userSessions, userMessages, userOrders } from "../state/userState.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
 import { clearTimers, clearUserMessages } from "../state/stateManager.js";
 
-// 🌍 Must match stepHandler.js regionMap keys exactly
+// 🌍 Region choices — must match exactly with stepHandler.js regionMap
 const REGION_LIST = [
   "🗽 East Coast",
   "🌴 West Coast",
@@ -15,14 +15,14 @@ const REGION_LIST = [
 ];
 
 /**
- * 🔁 Starts a 100% clean new order flow (step 1)
+ * 🔁 Starts a clean order from step 1 (with full memory/timer wipe)
  */
 export async function startOrder(bot, id, userMsgs = {}) {
   const uid = String(id || "").trim();
   if (!bot || !uid || typeof bot.sendMessage !== "function") return;
 
   try {
-    // 🧼 1. Full cleanup: session, timers, messages, order count
+    // 🧼 Step 1: Clean up everything for fresh order
     await clearTimers(uid);
     await clearUserMessages(uid);
 
@@ -30,7 +30,7 @@ export async function startOrder(bot, id, userMsgs = {}) {
     delete userOrders[uid];
     delete userMessages[uid];
 
-    // 🔒 2. Reinit session
+    // 🚀 Step 2: Reinitialize clean session state
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now(),
@@ -56,13 +56,13 @@ export async function startOrder(bot, id, userMsgs = {}) {
       cleanupScheduled: false
     };
 
-    // ⌨️ 3. Show keyboard
+    // 📲 Step 3: Region selector UI
     const keyboard = REGION_LIST.map(r => [{ text: r }]);
     keyboard.push([{ text: "🔙 Back" }]);
 
-    await bot.sendChatAction(uid, "typing").catch(() =>
-      console.warn(`⚠️ [startOrder] chatAction failed: ${uid}`)
-    );
+    await bot.sendChatAction(uid, "typing").catch(() => {
+      console.warn(`⚠️ [startOrder] chatAction failed → ${uid}`);
+    });
 
     return await sendKeyboard(
       bot,
