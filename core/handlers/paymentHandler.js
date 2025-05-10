@@ -1,4 +1,5 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL v99999999999999999 — FINAL LOCK™
+
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v100000000000000 — BULLETPROOF+MATIC FIXED
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -10,7 +11,7 @@ import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
 
-// 🔁 Retry with exponential backoff (safe + delay)
+// 🔁 Retry with exponential backoff (stable)
 async function fetchWithRetry(apiCall, retries = 3, baseDelay = 1500) {
   let lastErr;
   for (let i = 0; i <= retries; i++) {
@@ -24,7 +25,7 @@ async function fetchWithRetry(apiCall, retries = 3, baseDelay = 1500) {
   throw lastErr;
 }
 
-// ✅ Safe exchange rate fetcher
+// ✅ Safe rate resolver for any supported crypto
 async function getSafeRate(currency) {
   try {
     const rate = await fetchWithRetry(() => fetchCryptoPrice(currency));
@@ -103,7 +104,8 @@ export async function handlePayment(bot, id, userMessages) {
   } catch (err) {
     console.error("❌ [handlePayment error]:", err.message);
     s.paymentInProgress = false;
-    return sendAndTrack(bot, id, `❗️ Payment setup failed.\n*${err.message}*`, {
+    return sendAndTrack(bot, id, `❗️ Payment setup failed.
+*${err.message}*`, {
       parse_mode: "Markdown"
     }, userMessages);
   }
@@ -195,7 +197,7 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
 }
 
 /**
- * ⏳ Delay helper
+ * ⏳ Wait helper
  */
 function wait(ms) {
   return new Promise(res => setTimeout(res, ms));
