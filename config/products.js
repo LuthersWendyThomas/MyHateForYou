@@ -53,6 +53,28 @@ export const allProductNames = allCategories
   .map(p => p.name);
 
 /**
+ * 📦 Flat list of all products with metadata
+ */
+export function getAllProductsFlat() {
+  return allCategories.flatMap(category =>
+    products[category].map(p => ({ ...p, category }))
+  );
+}
+
+/**
+ * 🧠 Quick lookup: { "🔥 Zaza (Exotic Indoor)": "🌿 Cannabis", ... }
+ */
+export const getCategoryMap = (() => {
+  const map = {};
+  for (const category of allCategories) {
+    for (const p of products[category]) {
+      map[p.name] = category;
+    }
+  }
+  return map;
+})();
+
+/**
  * 🎯 Generate keyboard for available products in category
  */
 export function getProductKeyboard({ userId, city, category }) {
