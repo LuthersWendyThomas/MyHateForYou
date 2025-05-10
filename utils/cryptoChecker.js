@@ -3,11 +3,19 @@ import fs from "fs";
 import path from "path";
 import { API, BOT } from "../config/config.js";
 
-// 🧾 Log failo kelias
+// 🔒 Log failas
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
+// ✅ Palaikomi tinklai (pagal fetchCryptoPrice.js mapping)
+const SUPPORTED = {
+  BTC: true,
+  ETH: true,
+  MATIC: true,
+  SOL: true
+};
+
 /**
- * ✅ Tikrina ar wallet'e yra pakankamai lėšų pagal tinklą
+ * ✅ Tikrina ar wallet'e yra lėšų pagal valiutą
  */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
   try {
@@ -16,7 +24,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 
     if (
       !wallet || typeof wallet !== "string" || wallet.length < 8 ||
-      !["BTC", "ETH", "MATIC", "SOL"].includes(cur) ||
+      !SUPPORTED[cur] ||
       !Number.isFinite(amount) || amount <= 0
     ) {
       log(wallet, cur, amount, "❌ INVALID PARAMS");
@@ -63,7 +71,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 }
 
 /**
- * ✅ BTC patikrinimas (blockchain.info API, satoshis → BTC)
+ * ✅ BTC (blockchain.info API, satoshis → BTC)
  */
 async function checkBTC(address, expected) {
   try {
@@ -86,7 +94,7 @@ async function checkBTC(address, expected) {
 }
 
 /**
- * ✅ ETH/MATIC (EVM tinklai) patikrinimas (wei → eth)
+ * ✅ ETH / MATIC — EVM tinklai (wei → eth)
  */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
@@ -126,7 +134,7 @@ async function checkEVM(address, expected, rpcUrl, label) {
 }
 
 /**
- * ✅ Solana tinklas (lamports → SOL)
+ * ✅ Solana (lamports → SOL)
  */
 async function checkSOL(address, expected) {
   try {
@@ -160,7 +168,7 @@ async function checkSOL(address, expected) {
 }
 
 /**
- * 📄 Įrašo rezultatą į `cryptoChecks.log`
+ * 📄 Log failas
  */
 function log(wallet, currency, amount, status) {
   try {
