@@ -19,6 +19,19 @@ async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
   }
 }
 
+// ✅ Exchange rate handler with proper error isolation
+async function getSafeRate(currency) {
+  try {
+    const rate = await fetchWithRetry(() => fetchCryptoPrice(currency));
+    if (!rate || isNaN(rate) || rate <= 0) {
+      throw new Error(`Exchange rate unavailable for "${currency}"`);
+    }
+    return rate;
+  } catch (err) {
+    throw new Error(`❌ Failed to fetch exchange rate for ${currency}: ${err.message}`);
+  }
+}
+
 /**
  * 🧾 Step 7 — Generate QR and await payment
  */
@@ -36,9 +49,7 @@ export async function handlePayment(bot, id, userMessages) {
       throw new Error("Missing or invalid payment data");
     }
 
-    const rate = await fetchWithRetry(() => fetchCryptoPrice(s.currency));
-    if (!rate || isNaN(rate) || rate <= 0) throw new Error("Exchange rate fetch failed");
-
+    const rate = await getSafeRate(s.currency);
     const amount = +(usd / rate).toFixed(6);
     s.expectedAmount = amount;
 
@@ -83,7 +94,9 @@ export async function handlePayment(bot, id, userMessages) {
   } catch (err) {
     console.error("❌ [handlePayment error]:", err.message);
     s.paymentInProgress = false;
-    return sendAndTrack(bot, id, "❗️ Payment setup failed. Please try again.", {}, userMessages);
+    return sendAndTrack(bot, id, `❗️ Payment setup failed.\n*${err.message}*`, {
+      parse_mode: "Markdown"
+    }, userMessages);
   }
 }
 
