@@ -1,25 +1,13 @@
-// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v1_11111111111 — ULTRA BULLETPROOF SYNC + ALIASES
+// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v999999999 — ULTRA BULLETPROOF SYNC + CONFIG ALIASES
 
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
-import { API, BOT } from "../config/config.js";
+import { API, BOT, ALIASES } from "../config/config.js";
 
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
-// ✅ Alias'ai (leidžia lankstumą iš fetchCryptoPrice)
-const ALIASES = {
-  bitcoin: "BTC",
-  ethereum: "ETH",
-  polygon: "MATIC",
-  "polygon-pos": "MATIC",
-  solana: "SOL",
-  btc: "BTC",
-  eth: "ETH",
-  matic: "MATIC",
-  sol: "SOL"
-};
-
+// ✅ Oficialiai palaikomos valiutos
 const SUPPORTED = {
   BTC: true,
   ETH: true,
@@ -27,6 +15,9 @@ const SUPPORTED = {
   SOL: true
 };
 
+/**
+ * 🔍 Patikrina ar vartotojas tikrai apmokėjo užsakymą (pagal valiutą)
+ */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
   const curInput = String(currency || "").trim().toLowerCase();
   const cur = ALIASES[curInput] || curInput.toUpperCase();
@@ -40,6 +31,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
 
   try {
     let result = false;
+
     switch (cur) {
       case "BTC":
         result = await checkBTC(wallet, amount);
@@ -77,6 +69,9 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
   }
 }
 
+/**
+ * 🔎 BTC balanso patikrinimas per blockchain.info
+ */
 async function checkBTC(address, expected) {
   try {
     const controller = new AbortController();
@@ -95,6 +90,9 @@ async function checkBTC(address, expected) {
   }
 }
 
+/**
+ * 🔎 ETH / MATIC balansas per RPC (wei → ETH/MATIC)
+ */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
     const controller = new AbortController();
@@ -130,6 +128,9 @@ async function checkEVM(address, expected, rpcUrl, label) {
   }
 }
 
+/**
+ * 🔎 SOL balanso tikrinimas per RPC (lamports → SOL)
+ */
 async function checkSOL(address, expected) {
   try {
     const controller = new AbortController();
@@ -160,6 +161,9 @@ async function checkSOL(address, expected) {
   }
 }
 
+/**
+ * 📁 Įrašo log'ą į failą
+ */
 function log(wallet, currency, amount, status) {
   try {
     const dir = path.dirname(logPath);
