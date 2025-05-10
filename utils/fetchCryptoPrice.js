@@ -1,14 +1,13 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v999999999999 — GODMODE ALIASED SYNCED + BULLETPROOF
+// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v999999999999 — GODMODE ALIASED SYNCED + BULLETPROOF v2.0
 
 import fetch from "node-fetch";
 import { rateLimiter } from "./rateLimiter.js";
 import { ALIASES } from "../config/config.js";
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 min
+const CACHE_TTL = 5 * 60 * 1000;
 const cache = {};
 const locks = {};
 
-// ✅ Sinchronizuotas palaikymas visose sistemose
 const SUPPORTED = {
   BTC:   { gecko: "bitcoin",      coincap: "bitcoin" },
   ETH:   { gecko: "ethereum",     coincap: "ethereum" },
@@ -26,7 +25,7 @@ export async function fetchCryptoPrice(currency) {
     return null;
   }
 
-  await rateLimiter(normalized); // 🛡️ Anti-spam protection
+  await rateLimiter(normalized);
 
   if (locks[normalized]) return await locks[normalized];
 
@@ -52,11 +51,19 @@ async function _fetchCryptoPriceInternal(key, ids) {
     return cached.rate;
   }
 
-  const geckoRate = await fetchWithRetry(() => fetchFromCoinGecko(ids.gecko), `CoinGecko → ${key}`);
-  if (geckoRate) return saveToCache(key, geckoRate);
+  try {
+    const geckoRate = await fetchWithRetry(() => fetchFromCoinGecko(ids.gecko), `CoinGecko → ${key}`);
+    if (geckoRate) return saveToCache(key, geckoRate);
+  } catch (err) {
+    console.warn(`⚠️ [Gecko fallback → ${key}]: ${err.message}`);
+  }
 
-  const capRate = await fetchWithRetry(() => fetchFromCoinCap(ids.coincap), `CoinCap → ${key}`);
-  if (capRate) return saveToCache(key, capRate);
+  try {
+    const capRate = await fetchWithRetry(() => fetchFromCoinCap(ids.coincap), `CoinCap → ${key}`);
+    if (capRate) return saveToCache(key, capRate);
+  } catch (err) {
+    console.warn(`⚠️ [CoinCap failed → ${key}]: ${err.message}`);
+  }
 
   throw new Error(`❌ Failed to fetch ${key} from both APIs`);
 }
@@ -69,7 +76,7 @@ async function fetchWithRetry(fn, label, retries = 3, baseDelay = 1500) {
       return await fn();
     } catch (err) {
       lastErr = err;
-      console.warn(`⚠️ [Retry ${i + 1}/${retries} → ${label}]: ${err.message}`);
+      console.warn(`⚠️ [Retry ${i + 1}/${retries} → ${label}]:`, err.message);
     }
   }
   throw lastErr;
@@ -91,7 +98,11 @@ async function fetchFromCoinGecko(id) {
   const json = await res.json();
   debug(`📡 [Gecko ${id}] →`, json);
 
-  const price = parseFloat(json?.[id]?.eur);
+  if (!json || typeof json !== "object" || !json[id] || !json[id].eur) {
+    throw new Error(`Missing or malformed Gecko response for: ${id}`);
+  }
+
+  const price = parseFloat(json[id].eur);
   if (!Number.isFinite(price) || price <= 0) throw new Error("Invalid Gecko price");
 
   return +price.toFixed(2);
@@ -117,7 +128,7 @@ async function fetchFromCoinCap(id) {
   const usd = parseFloat(json?.data?.priceUsd);
   if (!Number.isFinite(usd) || usd <= 0) throw new Error("Invalid CoinCap price");
 
-  const eurRate = 1.07; // 💡 Galima reali valiutų konversija ateityje
+  const eurRate = 1.07;
   return +(usd / eurRate).toFixed(2);
 }
 
