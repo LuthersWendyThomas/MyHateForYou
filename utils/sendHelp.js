@@ -1,9 +1,9 @@
-// 📦 utils/sendHelp.js | FINAL IMMORTAL v3.1 — HELP FIXED • BUTTON-SAFE
+// 📦 utils/sendHelp.js | IMMORTAL FINAL v999999999.∞ — BULLETPROOF HELP + TELEGRAM UX SYNC
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
 /**
- * ✅ Displays help and safety rules (UX-synced, 100% Telegram-compliant)
+ * ✅ Rodo pagalbos / saugumo pranešimą naudotojui (Telegram-safe)
  */
 export async function sendHelp(bot, id, userMessages = {}) {
   try {
@@ -14,22 +14,23 @@ export async function sendHelp(bot, id, userMessages = {}) {
 ❓ *HELP & SAFETY RULES:*
 
 1️⃣ *Orders are ONLY processed via this bot*  
-🔒 No private chats. Use interface buttons only.
+🔒 Do not send private messages. Use interface buttons only.
 
-2️⃣ *Do NOT photograph or speak to the courier/dropper*  
-📵 Any attempt = *INSTANT BAN*
+2️⃣ *Do NOT photograph, call, or speak to the courier/dropper*  
+📵 Any such attempt = *IMMEDIATE BAN*
 
 3️⃣ *Delivery takes ~20–30 minutes*  
-⏱ Follow instructions and be ready.
+⏱ Follow all steps. Be alert and nearby.
 
-4️⃣ *After delivery: No messages, no photos!*  
-🧼 Auto-clean triggers in 25–27min.
+4️⃣ *After delivery: No messages, no photos*  
+🧼 Auto-clean triggers ~25–27min after drop.
 
-⛔ *Any violations = ban / blacklist*
+5️⃣ *Never reply to this bot directly*  
+⚠️ Only use interface buttons!
 
 📩 *Support:* balticpharmausa@gmail.com
 
-⚠️ If something breaks, use */start* or tap *HELP* again.
+⚠️ If anything breaks, tap *HELP* again or type */start*
     `.trim();
 
     await bot.sendChatAction(uid, "typing").catch(() => {});
