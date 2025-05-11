@@ -1,7 +1,7 @@
 {
   "name": "BalticPharmacyBot",
   "version": "1.0.4",
-  "description": "⚗️ BalticPharmacyBot — Fully automated Telegram bot with crypto payments, regional product discounts, city-based drop/courier delivery, and 24/7 bulletproof architecture.",
+  "description": "BalticPharmacyBot — Fully automated Telegram bot with crypto payments, regional product discounts, city-based drop/courier delivery, and 24/7 bulletproof architecture.",
   "main": "index.js",
   "type": "module",
   "scripts": {
