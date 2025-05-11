@@ -1,4 +1,4 @@
-// 📦 core/sessionManager.js | IMMORTAL FINAL v999999999 — TITAN SYNC + ZOMBIE KILLER EDITION
+// 📦 core/sessionManager.js | IMMORTAL FINAL v9999999999999 — TITAN SYNC + ZOMBIE SLAYER
 
 import {
   activeTimers,
@@ -12,22 +12,18 @@ import {
   userOrders
 } from "../state/userState.js";
 
-const lastSeenAt = {}; // ⏱️ Track last user activity time
+const lastSeenAt = {}; // ⏱️ Tracks last activity
 
-const STEP_TIMEOUT = 60 * 60 * 1000;             // 1h — zombie protection
-const DEFAULT_EXPIRE_THRESHOLD = 45 * 60 * 1000; // 45min — idle timeout
+const STEP_TIMEOUT = 60 * 60 * 1000;             // 1h — zombie
+const DEFAULT_EXPIRE_THRESHOLD = 45 * 60 * 1000; // 45min — idle
 
-/**
- * ✅ On any user interaction, mark them active
- */
+/** ✅ Register activity */
 export const markUserActive = (id) => {
   const uid = String(id || "").trim();
   if (uid) lastSeenAt[uid] = Date.now();
 };
 
-/**
- * ✅ Clears UI/delivery timer
- */
+/** ✅ Clear UI timer */
 export const clearUserTimer = (id) => {
   const uid = String(id || "").trim();
   if (activeTimers[uid]) {
@@ -37,9 +33,7 @@ export const clearUserTimer = (id) => {
   }
 };
 
-/**
- * ✅ Clears payment-specific timer
- */
+/** ✅ Clear payment timer */
 export const clearPaymentTimer = (id) => {
   const uid = String(id || "").trim();
   if (paymentTimers[uid]) {
@@ -49,9 +43,7 @@ export const clearPaymentTimer = (id) => {
   }
 };
 
-/**
- * ✅ Wipes everything linked to this user
- */
+/** ✅ Total cleanup for user session */
 export const resetSession = (id) => {
   const uid = String(id || "").trim();
   if (!uid) return;
@@ -72,7 +64,7 @@ export const resetSession = (id) => {
     ];
 
     for (const store of stores) {
-      if (uid in store) {
+      if (store && store[uid] !== undefined) {
         delete store[uid];
       }
     }
@@ -83,9 +75,7 @@ export const resetSession = (id) => {
   }
 };
 
-/**
- * ⏳ Checks for expired/zombie sessions
- */
+/** ⏱️ Kill idle/zombie sessions */
 export const autoExpireSessions = (threshold = DEFAULT_EXPIRE_THRESHOLD) => {
   const now = Date.now();
   const expired = [];
@@ -94,60 +84,52 @@ export const autoExpireSessions = (threshold = DEFAULT_EXPIRE_THRESHOLD) => {
     const session = userSessions[id];
     const idle = now - last;
 
-    const isIdle = idle > threshold;
     const isZombie = session?.step >= 1 && idle > STEP_TIMEOUT;
+    const isIdle = idle > threshold;
 
-    if (isIdle || isZombie) {
-      expired.push(id);
+    if (isZombie || isIdle) {
+      expired.push({ id, zombie: isZombie });
     }
   }
 
-  for (const id of expired) {
+  for (const { id, zombie } of expired) {
     resetSession(id);
-    console.log(`⏳ AUTO-EXPIRE (${userSessions[id]?.step >= 1 ? "ZOMBIE" : "IDLE"}) → ${id}`);
+    console.log(`⏳ AUTO-EXPIRE (${zombie ? "ZOMBIE" : "IDLE"}) → ${id}`);
   }
 };
 
-/**
- * 📊 Returns active user count
- */
+/** 📊 Count currently tracked users */
 export const getActiveUsersCount = () => {
-  return Object.keys(userSessions).length;
+  return Object.keys(lastSeenAt).length;
 };
 
-/**
- * 🔥 Developer use — reset all
- */
+/** 🔥 Dev: full reset */
 export const wipeAllSessions = () => {
   const ids = Object.keys(userSessions);
   for (const id of ids) resetSession(id);
   console.log(`🔥 wipeAllSessions → ${ids.length} wiped`);
 };
 
-/**
- * 🧽 Clean orphan payment timers (not in payment step anymore)
- */
+/** 🧽 Cleanup orphaned payment timers */
 export const cleanStalePaymentTimers = () => {
   for (const id in paymentTimers) {
-    if (userSessions[id]?.step !== 8) {
+    const step = userSessions[id]?.step;
+    if (step !== 8) {
       clearPaymentTimer(id);
       console.log(`🧽 Stale payment timer cleared → ${id}`);
     }
   }
 };
 
-/**
- * 🧪 Debug — overview of all user sessions
- */
+/** 🧪 Developer/debug view */
 export const printSessionSummary = () => {
   const now = Date.now();
   const sessions = Object.entries(userSessions);
   console.log(`📊 Active sessions: ${sessions.length}`);
 
   for (const [id, session] of sessions) {
-    const lastSeen = lastSeenAt[id]
-      ? `${Math.floor((now - lastSeenAt[id]) / 1000)}s ago`
-      : "unknown";
+    const last = lastSeenAt[id];
+    const lastSeen = last ? `${Math.floor((now - last) / 1000)}s ago` : "unknown";
     console.log(`— ${id} | step=${session.step ?? "?"} | lastSeen=${lastSeen}`);
   }
 };
