@@ -1,4 +1,4 @@
-// 📦 helpers/messageUtils.js | FINAL IMMORTAL ULTRALOCKED v999999999999.99 — SYNC-GODMODE TITAN
+// 📦 helpers/messageUtils.js | FINAL IMMORTAL v99999999999.∞ — SYNC-GODMODE TITANLOCK
 
 import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
@@ -9,43 +9,60 @@ const CLEANUP_TIMEOUT_MS = 27 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 4096;
 
 /**
- * ✅ Core: tracked message sender
+ * ✅ Core: tracked message sender (default: Markdown, silent errors)
  */
-export const sendAndTrack = async (bot, id, text, options = {}, messages = userMessages) => {
+export async function sendAndTrack(bot, id, text, options = {}, messages = userMessages) {
   if (!bot || !id || !text?.trim()) return null;
 
-  try {
-    const chunks = splitMessage(text);
-    let firstMsg = null;
+  const chunks = splitMessage(text);
+  let firstMsg = null;
 
-    for (const chunk of chunks) {
-      if (!chunk?.length) continue;
+  for (const chunk of chunks) {
+    if (!chunk?.length) continue;
 
-      const msg = await safeSend(bot, id, chunk, {
-        parse_mode: "Markdown",
-        disable_web_page_preview: true,
-        ...options
-      });
+    const msg = await safeSend(bot, id, chunk, {
+      parse_mode: "Markdown",
+      disable_web_page_preview: true,
+      ...options
+    });
 
-      if (msg?.message_id) {
-        trackMessage(id, msg.message_id, messages);
-        if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`📬 Tracked message → ${id} :: ${msg.message_id}`);
-        }
+    if (msg?.message_id) {
+      trackMessage(id, msg.message_id, messages);
+      if (process.env.DEBUG_MESSAGES === "true") {
+        console.log(`📬 Tracked message → ${id} :: ${msg.message_id}`);
       }
-
-      if (!firstMsg && msg) firstMsg = msg;
     }
 
-    scheduleCleanup(bot, id, messages);
-    return firstMsg;
-  } catch (err) {
-    console.error("❌ [sendAndTrack error]:", err.message);
-    return null;
+    if (!firstMsg && msg) firstMsg = msg;
   }
-};
 
-export const sendKeyboard = async (bot, id, text, keyboard, messages = userMessages) => {
+  scheduleCleanup(bot, id, messages);
+  return firstMsg;
+}
+
+/**
+ * ✅ Plain text sender with tracking
+ */
+export async function sendPlain(bot, id, text, messages = userMessages) {
+  if (!bot || !id || !text?.trim()) return null;
+
+  const chunks = splitMessage(text);
+  let firstMsg = null;
+
+  for (const chunk of chunks) {
+    const msg = await safeSend(bot, id, chunk);
+    if (msg?.message_id) trackMessage(id, msg.message_id, messages);
+    if (!firstMsg && msg) firstMsg = msg;
+  }
+
+  scheduleCleanup(bot, id, messages);
+  return firstMsg;
+}
+
+/**
+ * ✅ Send keyboard + tracking
+ */
+export async function sendKeyboard(bot, id, text, keyboard, messages = userMessages) {
   return await sendAndTrack(bot, id, text, {
     reply_markup: {
       keyboard,
@@ -54,28 +71,12 @@ export const sendKeyboard = async (bot, id, text, keyboard, messages = userMessa
       selective: true
     }
   }, messages);
-};
+}
 
-export const sendMessageWithTracking = sendKeyboard;
-
-export const sendPlain = async (bot, id, text, messages = userMessages) => {
-  if (!bot || !id || !text?.trim()) return null;
-
-  const chunks = splitMessage(text);
-  let firstMsg = null;
-
-  for (const chunk of chunks) {
-    if (!chunk?.length) continue;
-    const msg = await safeSend(bot, id, chunk);
-    if (msg?.message_id) trackMessage(id, msg.message_id, messages);
-    if (!firstMsg && msg) firstMsg = msg;
-  }
-
-  scheduleCleanup(bot, id, messages);
-  return firstMsg;
-};
-
-export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages = userMessages) => {
+/**
+ * ✅ Send photo + track
+ */
+export async function sendPhotoAndTrack(bot, id, photo, options = {}, messages = userMessages) {
   if (!bot || !id || !photo) return null;
 
   try {
@@ -100,22 +101,10 @@ export const sendPhotoAndTrack = async (bot, id, photo, options = {}, messages =
     console.error("❌ [sendPhotoAndTrack error]:", err.message);
     return null;
   }
-};
-
-/**
- * ✅ Safe universal send wrapper (with logging)
- */
-export async function safeSend(bot, id, text, options = {}) {
-  try {
-    return await bot.sendMessage(id, text, options);
-  } catch (err) {
-    console.warn(`⚠️ [safeSend] Failed → ${err.message}`);
-    return null;
-  }
 }
 
 /**
- * ✅ Silent fire-and-forget message
+ * ✅ Try silent notify
  */
 export async function tryNotify(bot, id, text) {
   try {
@@ -125,7 +114,7 @@ export async function tryNotify(bot, id, text) {
 }
 
 /**
- * ✅ User-facing alert that never crashes
+ * ✅ Safe alert to user
  */
 export async function safeAlert(bot, id, text) {
   try {
@@ -139,20 +128,38 @@ export async function safeAlert(bot, id, text) {
   }
 }
 
-function trackMessage(id, messageId, messages = userMessages) {
-  const uid = String(id).trim();
-  if (!uid || !messageId) return;
-
-  if (!messages[uid]) messages[uid] = [];
-  if (Array.isArray(messages[uid]) && !messages[uid].includes(messageId)) {
-    messages[uid].push(messageId);
+/**
+ * ✅ Safe message sender (universal fallback)
+ */
+export async function safeSend(bot, id, text, options = {}) {
+  try {
+    return await bot.sendMessage(id, text, options);
+  } catch (err) {
+    console.warn(`⚠️ [safeSend] Failed → ${err.message}`);
+    return null;
   }
 }
 
+/**
+ * 🧠 Track msg ID for auto-cleanup
+ */
+function trackMessage(id, msgId, messages = userMessages) {
+  const uid = String(id || "").trim();
+  if (!uid || !msgId) return;
+
+  if (!messages[uid]) messages[uid] = [];
+  if (Array.isArray(messages[uid]) && !messages[uid].includes(msgId)) {
+    messages[uid].push(msgId);
+  }
+}
+
+/**
+ * 🧼 Schedules auto-cleanup of tracked messages (and autoban if enabled)
+ */
 function scheduleCleanup(bot, id, messages = userMessages) {
   if (!autodeleteEnabled.status && !autobanEnabled.status) return;
 
-  const uid = String(id).trim();
+  const uid = String(id || "").trim();
   const session = userSessions[uid];
   if (!session || session.cleanupScheduled) return;
   if (BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID)) return;
@@ -191,6 +198,9 @@ function scheduleCleanup(bot, id, messages = userMessages) {
   }, CLEANUP_TIMEOUT_MS);
 }
 
+/**
+ * ✂️ Telegram max message size protection
+ */
 function splitMessage(text) {
   if (!text || typeof text !== "string") return [""];
   const parts = [];
