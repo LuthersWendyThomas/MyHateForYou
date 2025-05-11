@@ -1,5 +1,5 @@
 // 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v9999999999999.∞
-// LOCKABLE SYNCED BULLETPROOF FINAL + GREETING + RESET + DELIVERY
+// LOCKABLE SYNCED BULLETPROOF FINAL + GREETING + RESET + DELIVERY + FULL CLEAN
 
 import fs from "fs/promises";
 import path from "path";
@@ -74,7 +74,7 @@ export async function safeStart(bot, id) {
 }
 
 /**
- * ✅ Finalizes successful order and restarts session
+ * ✅ Finalizes successful order and resets session
  */
 export async function finishOrder(bot, id) {
   const uid = String(id);
@@ -108,7 +108,7 @@ export async function finishOrder(bot, id) {
 }
 
 /**
- * 🧼 Resets the session state
+ * 🧼 Clears all session state for the user
  */
 export async function resetSession(id) {
   const uid = String(id);
@@ -117,7 +117,7 @@ export async function resetSession(id) {
 }
 
 /**
- * 🧯 Fully resets all user-related session data
+ * 🧯 Total session teardown — state, timers, messages, flags
  */
 async function fullSessionReset(uid) {
   try {
@@ -130,12 +130,20 @@ async function fullSessionReset(uid) {
       delete paymentTimers[uid];
     }
 
-    if (userSessions[uid]) {
-      delete userSessions[uid].paymentInProgress;
-      delete userSessions[uid].deliveryInProgress;
-      delete userSessions[uid].cleanupScheduled;
-      delete userSessions[uid].paymentTimer;
-      delete userSessions[uid].expectedAmount;
+    const session = userSessions[uid];
+    if (session) {
+      const fields = [
+        "paymentInProgress", "deliveryInProgress", "cleanupScheduled",
+        "paymentTimer", "expectedAmount", "wallet", "currency",
+        "quantity", "product", "category", "promoCode", "deliveryMethod",
+        "deliveryFee", "adminStep", "step", "createdAt", "lastText"
+      ];
+      for (const key of fields) delete session[key];
+      delete userSessions[uid];
+    }
+
+    if (activeUsers.has(uid)) {
+      activeUsers.delete(uid);
     }
 
     if (process.env.DEBUG_MESSAGES === "true") {
@@ -147,7 +155,7 @@ async function fullSessionReset(uid) {
 }
 
 /**
- * 📸 Returns the greeting caption with full bot info
+ * 📸 Greeting caption with bot intro
  */
 function greetingText(count) {
   return `
@@ -176,7 +184,7 @@ function greetingText(count) {
 }
 
 /**
- * 💬 Text fallback when greeting image is missing
+ * 💬 Text fallback when greeting image unavailable
  */
 function fallbackText(count) {
   return `
