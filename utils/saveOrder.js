@@ -1,14 +1,13 @@
-// 📦 utils/saveOrder.js | IMMORTAL FINAL v4.0 — ULTRA BULLETPROOF LOCKED + SMART BACKUP
+// 📦 utils/saveOrder.js | IMMORTAL FINAL v999999999.∞ — ULTRA BULLETPROOF + SMART BACKUP + STATS SYNCED
 
 import fs from "fs/promises";
 import path from "path";
 
 const ordersDir = path.resolve("./data");
 const ordersFile = path.join(ordersDir, "orders.json");
-const backupFile = path.join(ordersDir, `orders.bak.${Date.now()}.json`);
 
 /**
- * 📁 Ensures the /data folder exists
+ * 📁 Užtikrina, kad /data egzistuoja
  */
 async function ensureDataDir() {
   try {
@@ -19,7 +18,7 @@ async function ensureDataDir() {
 }
 
 /**
- * ✅ Saves a new order (called on successful payment)
+ * ✅ Išsaugo naują užsakymą (kviečiamas po apmokėjimo)
  */
 export async function saveOrder(userId, city, product, amount) {
   try {
@@ -35,7 +34,7 @@ export async function saveOrder(userId, city, product, amount) {
     };
 
     const orders = await loadOrders();
-    if (!Array.isArray(orders)) throw new Error("Orders data corrupted");
+    if (!Array.isArray(orders)) throw new Error("Corrupted orders data");
 
     orders.push(newOrder);
     await safeWriteJSON(ordersFile, orders);
@@ -47,7 +46,7 @@ export async function saveOrder(userId, city, product, amount) {
 }
 
 /**
- * 📊 Revenue/statistics for user/admin
+ * 📊 Grąžina statistiką pagal tipą (admin/user)
  */
 export async function getStats(type = "admin", userId = null) {
   try {
@@ -56,7 +55,7 @@ export async function getStats(type = "admin", userId = null) {
     const today = now.toISOString().split("T")[0];
     const stats = defaultStats();
 
-    const relevant = (type === "user" && userId)
+    const relevant = type === "user" && userId
       ? orders.filter(o => String(o.userId) === String(userId))
       : orders;
 
@@ -80,27 +79,27 @@ export async function getStats(type = "admin", userId = null) {
 
     return stats;
   } catch (err) {
-    console.error("❌ [getStats error]:", err.message || err);
+    console.error("❌ [getStats error]:", err.message);
     return defaultStats();
   }
 }
 
 /**
- * 📦 Loads saved orders safely
+ * 📂 Įkelia visus užsakymus
  */
 async function loadOrders() {
   try {
     const raw = await fs.readFile(ordersFile, "utf8");
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch (err) {
-    console.warn("⚠️ [loadOrders fallback]: empty list returned");
+  } catch {
+    console.warn("⚠️ [loadOrders fallback] Empty list used");
     return [];
   }
 }
 
 /**
- * 🧼 Basic sanitizer
+ * 🧼 Sanitize helper (miestui, produktui)
  */
 function sanitize(str) {
   return String(str || "")
@@ -111,27 +110,27 @@ function sanitize(str) {
 }
 
 /**
- * 📈 Default stats model
+ * 📈 Tuščias statistikos modelis
  */
 function defaultStats() {
   return { today: 0, week: 0, month: 0, total: 0 };
 }
 
 /**
- * 💾 Smart file writer w/ backup on failure
+ * 💾 Saugi JSON rašymo funkcija su avariniu kopijavimu
  */
 async function safeWriteJSON(filePath, data) {
+  const json = JSON.stringify(data, null, 2);
   try {
-    const json = JSON.stringify(data, null, 2);
     await fs.writeFile(filePath, json, "utf8");
   } catch (err) {
     console.error("❌ [safeWriteJSON error]:", err.message);
     try {
-      const fallback = JSON.stringify(data, null, 2);
-      await fs.writeFile(backupFile, fallback, "utf8");
-      console.warn("⚠️ Backup written to:", backupFile);
+      const backupPath = `${filePath}.bak.${Date.now()}`;
+      await fs.writeFile(backupPath, json, "utf8");
+      console.warn("⚠️ Backup written to:", backupPath);
     } catch (backupErr) {
-      console.error("❌ [backupWrite failed]:", backupErr.message || backupErr);
+      console.error("❌ [backupWrite failed]:", backupErr.message);
     }
   }
 }
