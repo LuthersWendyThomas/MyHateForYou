@@ -1,48 +1,42 @@
-// 📦 utils/sendPromo.js | FINAL IMMORTAL v1.0 — DYNAMIC PROMO SHOWCASE + SYNC
+// 📦 utils/sendPromo.js | FINAL IMMORTAL v999999999 — PROMO WRAPPER + BULLETPROOF TRACK
 
-import { getDiscountInfo } from "../config/discounts.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
+import { userMessages } from "../state/userState.js";
 
 /**
- * 🎁 Shows current active discounts (if any)
+ * 🎁 Sends a promotional message to user (uses Markdown + cleanup-safe)
+ * @param {object} bot — Telegram bot instance
+ * @param {string|number} id — user ID
+ * @param {string} code — optional promo code (uppercase, e.g. "XMAS20")
  */
-export async function sendPromo(bot, id, userMessages = {}) {
+export async function sendPromo(bot, id, code = "", userMsgs = userMessages) {
   try {
     const uid = String(id || "").trim();
     if (!bot || !uid) return;
 
-    const all = getDiscountInfo();
+    const codeLine = code?.trim()
+      ? `🎟️ Use promo code *${code.toUpperCase()}* to get your discount!`
+      : `🎁 Check the main menu for active discounts.`;
 
-    const allLines = [
-      all.global,
-      ...all.codes,
-      ...all.categories,
-      ...all.products
-    ].filter(Boolean);
+    const text = `
+🤑 *Special Promo Just for You!*
 
-    if (!allLines.length) {
-      return await sendAndTrack(bot, uid, "ℹ️ *No active promos or discounts at the moment.*", {
-        parse_mode: "Markdown"
-      }, userMessages);
-    }
+💥 Enjoy discounts on selected products  
+🚀 Fast delivery & 100% anonymity guaranteed  
 
-    const out = `
-🎁 *Current Promos & Discounts:*
+${codeLine}
 
-${allLines.join("\n")}
-
-🔥 Tap BUY to use these offers now.
+👇 Start ordering now from the main menu:
     `.trim();
 
-    return await sendAndTrack(bot, uid, out, {
+    return await sendAndTrack(bot, uid, text, {
       parse_mode: "Markdown",
       disable_web_page_preview: true
-    }, userMessages);
-
+    }, userMsgs);
   } catch (err) {
     console.error("❌ [sendPromo error]:", err.message || err);
     try {
-      await bot.sendMessage(id, "⚠️ Failed to load promo info.");
+      return await bot.sendMessage(id, "⚠️ Failed to deliver promo message.");
     } catch {}
   }
 }
