@@ -21,8 +21,6 @@ export const DISCOUNTS = {
   products: {}
 };
 
-export { resolveDiscount };
-
 export function getActiveDiscounts() {
   return JSON.parse(JSON.stringify(DISCOUNTS));
 }
