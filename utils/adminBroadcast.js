@@ -1,5 +1,4 @@
-// 📦 utils/adminBroadcast.js | FINAL IMMORTAL BROADCASTLOCK v999999999.∞ — GODMODE SYNC + BULLETPROOF + LOGGING + RATE-SAFE
-
+// 📦 utils/adminBroadcast.js | IMMORTAL FINAL v999999999.∞ — GODLOCK BROADCAST SYSTEM
 import { BOT } from "../config/config.js";
 import { userSessions, userMessages } from "../state/userState.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
@@ -10,17 +9,20 @@ const MAX_BATCH = 30;
 const DELAY_PER_USER = 80;
 const DELAY_PER_BATCH = 1000;
 
-let isBroadcasting = false;
+let broadcastStatus = {
+  isRunning: false,
+  type: null, // "text" | "promo"
+};
 
 /**
- * 📣 Initiates mass broadcast to all users (Markdown text)
+ * 📣 Text-based mass broadcast (Markdown)
  */
 export async function startBroadcast(bot, id, text) {
   const uid = String(id || "");
   if (uid !== ADMIN_ID || !text?.trim()) return;
 
-  if (isBroadcasting) {
-    return sendAndTrack(bot, id, "⚠️ *Broadcast already in progress. Please wait...*", {
+  if (broadcastStatus.isRunning) {
+    return sendAndTrack(bot, id, `⚠️ *Another broadcast (${broadcastStatus.type}) is in progress...*`, {
       parse_mode: "Markdown"
     });
   }
@@ -32,11 +34,11 @@ export async function startBroadcast(bot, id, text) {
     });
   }
 
-  isBroadcasting = true;
+  broadcastStatus = { isRunning: true, type: "text" };
   let sent = 0;
   let failed = 0;
 
-  await sendAndTrack(bot, id, `📣 *Starting broadcast...*\n👥 Users: *${userIds.length}*`, {
+  await sendAndTrack(bot, id, `📣 *Broadcast started!*\n👥 Users: *${userIds.length}*`, {
     parse_mode: "Markdown"
   });
 
@@ -47,34 +49,33 @@ export async function startBroadcast(bot, id, text) {
       try {
         await sleep(DELAY_PER_USER);
         const res = await sendAndTrack(bot, userId, text, { parse_mode: "Markdown" }, userMessages);
-        if (res?.message_id) sent++;
-        else failed++;
+        res?.message_id ? sent++ : failed++;
       } catch (err) {
         failed++;
-        console.warn(`⚠️ [Broadcast error → ${userId}]: ${err.message}`);
+        console.warn(`⚠️ [Broadcast → ${userId}]:`, err.message || err);
       }
     }));
 
     await sleep(DELAY_PER_BATCH);
   }
 
-  isBroadcasting = false;
+  broadcastStatus = { isRunning: false, type: null };
 
   return sendAndTrack(bot, id,
-    `✅ *Broadcast complete!*\n\n📤 Sent: *${sent}*\n❌ Failed: *${failed}*`,
+    `✅ *Broadcast complete!*\n📤 Sent: *${sent}*\n❌ Failed: *${failed}*`,
     { parse_mode: "Markdown" }
   );
 }
 
 /**
- * 🎁 Initiates mass PROMO broadcast (uses sendPromo with optional code)
+ * 🎁 PROMO-based broadcast (sendPromo)
  */
 export async function startPromoBroadcast(bot, id, promoCode = "") {
   const uid = String(id || "");
   if (uid !== ADMIN_ID) return;
 
-  if (isBroadcasting) {
-    return sendAndTrack(bot, id, "⚠️ *Promo broadcast already in progress.*", {
+  if (broadcastStatus.isRunning) {
+    return sendAndTrack(bot, id, `⚠️ *Another broadcast (${broadcastStatus.type}) is in progress...*`, {
       parse_mode: "Markdown"
     });
   }
@@ -86,12 +87,12 @@ export async function startPromoBroadcast(bot, id, promoCode = "") {
     });
   }
 
-  isBroadcasting = true;
+  broadcastStatus = { isRunning: true, type: "promo" };
   let sent = 0;
   let failed = 0;
 
   await sendAndTrack(bot, id,
-    `🎁 *Sending promo to ${userIds.length} users...*`,
+    `🎁 *Sending promo...*\n👥 Users: *${userIds.length}*`,
     { parse_mode: "Markdown" }
   );
 
@@ -102,27 +103,26 @@ export async function startPromoBroadcast(bot, id, promoCode = "") {
       try {
         await sleep(DELAY_PER_USER);
         const res = await sendPromo(bot, userId, promoCode, userMessages);
-        if (res?.message_id) sent++;
-        else failed++;
+        res?.message_id ? sent++ : failed++;
       } catch (err) {
         failed++;
-        console.warn(`⚠️ [Promo error → ${userId}]: ${err.message}`);
+        console.warn(`⚠️ [Promo → ${userId}]:`, err.message || err);
       }
     }));
 
     await sleep(DELAY_PER_BATCH);
   }
 
-  isBroadcasting = false;
+  broadcastStatus = { isRunning: false, type: null };
 
   return sendAndTrack(bot, id,
-    `✅ *Promo broadcast complete!*\n\n📤 Sent: *${sent}*\n❌ Failed: *${failed}*`,
+    `✅ *Promo broadcast complete!*\n📤 Sent: *${sent}*\n❌ Failed: *${failed}*`,
     { parse_mode: "Markdown" }
   );
 }
 
 /**
- * 🕒 Async delay helper
+ * 🕒 Async sleep
  */
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
