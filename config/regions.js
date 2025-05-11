@@ -65,6 +65,17 @@ export const REGION_MAP = {
   }
 };
 
+// 🧠 Auto-sync to DISCOUNTS (region + city)
+import { DISCOUNTS } from "./discounts.js";
+
+for (const region of Object.keys(REGION_MAP)) {
+  DISCOUNTS.regions[region] ||= { active: false, percentage: 0 };
+
+  for (const city of Object.keys(REGION_MAP[region]?.cities || {})) {
+    DISCOUNTS.cities[city] ||= { active: false, percentage: 0 };
+  }
+}
+
 /**
  * 📦 Export flat lists for discounts.js sync + AdminPanel UI
  */
