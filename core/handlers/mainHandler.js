@@ -1,6 +1,3 @@
-// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v9999999999999.∞
-// FULLY LOCKED DEPLOY GODMODE + ADMIN + FLOW + FALLBACK + SECURE SYNC
-
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages, userOrders } from "../../state/userState.js";
 import { safeStart } from "./finalHandler.js";
@@ -19,14 +16,20 @@ import { markUserActive } from "../sessionManager.js";
  * 🔐 Registers the universal Telegram message handler
  */
 export function registerMainHandler(bot) {
-  bot.on("message", async (msg) => {
-    const id = msg.chat?.id;
-    let text = msg.text;
+  if (!bot || typeof bot.on !== "function") {
+    console.error("❌ [registerMainHandler] Invalid bot instance.");
+    return;
+  }
 
-    if (!bot || !id || typeof text !== "string") return;
+  bot.on("message", async (msg) => {
+    const id = msg?.chat?.id;
+    let text = msg?.text;
+
+    if (!id || typeof text !== "string") return;
 
     const uid = String(id).trim();
     text = normalizeText(text);
+    if (!text) return;
 
     try {
       markUserActive(uid);
@@ -36,17 +39,17 @@ export function registerMainHandler(bot) {
 
       const isAdmin = uid === String(BOT.ADMIN_ID);
 
-      // ✅ 1. Anti-bot security
+      // ✅ Security & Spam check
       const allowed = await canProceed(uid, bot, text);
       if (!allowed) return;
 
-      // ✅ 2. Force restart
+      // ✅ Force /start reset
       if (text === "/start") {
-        console.log(`🚀 /start from ${uid}`);
+        console.log(`🚀 /start command from ${uid}`);
         return await safeCall(() => safeStart(bot, uid));
       }
 
-      // ✅ 3. Admin flow control
+      // ✅ Admin flow (if in progress)
       if (session.adminStep) {
         return await safeCall(async () => {
           try {
@@ -62,7 +65,7 @@ export function registerMainHandler(bot) {
         });
       }
 
-      // ✅ 4. Main menu static routing
+      // ✅ Static main menu routing
       switch (text) {
         case MENU_BUTTONS.BUY:
           return await safeCall(() => startOrder(bot, uid, userMessages));
@@ -80,9 +83,10 @@ export function registerMainHandler(bot) {
           break;
       }
 
-      // ✅ 5. Dynamic flow via stepHandler
-      if (typeof session.step !== "number" || session.step < 1 || session.step > 9) {
-        console.warn(`⚠️ Corrupt session step → Resetting: ${uid}`);
+      // ✅ Flow routing via session step
+      const step = Number(session.step);
+      if (!Number.isInteger(step) || step < 1 || step > 9) {
+        console.warn(`⚠️ Corrupt step "${session.step}" → Resetting session for ${uid}`);
         session.step = 1;
       }
 
@@ -90,7 +94,7 @@ export function registerMainHandler(bot) {
     } catch (err) {
       console.error("❌ [MainHandler crash]:", err.message || err);
       try {
-        return await bot.sendMessage(uid, "❗️ Internal error occurred.\nTry again or type /start.", {
+        return await bot.sendMessage(uid, "❗️ Internal error.\nTry again or type /start.", {
           parse_mode: "Markdown",
           reply_markup: MAIN_KEYBOARD
         });
@@ -102,14 +106,14 @@ export function registerMainHandler(bot) {
 }
 
 /**
- * 🧼 Normalizes text input (safe for comparison)
+ * 🧼 Normalizes text input
  */
 function normalizeText(txt) {
   return txt?.toString().trim().slice(0, 4096).toLowerCase();
 }
 
 /**
- * 🔐 Safe async call with error shield
+ * 🔐 Safe async call
  */
 async function safeCall(fn) {
   try {
