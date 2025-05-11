@@ -1,5 +1,3 @@
-// 📦 utils/cryptoChecker.js | IMMORTAL FINAL v999999999 — GODMODE BULLETPROOF SYNC + CONFIG ALIASES
-
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
@@ -7,7 +5,6 @@ import { API, BOT, ALIASES } from "../config/config.js";
 
 const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
 
-// ✅ Tiksliai palaikomos valiutos
 const SUPPORTED = {
   BTC: true,
   ETH: true,
@@ -15,16 +12,15 @@ const SUPPORTED = {
   SOL: true
 };
 
-/**
- * 🔍 Patikrina ar vartotojo mokėjimas atitiko (blockchain)
- */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
-  const curInput = String(currency || "").trim().toLowerCase();
-  const cur = ALIASES[curInput] || curInput.toUpperCase();
+  const input = String(currency || "").trim().toLowerCase();
+  const cur = ALIASES[input] || input.toUpperCase();
   const amount = parseFloat(expectedAmount);
 
-  if (!wallet || typeof wallet !== "string" || wallet.length < 8 ||
-      !SUPPORTED[cur] || !Number.isFinite(amount) || amount <= 0) {
+  if (
+    !wallet || typeof wallet !== "string" || wallet.length < 8 ||
+    !SUPPORTED[cur] || !Number.isFinite(amount) || amount <= 0
+  ) {
     log(wallet, cur, amount, "❌ INVALID PARAMS");
     return false;
   }
@@ -46,7 +42,7 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
         result = await checkSOL(wallet, amount);
         break;
       default:
-        log(wallet, cur, amount, "❌ UNSUPPORTED CURRENCY");
+        log(wallet, cur, amount, "❌ UNSUPPORTED");
         return false;
     }
 
@@ -58,41 +54,36 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
         BOT.ADMIN_ID,
         `✅ *Payment confirmed*\n\n• Currency: *${cur}*\n• Amount: *${amount}*\n• Wallet: \`${wallet}\`\n• Time: ${time}`,
         { parse_mode: "Markdown" }
-      ).catch((e) => console.warn("⚠️ [Bot notify error]", e.message));
+      ).catch(err => console.warn("⚠️ [Bot notify error]", err.message));
     }
 
     return result;
   } catch (err) {
-    console.error(`❌ [checkPayment fatal → ${cur}]:`, err.message || err);
+    console.error(`❌ [checkPayment fatal → ${cur}]:`, err.message);
     log(wallet, cur, amount, "❌ ERROR");
     return false;
   }
 }
 
-/**
- * 🔎 BTC: blockchain.info balance check (satoshis → BTC)
- */
 async function checkBTC(address, expected) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
+
     const res = await fetch(`${API.BTC_RPC}${address}`, { signal: controller.signal });
     clearTimeout(timeout);
 
-    const satoshis = parseInt(await res.text());
-    if (!Number.isFinite(satoshis)) throw new Error("Invalid BTC satoshi balance");
+    const satoshis = parseInt(await res.text(), 10);
+    if (!Number.isFinite(satoshis)) throw new Error("Invalid satoshi balance");
 
     const btc = satoshis / 1e8;
     return btc >= expected;
   } catch (err) {
-    console.error("❌ [BTC error]:", err.message || err);
+    console.error("❌ [BTC error]:", err.message);
     return false;
   }
 }
 
-/**
- * 🔎 ETH / MATIC per JSON-RPC — universalus EVM balanso patikrinimas
- */
 async function checkEVM(address, expected, rpcUrl, label) {
   try {
     const controller = new AbortController();
@@ -113,24 +104,17 @@ async function checkEVM(address, expected, rpcUrl, label) {
 
     const json = await res.json();
     const hex = json?.result;
-    if (!hex || typeof hex !== "string") {
-      throw new Error(`EVM RPC returned invalid hex for ${label}`);
-    }
+    if (!hex || typeof hex !== "string") throw new Error(`Invalid ${label} hex`);
 
     const wei = parseInt(hex, 16);
-    const value = wei / 1e18;
-    if (!Number.isFinite(value)) throw new Error(`Parsed ${label} balance not valid`);
-
-    return value >= expected;
+    const ethVal = wei / 1e18;
+    return ethVal >= expected;
   } catch (err) {
-    console.error(`❌ [${label} error]:`, err.message || err);
+    console.error(`❌ [${label} error]:`, err.message);
     return false;
   }
 }
 
-/**
- * 🔎 SOLANA RPC patikrinimas (lamports → SOL)
- */
 async function checkSOL(address, expected) {
   try {
     const controller = new AbortController();
@@ -151,19 +135,16 @@ async function checkSOL(address, expected) {
 
     const json = await res.json();
     const lamports = json?.result?.value;
-    if (!Number.isFinite(lamports)) throw new Error("Invalid lamports from RPC");
+    if (!Number.isFinite(lamports)) throw new Error("Invalid SOL lamports");
 
     const sol = lamports / 1e9;
     return sol >= expected;
   } catch (err) {
-    console.error("❌ [SOL error]:", err.message || err);
+    console.error("❌ [SOL error]:", err.message);
     return false;
   }
 }
 
-/**
- * 📁 Įrašo patikros rezultatą į log failą
- */
 function log(wallet, currency, amount, status) {
   try {
     const dir = path.dirname(logPath);
@@ -173,6 +154,6 @@ function log(wallet, currency, amount, status) {
     const entry = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
     fs.appendFileSync(logPath, entry, "utf8");
   } catch (err) {
-    console.warn("⚠️ [log error]:", err.message || err);
+    console.warn("⚠️ [log error]:", err.message);
   }
 }
