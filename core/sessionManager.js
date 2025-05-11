@@ -1,4 +1,4 @@
-// 📦 core/sessionManager.js | IMMORTAL FINAL v9999999999999 — TITAN SYNC + ZOMBIE SLAYER
+// 📦 core/sessionManager.js | FINAL IMMORTAL v999999999.∞ — TITANLOCK SYNC + ZOMBIE SLAYER + 24/7 BULLETPROOF
 
 import {
   activeTimers,
@@ -9,43 +9,44 @@ import {
   antiSpam,
   bannedUntil,
   userMessages,
-  userOrders
+  userOrders,
+  activeUsers
 } from "../state/userState.js";
 
-const lastSeenAt = {}; // ⏱️ Tracks last activity
+const lastSeenAt = {}; // ⏱️ Internal session activity clock
 
-const STEP_TIMEOUT = 60 * 60 * 1000;             // 1h — zombie
-const DEFAULT_EXPIRE_THRESHOLD = 45 * 60 * 1000; // 45min — idle
+const STEP_TIMEOUT = 60 * 60 * 1000;             // 1h → zombie (mid-order, abandoned)
+const DEFAULT_EXPIRE_THRESHOLD = 45 * 60 * 1000; // 45min → idle (home screen etc.)
 
-/** ✅ Register activity */
+/** ✅ Registers a user as active (pinged) */
 export const markUserActive = (id) => {
-  const uid = String(id || "").trim();
+  const uid = safeId(id);
   if (uid) lastSeenAt[uid] = Date.now();
 };
 
-/** ✅ Clear UI timer */
+/** ✅ Clears active delivery/session timer */
 export const clearUserTimer = (id) => {
-  const uid = String(id || "").trim();
-  if (activeTimers[uid]) {
+  const uid = safeId(id);
+  if (uid && activeTimers[uid]) {
     clearTimeout(activeTimers[uid]);
     delete activeTimers[uid];
     console.log(`🕒 UI timer cleared → ${uid}`);
   }
 };
 
-/** ✅ Clear payment timer */
+/** ✅ Clears active payment confirmation timer */
 export const clearPaymentTimer = (id) => {
-  const uid = String(id || "").trim();
-  if (paymentTimers[uid]) {
+  const uid = safeId(id);
+  if (uid && paymentTimers[uid]) {
     clearTimeout(paymentTimers[uid]);
     delete paymentTimers[uid];
     console.log(`💳 Payment timer cleared → ${uid}`);
   }
 };
 
-/** ✅ Total cleanup for user session */
+/** ✅ Total session reset: timers + state + all caches */
 export const resetSession = (id) => {
-  const uid = String(id || "").trim();
+  const uid = safeId(id);
   if (!uid) return;
 
   try {
@@ -64,31 +65,31 @@ export const resetSession = (id) => {
     ];
 
     for (const store of stores) {
-      if (store && store[uid] !== undefined) {
-        delete store[uid];
-      }
+      if (store?.[uid] !== undefined) delete store[uid];
     }
 
+    activeUsers.remove(uid);
     console.log(`🧼 Session reset → ${uid}`);
   } catch (err) {
     console.error("❌ [resetSession error]:", err.message);
   }
 };
 
-/** ⏱️ Kill idle/zombie sessions */
+/** ⏱️ Kills idle/zombie sessions (auto) */
 export const autoExpireSessions = (threshold = DEFAULT_EXPIRE_THRESHOLD) => {
   const now = Date.now();
   const expired = [];
 
   for (const [id, last] of Object.entries(lastSeenAt)) {
-    const session = userSessions[id];
+    const uid = safeId(id);
+    const session = userSessions[uid];
     const idle = now - last;
 
     const isZombie = session?.step >= 1 && idle > STEP_TIMEOUT;
     const isIdle = idle > threshold;
 
     if (isZombie || isIdle) {
-      expired.push({ id, zombie: isZombie });
+      expired.push({ id: uid, zombie: isZombie });
     }
   }
 
@@ -98,19 +99,19 @@ export const autoExpireSessions = (threshold = DEFAULT_EXPIRE_THRESHOLD) => {
   }
 };
 
-/** 📊 Count currently tracked users */
+/** 📊 Gets live active user count */
 export const getActiveUsersCount = () => {
   return Object.keys(lastSeenAt).length;
 };
 
-/** 🔥 Dev: full reset */
+/** 🔥 Nukes all sessions from orbit (admin use) */
 export const wipeAllSessions = () => {
   const ids = Object.keys(userSessions);
   for (const id of ids) resetSession(id);
   console.log(`🔥 wipeAllSessions → ${ids.length} wiped`);
 };
 
-/** 🧽 Cleanup orphaned payment timers */
+/** 🧽 Removes invalid payment timers (step drift) */
 export const cleanStalePaymentTimers = () => {
   for (const id in paymentTimers) {
     const step = userSessions[id]?.step;
@@ -121,7 +122,7 @@ export const cleanStalePaymentTimers = () => {
   }
 };
 
-/** 🧪 Developer/debug view */
+/** 🧪 Debug tool: list session summary to console */
 export const printSessionSummary = () => {
   const now = Date.now();
   const sessions = Object.entries(userSessions);
@@ -133,3 +134,10 @@ export const printSessionSummary = () => {
     console.log(`— ${id} | step=${session.step ?? "?"} | lastSeen=${lastSeen}`);
   }
 };
+
+// ————— HELPERS —————
+
+function safeId(id) {
+  const str = String(id ?? "").trim();
+  return str && str !== "undefined" && str !== "null" ? str : null;
+}
