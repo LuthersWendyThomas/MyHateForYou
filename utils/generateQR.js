@@ -1,10 +1,12 @@
-// 📦 utils/generateQR.js | IMMORTAL FINAL v3.3 — ULTRA BULLETPROOF INLINE+QR ALIASED GODMODE SYNCED
-
 import QRCode from "qrcode";
 import { WALLETS, ALIASES } from "../config/config.js";
 
 /**
- * ✅ Generates QR code PNG buffer for crypto payment
+ * ✅ Generates QR PNG buffer for supported network + amount
+ * @param {string} currency - e.g. "btc", "eth", "matic", "sol"
+ * @param {number|string} amount - amount in that currency
+ * @param {string|null} overrideAddress - override wallet address (optional)
+ * @returns {Buffer|null}
  */
 export async function generateQR(currency, amount, overrideAddress = null) {
   try {
@@ -28,14 +30,18 @@ export async function generateQR(currency, amount, overrideAddress = null) {
 
     const buffer = await QRCode.toBuffer(uri, {
       type: "png",
-      width: 180,
+      width: 140, // ⬅️ Smaller by ~30% (default ~200)
       margin: 1,
+      scale: 2,
       errorCorrectionLevel: "H",
-      color: { dark: "#000000", light: "#FFFFFF" }
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF"
+      }
     });
 
     if (!(buffer instanceof Buffer)) {
-      throw new Error("QR code not generated as buffer.");
+      throw new Error("QR generation failed (non-buffer).");
     }
 
     if (process.env.DEBUG_MESSAGES === "true") {
@@ -50,7 +56,7 @@ export async function generateQR(currency, amount, overrideAddress = null) {
 }
 
 /**
- * ✅ Generates message with copyable crypto address inline button
+ * ✅ Generates inline message + button with wallet address
  */
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
   const raw = String(currency || "").toLowerCase();
@@ -85,7 +91,7 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
 }
 
 /**
- * ✅ Basic validation of wallet address format
+ * ✅ Basic wallet format check (8+ alphanumeric)
  */
 function isValidAddress(addr) {
   return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
