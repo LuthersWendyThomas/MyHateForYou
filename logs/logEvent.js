@@ -1,4 +1,4 @@
-// 🧾 logs/logEvent.js | BalticPharma V2 — FINAL v2025.6 EVENT CORE LOGGER EDITION
+// 🧾 logs/logEvent.js | FINAL IMMORTAL v9999999 — BULLETPROOF EVENT LOGGER SYNCED
 
 import fs from "fs";
 import path from "path";
@@ -14,23 +14,35 @@ const logFile = path.join(logsDir, "events.log");
  * ✅ Ensures that the logs directory exists
  */
 function ensureLogsFolder() {
-  if (!fs.existsSync(logsDir)) {
-    fs.mkdirSync(logsDir, { recursive: true });
+  try {
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
+  } catch (err) {
+    console.error("❌ [logEvent] Failed to ensure logs directory:", err.message);
   }
 }
 
 /**
- * ✅ Records the event in the logs/events.log file with the date
- * @param {string} type - Event type (pvz: ORDER, PAYMENT, ERROR)
- * @param {string} message - Message
+ * ✅ Records an event in logs/events.log with UTC timestamp
+ * @param {string} type — Event type (e.g. ORDER, PAYMENT, ERROR)
+ * @param {string} message — Message to log
  */
 export function logEvent(type, message) {
   try {
     ensureLogsFolder();
+
     const timestamp = new Date().toISOString();
-    const line = `[${timestamp}] [${type}] ${message}\n`;
-    fs.appendFileSync(logFile, line);
-  } catch (e) {
-    console.error("❌ Failed to write log entry:", e);
+    const sanitizedType = (type || "UNKNOWN").toUpperCase().slice(0, 20);
+    const cleanMessage = String(message || "").trim().replace(/\s+/g, " ");
+
+    const line = `[${timestamp}] [${sanitizedType}] ${cleanMessage}\n`;
+    fs.appendFileSync(logFile, line, "utf8");
+
+    if (process.env.DEBUG_LOGS === "true") {
+      console.log(`🧾 [logEvent] ${sanitizedType}: ${cleanMessage}`);
+    }
+  } catch (err) {
+    console.error("❌ [logEvent] Failed to write log entry:", err.message);
   }
 }
