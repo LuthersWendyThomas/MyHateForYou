@@ -1,4 +1,4 @@
-// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.∞ — BULLETPROOF SYNC + LIVE USER COUNT + DISCOUNT CONTROL + FULL IMPORT + TOGGLE SYSTEM
+// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.∞ — BULLETPROOF SYNC + LIVE USER COUNT + DISCOUNT CONTROL + BROADCAST SYSTEM
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import {
@@ -15,7 +15,6 @@ import { BOT } from "../config/config.js";
 import {
   getDiscountInfo,
   setDiscount,
-  removeDiscount,
   DISCOUNT_TYPES
 } from "../config/discounts.js";
 import {
@@ -29,6 +28,7 @@ import {
   allCities,
   REGION_MAP
 } from "../config/regions.js";
+import { startBroadcast } from "./adminBroadcast.js";
 
 export async function openAdminPanel(bot, id) {
   try {
@@ -40,6 +40,7 @@ export async function openAdminPanel(bot, id) {
       [{ text: "📋 Banned list" }, { text: "⏱️ Temp bans" }],
       [{ text: "🏷️ Manage Discounts" }],
       [{ text: "🟢 Toggle Items" }],
+      [{ text: "📣 Broadcast" }],
       [{ text: "🔙 Back" }]
     ];
 
@@ -138,6 +139,12 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
       return await sendAndTrack(bot, id, `🟢 Toggle updated: \`${target}\` → ${status ? "ON ✅" : "OFF ❌"}`, { parse_mode: "Markdown" }, {});
     }
 
+    if (s.adminStep === "broadcast") {
+      await startBroadcast(bot, id, text);
+      delete s.adminStep;
+      return;
+    }
+
     switch (text) {
       case "📊 STATISTICS":
       case "📅 Today":
@@ -219,6 +226,10 @@ Available targets:
 \`🗽 East Coast 1\``,
           { parse_mode: "Markdown" }, {});
       }
+
+      case "📣 Broadcast":
+        s.adminStep = "broadcast";
+        return await sendAndTrack(bot, id, "📣 *Enter message to broadcast to all users:*", { parse_mode: "Markdown" }, {});
 
       case "🔙 Back":
         delete s.adminStep;
