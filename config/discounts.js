@@ -1,7 +1,8 @@
-// 📦 config/discounts.js | FINAL IMMORTAL GODMODE v99999999999999.2 — FULL AUTO-SYNC + ADMIN READY
+// 📦 config/discounts.js | FINAL IMMORTAL GODMODE v99999999999999.3 — FIXED FOR ESM + CIRCULAR BREAKER
 
 import { products } from "./products.js";
 import { REGION_MAP } from "./regions.js";
+import { resolveDiscount } from "./discountUtils.js";
 
 export const DISCOUNT_TYPES = [
   "global", "user", "code", "region", "city", "category", "product"
@@ -12,7 +13,6 @@ export const DISCOUNTS = {
     active: false,
     percentage: 10
   },
-
   users: {},
   codes: {},
   regions: {},
@@ -37,19 +37,7 @@ for (const [region, data] of Object.entries(REGION_MAP)) {
   }
 }
 
-export function resolveDiscount({ userId, code, region, city, category, productName }) {
-  let max = 0;
-
-  if (DISCOUNTS.global?.active) max = Math.max(max, DISCOUNTS.global.percentage || 0);
-  if (code && DISCOUNTS.codes?.[normalize(code)]?.active) max = Math.max(max, DISCOUNTS.codes[normalize(code)].percentage || 0);
-  if (userId && DISCOUNTS.users?.[userId]?.active) max = Math.max(max, DISCOUNTS.users[userId].percentage || 0);
-  if (region && DISCOUNTS.regions?.[region]?.active) max = Math.max(max, DISCOUNTS.regions[region].percentage || 0);
-  if (city && DISCOUNTS.cities?.[city]?.active) max = Math.max(max, DISCOUNTS.cities[city].percentage || 0);
-  if (category && DISCOUNTS.categories?.[category]?.active) max = Math.max(max, DISCOUNTS.categories[category].percentage || 0);
-  if (productName && DISCOUNTS.products?.[productName]?.active) max = Math.max(max, DISCOUNTS.products[productName].percentage || 0);
-
-  return max;
-}
+export { resolveDiscount };
 
 export function getActiveDiscounts() {
   return JSON.parse(JSON.stringify(DISCOUNTS));
