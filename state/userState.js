@@ -53,7 +53,7 @@ export const activeUsers = {
 };
 
 // ==============================
-// 🔧 Utility helpers — sync'd across system
+// 🔧 Utility helpers — SYNC-GODMODE
 // ==============================
 
 export function clearUserSession(id) {
@@ -71,9 +71,7 @@ export function clearUserSession(id) {
     antiSpam,
     antiFlood
   ].forEach(store => {
-    if (store?.[uid] !== undefined) {
-      delete store[uid];
-    }
+    if (store?.[uid] !== undefined) delete store[uid];
   });
 
   activeUsers.remove(uid);
@@ -141,13 +139,16 @@ export function exportUserStats() {
     const exportData = {};
 
     for (const id of Object.keys(userSessions)) {
-      exportData[id] = {
-        step: userSessions[id]?.step ?? null,
-        city: userSessions[id]?.city ?? null,
-        product: userSessions[id]?.product?.name ?? null,
-        orders: userOrders[id] ?? 0,
-        bannedUntil: bannedUntil[id] ?? null,
-        lastMsgCount: Array.isArray(userMessages[id]) ? userMessages[id].length : 0
+      const uid = safeString(id);
+      if (!uid) continue;
+
+      exportData[uid] = {
+        step: userSessions[uid]?.step ?? null,
+        city: userSessions[uid]?.city ?? null,
+        product: userSessions[uid]?.product?.name ?? null,
+        orders: userOrders[uid] ?? 0,
+        bannedUntil: bannedUntil[uid] ?? null,
+        lastMsgCount: Array.isArray(userMessages[uid]) ? userMessages[uid].length : 0
       };
     }
 
