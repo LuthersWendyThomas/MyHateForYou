@@ -1,7 +1,7 @@
 {
   "name": "BalticPharmacyBot",
-  "version": "1.0.3",
-  "description": "⚗️ BalticPharmacyBot — Fully automated Telegram bot with crypto payments, city-based drop/courier delivery, and bulletproof session architecture.",
+  "version": "1.0.4",
+  "description": "⚗️ BalticPharmacyBot — Fully automated Telegram bot with crypto payments, regional product discounts, city-based drop/courier delivery, and 24/7 bulletproof architecture.",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -17,15 +17,21 @@
     "web3",
     "automation",
     "telegram",
-    "bot"
+    "bot",
+    "discounts",
+    "geolocation",
+    "payments"
   ],
   "author": "BalticPharma Core",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "dependencies": {
-    "dotenv": "16.5.0",
-    "node-fetch": "3.3.2",
-    "node-telegram-bot-api": "0.66.0",
-    "ps-tree": "1.2.0",
-    "qrcode": "1.5.4"
+    "dotenv": "^16.5.0",
+    "node-fetch": "^3.3.2",
+    "node-telegram-bot-api": "^0.66.0",
+    "ps-tree": "^1.2.0",
+    "qrcode": "^1.5.4"
   }
 }
