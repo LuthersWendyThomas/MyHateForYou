@@ -1,21 +1,26 @@
-// 📦 utils/sendPromo.js | FINAL IMMORTAL v999999999 — PROMO WRAPPER + BULLETPROOF TRACK
+// 📦 utils/sendPromo.js | FINAL IMMORTAL v999999999 — PROMO WRAPPER + SYNCED BULLETPROOF CLEAN
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { userMessages } from "../state/userState.js";
 
 /**
- * 🎁 Sends a promotional message to user (uses Markdown + cleanup-safe)
- * @param {object} bot — Telegram bot instance
+ * 🎁 Sends a promotional message to user (Markdown-safe, cleanup-tracked)
+ *
+ * @param {TelegramBot} bot — Telegram bot instance
  * @param {string|number} id — user ID
- * @param {string} code — optional promo code (uppercase, e.g. "XMAS20")
+ * @param {string} code — optional promo code (e.g. "XMAS20")
+ * @param {object} userMsgs — optional userMessages object
  */
 export async function sendPromo(bot, id, code = "", userMsgs = userMessages) {
   try {
     const uid = String(id || "").trim();
     if (!bot || !uid) return;
 
-    const codeLine = code?.trim()
-      ? `🎟️ Use promo code *${code.toUpperCase()}* to get your discount!`
+    const hasCode = code?.trim()?.length > 0;
+    const promoCode = hasCode ? code.toUpperCase().replace(/[^A-Z0-9]/g, "") : null;
+
+    const codeLine = promoCode
+      ? `🎟️ Use promo code *${promoCode}* to get your discount!`
       : `🎁 Check the main menu for active discounts.`;
 
     const text = `
