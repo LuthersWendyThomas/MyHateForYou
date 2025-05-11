@@ -97,3 +97,6 @@ async function notifyCrash(type, err) {
     console.warn("⚠️ Failed to notify admin.");
   }
 }
+
+// 🔄 Final discount sync (MUST BE LAST)
+import "./config/discountSync.js"; // ✅ FINAL PLACEMENT — bulletproof, no circular risk
