@@ -89,6 +89,7 @@ export async function handlePayment(bot, id, userMessages) {
     if (!Number.isFinite(amount) || amount <= 0) throw new Error("❌ Invalid crypto amount");
 
     s.expectedAmount = amount;
+
     const qr = await generateQR(symbol, amount, s.wallet);
     if (!qr || !(qr instanceof Buffer)) throw new Error("❌ QR generation failed");
 
@@ -109,14 +110,17 @@ export async function handlePayment(bot, id, userMessages) {
 ✅ Scan the QR or copy the address.`.trim();
 
     await sendSafe(() => bot.sendChatAction(id, "upload_photo"));
-    await sendSafe(() => bot.sendPhoto(id, qr, { caption: summary, parse_mode: "Markdown" }));
+    await sendSafe(() => bot.sendPhoto(id, qr, {
+      caption: summary,
+      parse_mode: "Markdown"
+    }));
 
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
 
     const timer = setTimeout(() => {
       console.warn(`⌛️ Payment expired: ${id}`);
-      delete userSessions[id];
       delete paymentTimers[id];
+      delete userSessions[id];
     }, 30 * 60 * 1000);
 
     s.paymentTimer = timer;
@@ -142,8 +146,6 @@ export async function handlePaymentCancel(bot, id, userMessages) {
     return sendAndTrack(bot, id, "⚠️ No active payment to cancel.", {}, userMessages);
   }
 
-  s.paymentInProgress = false;
-
   if (s.paymentTimer) {
     clearTimeout(s.paymentTimer);
     delete s.paymentTimer;
@@ -153,6 +155,9 @@ export async function handlePaymentCancel(bot, id, userMessages) {
     clearTimeout(paymentTimers[id]);
     delete paymentTimers[id];
   }
+
+  s.paymentInProgress = false;
+  delete s.expectedAmount;
 
   delete userSessions[id];
 
@@ -185,6 +190,9 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
     delete s.paymentTimer;
     delete paymentTimers[id];
+
+    delete s.paymentInProgress;
+    delete s.expectedAmount;
 
     userOrders[id] = (userOrders[id] || 0) + 1;
 
