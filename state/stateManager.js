@@ -1,4 +1,4 @@
-// 📦 state/stateManager.js | FINAL IMMORTAL v999999999.999 — CORE SYSTEM LOCK
+// 📦 state/stateManager.js | FINAL IMMORTAL v999999999.999 — CORE SYSTEM LOCK + GODMODE SYNC
 
 import {
   userSessions,
@@ -14,7 +14,7 @@ import {
 } from "./userState.js";
 
 /**
- * ✅ Clears all user state, sessions, security flags, and timers
+ * ✅ Clears ALL user state: session, messages, bans, timers
  */
 export function resetUser(id) {
   const uid = safeId(id);
@@ -39,6 +39,7 @@ export function resetUser(id) {
     delete paymentTimers[uid];
 
     activeUsers.remove(uid);
+
     console.log(`🧼 [resetUser] → State fully cleared: ${uid}`);
   } catch (err) {
     console.error("❌ [resetUser error]:", err.message || err);
@@ -46,7 +47,7 @@ export function resetUser(id) {
 }
 
 /**
- * ✅ Clears only user activity + spam/security flags
+ * ✅ Clears spam/anti-flood/security flags (not session or orders)
  */
 export function clearUserActivity(id) {
   const uid = safeId(id);
@@ -59,6 +60,7 @@ export function clearUserActivity(id) {
     delete antiFlood[uid];
 
     activeUsers.remove(uid);
+
     console.log(`🧹 [clearUserActivity] → Security flags cleared: ${uid}`);
   } catch (err) {
     console.error("❌ [clearUserActivity error]:", err.message || err);
@@ -66,7 +68,7 @@ export function clearUserActivity(id) {
 }
 
 /**
- * ✅ Clears only tracked message history (autodelete)
+ * ✅ Clears tracked messages (for autodelete logic)
  */
 export function clearUserMessages(id) {
   const uid = safeId(id);
@@ -81,7 +83,7 @@ export function clearUserMessages(id) {
 }
 
 /**
- * ✅ Stops delivery/payment timers and removes cleanup flags
+ * ✅ Stops active delivery/payment timers and removes cleanup flags
  */
 export function clearTimers(id) {
   const uid = safeId(id);
@@ -110,7 +112,7 @@ export function clearTimers(id) {
 }
 
 /**
- * ✅ Destroys all state + timers for a user (forcibly)
+ * ✅ Force-destroys all user state — full cleanup
  */
 export function unregisterUser(id) {
   const uid = safeId(id);
@@ -127,7 +129,7 @@ export function unregisterUser(id) {
 }
 
 /**
- * 🧠 Safe and clean ID validation
+ * 🧠 Safe ID sanitizer (null/undefined/empty prevention)
  */
 function safeId(id) {
   const str = String(id ?? "").trim();
