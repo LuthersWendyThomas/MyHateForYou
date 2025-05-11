@@ -1,14 +1,14 @@
-// 📦 helpers/menu.js | FINAL IMMORTAL v9999999 — SKYLOCKED ADMIN-SAFE SYNCED (NO START)
+// 📦 helpers/menu.js | FINAL IMMORTAL v999999999.∞ — SKYLOCKED ADMIN-SAFE SYNCED
 
 import { BOT } from "../config/config.js";
 import { MENU_BUTTONS } from "./keyboardConstants.js";
 
 /**
- * ✅ Dynamically builds main menu based on admin status
- * 🔐 Synchronized with handlers & keyboard logic (no START button!)
+ * ✅ Dynamically builds user/admin menu (keyboard only)
+ * 🔐 Safe fallback variant with only `keyboard` (no reply_markup wrapper)
  *
  * @param {string|number} id — Telegram user ID
- * @returns {object} Telegram keyboard reply_markup
+ * @returns {object} — Telegram keyboard (not wrapped in reply_markup)
  */
 export function getMainMenu(id) {
   const uid = String(id || "").trim();
@@ -21,10 +21,7 @@ export function getMainMenu(id) {
   ];
 
   if (isAdmin) {
-    menu.push([
-      { text: MENU_BUTTONS.STATS },
-      { text: MENU_BUTTONS.ADMIN }
-    ]);
+    menu.push([{ text: MENU_BUTTONS.STATS }, { text: MENU_BUTTONS.ADMIN }]);
   }
 
   return {
