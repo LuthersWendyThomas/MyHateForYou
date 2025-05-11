@@ -1,4 +1,4 @@
-// 📦 utils/floodHandler.js | IMMORTAL v3.1 — FINAL LOCKED BULLETPROOF MIRROR SYNC EDITION
+// 📦 utils/floodHandler.js | IMMORTAL FINAL v999999999.∞ — BULLETPROOF FLOODLOCK SYNCED GODMODE
 
 import {
   antiSpam,
@@ -10,7 +10,7 @@ import {
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
 /**
- * ✅ Detects messages sent too rapidly (<1s apart)
+ * ✅ Detects rapid repeated messages (<1s)
  */
 export function isSpamming(id) {
   try {
@@ -25,14 +25,15 @@ export function isSpamming(id) {
 }
 
 /**
- * ✅ Detects if user is under flood mute
+ * ✅ Checks if user is currently muted
  */
 export function isMuted(id) {
   try {
     const until = bannedUntil[id];
     if (!until) return false;
 
-    if (Date.now() < until) return true;
+    const now = Date.now();
+    if (now < until) return true;
 
     delete bannedUntil[id]; // mute expired
     return false;
@@ -43,7 +44,7 @@ export function isMuted(id) {
 }
 
 /**
- * ✅ Adjust flood tolerance based on user trust level
+ * ✅ Calculates flood limit based on user trust (orders)
  */
 function getFloodLimit(id) {
   try {
@@ -57,7 +58,7 @@ function getFloodLimit(id) {
 }
 
 /**
- * ✅ Flood handler with warnings and session mute
+ * ✅ Handles flood events: warns and mutes if needed
  */
 export async function handleFlood(id, bot, userMessages = {}) {
   try {
@@ -68,7 +69,7 @@ export async function handleFlood(id, bot, userMessages = {}) {
 
     if (!Array.isArray(antiFlood[uid])) antiFlood[uid] = [];
 
-    // Filter to recent 5s window
+    // Filter last 5s window
     antiFlood[uid] = antiFlood[uid].filter(ts => now - ts < 5000);
     antiFlood[uid].push(now);
 
@@ -81,7 +82,7 @@ export async function handleFlood(id, bot, userMessages = {}) {
       await sendAndTrack(
         bot,
         uid,
-        "⛔️ *Too many actions in a short time.*\n🕓 Session has been muted for *5 minutes*.",
+        "⛔️ *Too many actions in a short time.*\n🕓 Session has been *muted for 5 minutes*.",
         { parse_mode: "Markdown" },
         userMessages
       );
@@ -97,7 +98,7 @@ export async function handleFlood(id, bot, userMessages = {}) {
       await sendAndTrack(
         bot,
         uid,
-        "⚠️ *Flood warning:* one more action and your session will be *muted* for 5 minutes.",
+        "⚠️ *Flood warning:* one more action and your session will be *muted for 5 minutes*.",
         { parse_mode: "Markdown" },
         userMessages
       );
