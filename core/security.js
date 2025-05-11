@@ -1,5 +1,4 @@
-// 🛡️ core/security.js | IMMORTAL FINAL v999999999.∞
-// TITANLOCK SYNCED BULLETPROOF ANTI-SPAM + FLOOD + MUTE + DANGER CHECK
+// 🛡️ core/security.js | FINAL IMMORTAL v999999999.∞ — TITANLOCK SYNCED BULLETPROOF
 
 import { isBanned, banUser } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
@@ -15,30 +14,25 @@ const MAX_MESSAGE_LENGTH = 600;
 const MAX_INPUT_FREQUENCY = 4;
 const MAX_DISTINCT_INPUTS = 20;
 
-const recentTexts = {}; // 🧠 Track last inputs per user
+const recentTexts = {}; // 🧠 Track recent input strings
 
-/**
- * 👑 Is admin
- */
 function isAdmin(id) {
   return BOT.ADMIN_ID && String(id) === String(BOT.ADMIN_ID);
 }
 
 /**
- * 🚫 Spam protection — message interval
+ * ⛔ Spam: too frequent input
  */
 export function isSpamming(id) {
   if (!id || isAdmin(id)) return false;
-
   const now = Date.now();
   const last = antiSpam[id] || 0;
   antiSpam[id] = now;
-
   return now - last < SPAM_INTERVAL_MS;
 }
 
 /**
- * 🌊 Flood protection — burst action rate
+ * 🌊 Flood: too many actions in short time
  */
 export async function handleFlood(id, bot) {
   if (!id || isAdmin(id)) return false;
@@ -74,25 +68,21 @@ export async function handleFlood(id, bot) {
 }
 
 /**
- * 🔇 Temp mute checker
+ * 🔇 Temp mute status check
  */
 export function isMuted(id) {
   if (!id || isAdmin(id)) return false;
-
   const until = bannedUntil[id];
   if (!until) return false;
-
-  const now = Date.now();
-  if (now >= until) {
+  if (Date.now() >= until) {
     delete bannedUntil[id];
     return false;
   }
-
   return true;
 }
 
 /**
- * 💣 Message length / repeat validator
+ * 💣 Detect dangerous message (too long or repeated)
  */
 function isMessageDangerous(id, rawText) {
   if (!id || isAdmin(id)) return false;
@@ -112,7 +102,7 @@ function isMessageDangerous(id, rawText) {
 }
 
 /**
- * ✅ MASTER GATEKEEPER — Can user proceed?
+ * ✅ MASTER CHECK — Determines if user is allowed to proceed
  */
 export async function canProceed(id, bot, text = "") {
   try {
@@ -123,7 +113,6 @@ export async function canProceed(id, bot, text = "") {
     if (isSpamming(id)) return false;
     if (isMessageDangerous(id, text)) return false;
     if (await isBanned(id)) return false;
-
     return true;
   } catch (err) {
     console.error("❌ [canProceed error]:", err.message || err);
