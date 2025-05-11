@@ -1,4 +1,5 @@
-// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.∞ — BULLETPROOF SYNC + LIVE USER COUNT + DISCOUNT CONTROL + BROADCAST SYSTEM
+// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.∞
+// BULLETPROOF SYNC + LIVE USER COUNT + DISCOUNT CONTROL + BROADCAST SYSTEM
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import {
@@ -73,6 +74,7 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
   const s = (sessions[id] ||= {});
 
   try {
+    // 🔒 Manual steps
     if (s.adminStep === "ban_user") {
       banUser(text);
       delete s.adminStep;
@@ -101,7 +103,7 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
       const active = activeRaw === "1";
       const pct = parseInt(percentRaw);
       if (!DISCOUNT_TYPES.includes(type)) {
-        return await sendAndTrack(bot, id, `❌ Invalid type. Use one of: *${DISCOUNT_TYPES.join(", ")}*`, { parse_mode: "Markdown" }, {});
+        return await sendAndTrack(bot, id, `❌ Invalid type. Use: *${DISCOUNT_TYPES.join(", ")}*`, { parse_mode: "Markdown" }, {});
       }
       setDiscount(type, keyRaw || null, active, pct);
       delete s.adminStep;
@@ -145,6 +147,7 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
       return;
     }
 
+    // 🎛 Menu actions
     switch (text) {
       case "📊 STATISTICS":
       case "📅 Today":
