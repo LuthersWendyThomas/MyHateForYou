@@ -36,31 +36,33 @@ export function registerMainHandler(bot) {
 
       const isAdmin = uid === String(BOT.ADMIN_ID);
 
-      // ✅ 1. Security: ban/flood check
+      // ✅ 1. Anti-bot security
       const allowed = await canProceed(uid, bot, text);
       if (!allowed) return;
 
-      // ✅ 2. Hard reset
+      // ✅ 2. Force restart
       if (text === "/start") {
         console.log(`🚀 /start from ${uid}`);
-        return await safeStart(bot, uid);
+        return await safeCall(() => safeStart(bot, uid));
       }
 
-      // ✅ 3. Admin step (if in input mode)
+      // ✅ 3. Admin flow control
       if (session.adminStep) {
-        try {
-          return await handleAdminAction(bot, msg, userSessions, userOrders);
-        } catch (err) {
-          console.error("❌ [AdminStep error]:", err.message || err);
-          session.adminStep = null;
-          return await bot.sendMessage(uid, "❗️ Admin error. Returning to panel.", {
-            parse_mode: "Markdown",
-            reply_markup: MAIN_KEYBOARD
-          });
-        }
+        return await safeCall(async () => {
+          try {
+            return await handleAdminAction(bot, msg, userSessions, userOrders);
+          } catch (err) {
+            console.error("❌ [AdminStep error]:", err.message);
+            session.adminStep = null;
+            return await bot.sendMessage(uid, "❗️ Admin error. Returning to panel.", {
+              parse_mode: "Markdown",
+              reply_markup: MAIN_KEYBOARD
+            });
+          }
+        });
       }
 
-      // ✅ 4. Static menu routing
+      // ✅ 4. Main menu static routing
       switch (text) {
         case MENU_BUTTONS.BUY:
           return await safeCall(() => startOrder(bot, uid, userMessages));
@@ -78,9 +80,9 @@ export function registerMainHandler(bot) {
           break;
       }
 
-      // ✅ 5. Dynamic step-based flow
+      // ✅ 5. Dynamic flow via stepHandler
       if (typeof session.step !== "number" || session.step < 1 || session.step > 9) {
-        console.warn(`⚠️ Corrupt step reset → ${uid}`);
+        console.warn(`⚠️ Corrupt session step → Resetting: ${uid}`);
         session.step = 1;
       }
 
@@ -100,14 +102,14 @@ export function registerMainHandler(bot) {
 }
 
 /**
- * 🧼 Clean and trim input for safe flow matching
+ * 🧼 Normalizes text input (safe for comparison)
  */
 function normalizeText(txt) {
   return txt?.toString().trim().slice(0, 4096).toLowerCase();
 }
 
 /**
- * 🛡️ Safe isolated call with crash logging
+ * 🔐 Safe async call with error shield
  */
 async function safeCall(fn) {
   try {
