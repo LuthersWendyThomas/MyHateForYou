@@ -1,4 +1,4 @@
-// 📦 index.js | BalticPharmaBot — FINAL IMMORTAL v3.0.9999999 DEPLOY-TITANLOCK™
+// 📦 index.js | BalticPharmaBot — FINAL IMMORTAL v1.0.0 LOCKED DEPLOY-TITAN™
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -8,20 +8,20 @@ import { initBotInstance, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions } from "./core/sessionManager.js";
 
-// 🧠 Init + register
+// 🔧 Init bot + handlers
 initBotInstance();
 registerMainHandler(BOT.INSTANCE);
 
-// 🔁 Auto-expire inactive sessions every 10 minutes
+// 🔁 Periodic zombie session killer
 setInterval(() => {
   try {
     autoExpireSessions();
   } catch (err) {
     console.error("❌ [autoExpireSessions error]:", err.message);
   }
-}, 10 * 60 * 1000);
+}, 10 * 60 * 1000); // every 10 min
 
-// 🚀 Startup sequence
+// 🚀 Startup log + notify admin
 (async () => {
   try {
     if (!BOT.INSTANCE?.getMe) throw new Error("BOT.INSTANCE is unavailable.");
@@ -44,11 +44,10 @@ setInterval(() => {
         BOT.ADMIN_ID,
         `✅ *BalticPharmacyBot v${version}* successfully launched!\n🕒 *${now}*`,
         { parse_mode: "Markdown" }
-      ).catch((e) => {
+      ).catch(e => {
         console.warn("⚠️ Failed to notify admin:", e.message);
       });
     }
-
   } catch (err) {
     console.error("❌ [Startup crash]:", err.message || err);
     await notifyCrash("startup", err);
@@ -56,7 +55,7 @@ setInterval(() => {
   }
 })();
 
-// 🛑 Global crash catchers
+// 🛑 Global error catchers
 process.on("uncaughtException", async (err) => {
   console.error("❌ [UNCAUGHT EXCEPTION]:", err);
   await notifyCrash("uncaughtException", err);
@@ -69,8 +68,8 @@ process.on("unhandledRejection", async (reason) => {
   process.exit(1);
 });
 
-// 🔁 Graceful shutdown (SIGINT, etc.)
-["SIGINT", "SIGTERM", "SIGQUIT"].forEach((sig) => {
+// 📴 Graceful shutdown
+["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig => {
   process.on(sig, async () => {
     console.log(`\n🛑 Signal received (${sig}) → stopping bot...`);
     try {
@@ -83,11 +82,10 @@ process.on("unhandledRejection", async (reason) => {
   });
 });
 
-// ✅ Launch log
 console.log("✅ BALTICPHARMACYBOT — LIVE • LOCKED • BULLETPROOF");
 
 /**
- * 🔔 Sends crash info to admin
+ * 🔔 Admin crash alert
  */
 async function notifyCrash(type, err) {
   if (!BOT.ADMIN_ID || !BOT.INSTANCE?.sendMessage) return;
