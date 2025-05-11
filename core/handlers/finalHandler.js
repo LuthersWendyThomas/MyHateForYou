@@ -1,5 +1,5 @@
-// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v9999999999999.∞
-// LOCKABLE SYNCED BULLETPROOF FINAL + GREETING + RESET + DELIVERY + FULL CLEAN
+// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v99999999999999.∞
+// DIAMOND LOCKED • FULLY SYNCED • GREETING • RESET • DELIVERY • BULLETPROOF
 
 import fs from "fs/promises";
 import path from "path";
@@ -10,7 +10,7 @@ import { userSessions, userMessages, activeUsers, paymentTimers } from "../../st
 import { simulateDelivery } from "./deliveryHandler.js";
 
 /**
- * 🚀 Starts a new session (/start)
+ * 🚀 Starts a fresh session (/start)
  */
 export async function safeStart(bot, id) {
   const uid = String(id);
@@ -32,63 +32,42 @@ export async function safeStart(bot, id) {
 
     try {
       buffer = await fs.readFile(greetingPath);
-    } catch (e) {
-      console.warn("⚠️ [safeStart] greeting.jpg missing:", e.message);
+    } catch (err) {
+      console.warn("⚠️ [safeStart] greeting.jpg not found:", err.message);
     }
 
-    if (buffer && buffer.byteLength > 10) {
-      return await sendPhotoAndTrack(
-        bot,
-        uid,
-        buffer,
-        {
-          caption: greetingText(count),
-          parse_mode: "Markdown",
-          reply_markup: getMainMenu(uid)
-        },
-        userMessages
-      );
-    } else {
-      return await sendAndTrack(
-        bot,
-        uid,
-        `✅ Welcome to *BalticPharmacyBot*!\n\n${fallbackText(count)}`,
-        {
-          parse_mode: "Markdown",
-          reply_markup: getMainMenu(uid)
-        },
-        userMessages
-      );
+    if (buffer?.byteLength > 10) {
+      return await sendPhotoAndTrack(bot, uid, buffer, {
+        caption: greetingText(count),
+        parse_mode: "Markdown",
+        reply_markup: getMainMenu(uid)
+      }, userMessages);
     }
 
+    return await sendAndTrack(bot, uid, `✅ Welcome to *BalticPharmacyBot*!\n\n${fallbackText(count)}`, {
+      parse_mode: "Markdown",
+      reply_markup: getMainMenu(uid)
+    }, userMessages);
   } catch (err) {
     console.error("❌ [safeStart error]:", err.message);
-    return await sendAndTrack(
-      bot,
-      uid,
-      "⚠️ Session start failed. Please try again or type /start.",
-      {},
-      userMessages
-    );
+    return await sendAndTrack(bot, uid, "⚠️ Session start failed. Please try again.", {}, userMessages);
   }
 }
 
 /**
- * ✅ Finalizes successful order and resets session
+ * ✅ Finalizes confirmed order + starts delivery
  */
 export async function finishOrder(bot, id) {
   const uid = String(id);
   try {
-    const s = userSessions[uid];
-    if (!s || !s.deliveryMethod) throw new Error("Missing delivery method");
+    const session = userSessions[uid];
+    if (!session || !session.deliveryMethod) throw new Error("❌ No delivery method");
 
-    await simulateDelivery(bot, uid, s.deliveryMethod, userMessages);
+    await simulateDelivery(bot, uid, session.deliveryMethod, userMessages);
     await resetSession(uid);
 
-    return await sendAndTrack(
-      bot,
-      uid,
-      "✅ Order accepted!\n🚚 Delivery in progress...\n\nYou’ve been returned to the main menu:",
+    return await sendAndTrack(bot, uid,
+      "✅ Order accepted!\n🚚 Delivery is on the way...\n\nReturned to main menu:",
       {
         parse_mode: "Markdown",
         reply_markup: getMainMenu(uid)
@@ -97,30 +76,23 @@ export async function finishOrder(bot, id) {
     );
   } catch (err) {
     console.error("❌ [finishOrder error]:", err.message);
-    return await sendAndTrack(
-      bot,
-      uid,
-      "❗️ Delivery error. Please try again later or use /start.",
-      {},
-      userMessages
-    );
+    return await sendAndTrack(bot, uid, "❗️ Delivery error. Please try again or type /start.", {}, userMessages);
   }
 }
 
 /**
- * 🧼 Clears all session state for the user
+ * 🧼 Public session reset (post-payment or cancel)
  */
 export async function resetSession(id) {
-  const uid = String(id);
-  await fullSessionReset(uid);
-  console.log(`🧼 Session fully cleared: ${uid}`);
+  await fullSessionReset(String(id));
 }
 
 /**
- * 🧯 Total session teardown — state, timers, messages, flags
+ * 🧯 Absolute session wipe — state, timers, flags, messages
  */
 async function fullSessionReset(uid) {
   try {
+    if (!uid) return;
     await clearTimers(uid);
     await clearUserMessages(uid);
     await resetUser(uid);
@@ -132,67 +104,60 @@ async function fullSessionReset(uid) {
 
     const session = userSessions[uid];
     if (session) {
-      const fields = [
-        "paymentInProgress", "deliveryInProgress", "cleanupScheduled",
-        "paymentTimer", "expectedAmount", "wallet", "currency",
-        "quantity", "product", "category", "promoCode", "deliveryMethod",
-        "deliveryFee", "adminStep", "step", "createdAt", "lastText"
-      ];
-      for (const key of fields) delete session[key];
+      [
+        "paymentInProgress", "deliveryInProgress", "cleanupScheduled", "paymentTimer",
+        "expectedAmount", "wallet", "currency", "quantity", "product", "category",
+        "promoCode", "deliveryMethod", "deliveryFee", "adminStep", "step", "createdAt", "lastText"
+      ].forEach(k => delete session[k]);
+
       delete userSessions[uid];
     }
 
-    if (activeUsers.has(uid)) {
-      activeUsers.delete(uid);
-    }
+    activeUsers.remove(uid);
 
     if (process.env.DEBUG_MESSAGES === "true") {
-      console.log(`🧯 [fullSessionReset] Complete for ${uid}`);
+      console.log(`🧯 [fullSessionReset] Finished for ${uid}`);
     }
   } catch (err) {
-    console.error("❌ [fullSessionReset error]:", err.message || err);
+    console.error("❌ [fullSessionReset error]:", err.message);
   }
 }
 
 /**
- * 📸 Greeting caption with bot intro
+ * 📸 Greeting caption
  */
 function greetingText(count) {
   return `
 🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
 
-💊 Operating in *30+ US cities*  
+💊 *30+ US cities*  
 🚚 Delivery in *45 minutes or less*  
 🕵️ Ultra-discreet • No questions asked  
 
-✨ Trusted Quality *Since 2020*
-✨ *24/7* Live Support & Fully Automated Service
-✨ *Drop / Courier Options Available*
+✨ *Since 2020* | *24/7 automated service*  
+✨ Drop / Courier options available
 
-🌆 *Drop anywhere in your city* 📍  
-🌆 *Courier to your agreed location* 🚚  
+📦 *Stock = button ON*  
+🌆 *City = button ON*  
+✅ Always updated!
 
-✅ *U see product button ON = IN STOCK!*  
-✅ *U see city button ON = THAT CITY IS ON!*  
-✅ *We constantly update products & cities!*
-
-❗️ *Do not speak or photograph couriers*  
-⛔ Any violation = instant *BAN*  
+❗️ *No photos or talking to couriers*  
+⛔ Instant *BAN* for any violation
 
 👥 Active users: *${count}*
 `.trim();
 }
 
 /**
- * 💬 Text fallback when greeting image unavailable
+ * 💬 Text fallback (no greeting.jpg)
  */
 function fallbackText(count) {
   return `
-🇺🇸 *BalticPharmacyBot* — now live in 30+ US cities  
+🇺🇸 *BalticPharmacyBot* — 30+ cities live  
 
-💊 Quality, Speed, Stealth  
-🚚 *Courier* or *Drop* delivery in 45 min  
-🔒 Fully anonymous crypto payments  
+💊 Quality • Speed • Privacy  
+🚚 45min courier/drop  
+💵 Anonymous crypto payments  
 
 👥 Active users: *${count}*
 `.trim();
