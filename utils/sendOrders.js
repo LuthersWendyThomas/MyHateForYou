@@ -1,10 +1,10 @@
-// 📦 utils/sendOrders.js | FINAL IMMORTAL v3.0 — BULLETPROOF VIP STATUS SYNC+
+// 📦 utils/sendOrders.js | IMMORTAL FINAL v999999999.∞ — BULLETPROOF VIP STATUS SYNCED + UX LOCKED
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { userOrders } from "../state/userState.js";
 
 /**
- * ✅ Shows user their order statistics and VIP progress
+ * ✅ Parodo naudotojo užsakymų statistiką ir VIP progresą
  */
 export async function sendOrders(bot, id, userId, userMessages = {}) {
   try {
@@ -20,7 +20,7 @@ export async function sendOrders(bot, id, userId, userMessages = {}) {
       text = `
 📋 *You have no orders yet.*
 
-🛍️ To place your first order – tap the *BUY* button below.
+🛍️ To place your first order — tap the *BUY* button below.
 
 ❓ Questions? Tap *HELP*.
       `.trim();
@@ -48,13 +48,13 @@ ${vipLine}
   } catch (err) {
     console.error("❌ [sendOrders error]:", err.message || err);
     try {
-      await bot.sendMessage(id, "❗️ Failed to load order history. Please try again.");
+      await bot.sendMessage(id, "❗️ Failed to load your order stats. Please try again.");
     } catch {}
   }
 }
 
 /**
- * 🔁 Calculates how many orders left until VIP status
+ * 🔁 Skaičiuoja, kiek užsakymų trūksta iki VIP statuso
  */
 function getMilestone(count) {
   if (count >= 10) return 0;
