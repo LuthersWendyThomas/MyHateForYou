@@ -1,3 +1,5 @@
+// 📦 config/discountUtils.js | BULLETPROOF SYNC — NO CIRCULAR DEPENDENCIES
+
 export function resolveDiscount({ userId, code, region, city, category, productName }, DISCOUNTS) {
   let max = 0;
 
