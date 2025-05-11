@@ -5,7 +5,7 @@ import path from "path";
 
 const LOG_DIR = path.resolve("logs");
 const MAX_AGE_DAYS = 3;
-const LOOP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h interval
+const LOOP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
 
 /**
  * 📆 Calculates how many days ago a timestamp was
@@ -15,7 +15,7 @@ function daysOld(timestamp) {
 }
 
 /**
- * 🧹 Deletes all .log files older than MAX_AGE_DAYS
+ * 🧹 Deletes all `.log` files older than MAX_AGE_DAYS
  */
 function cleanLogs() {
   const now = new Date().toLocaleString("en-GB");
@@ -46,18 +46,18 @@ function cleanLogs() {
           deleted++;
         }
       } catch (err) {
-        console.error(`❌ Error reading/deleting "${file}": ${err.message}`);
+        console.error(`❌ [cleanOldLogs] Error processing "${file}": ${err.message}`);
       }
     }
 
-    console.log(`✅ Cleanup complete. Deleted ${deleted} file(s).\n`);
+    console.log(`✅ Cleanup complete. Deleted ${deleted} log file(s).\n`);
   } catch (err) {
     console.error("❌ [cleanOldLogs] Fatal error:", err.message || err);
   }
 }
 
-// 🕒 Execute immediately
+// 🕒 Run immediately
 cleanLogs();
 
-// 🔁 Schedule next cleanups every 24h
+// 🔁 Schedule next cleanup every 24h
 setInterval(cleanLogs, LOOP_INTERVAL_MS);
