@@ -1,4 +1,4 @@
-// 📦 utils/sendProfile.js | FINAL IMMORTAL v3.0 — BULLETPROOF SYNCED PROFILE
+// 📦 utils/sendProfile.js | IMMORTAL FINAL v999999999.∞ — BULLETPROOF SYNCED PROFILE LOCK
 
 import { userSessions, userOrders } from "../state/userState.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
@@ -8,14 +8,15 @@ import { sendAndTrack } from "../helpers/messageUtils.js";
  */
 export async function sendProfile(bot, id, userMessages = {}) {
   try {
-    const uid = String(id).trim();
+    const uid = String(id || "").trim();
     if (!bot || !uid) return;
 
     const session = typeof userSessions[uid] === "object" ? userSessions[uid] : {};
-    const orderCount = typeof userOrders[uid] === "number" ? userOrders[uid] : 0;
+    const orderCount = Number.isInteger(userOrders[uid]) ? userOrders[uid] : 0;
 
     const chat = await bot.getChat(id).catch(() => null);
     const username = chat?.username ? `@${chat.username}` : "— none —";
+    const city = session?.city || "—";
 
     let status = "🚀 *New user*";
     if (orderCount >= 10) status = "👑 *VIP client*";
@@ -25,11 +26,12 @@ export async function sendProfile(bot, id, userMessages = {}) {
 👤 *Your Profile*
 
 🔗 Telegram: *${username}*
+📍 City: *${city}*
 📦 Completed Orders: *${orderCount}*
 🏅 Status: ${status}
 
-🧾 All data auto-reset after every session.
-🛡️ Fully anonymous | 0 data stored on server.
+🧾 Session data is temporary and auto-cleared.
+🛡️ Fully anonymous. Nothing is stored permanently.
     `.trim();
 
     return await sendAndTrack(bot, uid, profile, {
@@ -40,7 +42,7 @@ export async function sendProfile(bot, id, userMessages = {}) {
   } catch (err) {
     console.error("❌ [sendProfile error]:", err.message || err);
     try {
-      await bot.sendMessage(id, "⚠️ Failed to retrieve profile information.");
+      await bot.sendMessage(id, "⚠️ Failed to load your profile.");
     } catch {}
   }
 }
