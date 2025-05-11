@@ -50,7 +50,7 @@ services:
 
       # --- Available Cities (📍 UX Layer)
       - key: CITIES
-        value: Vilnius,Kaunas
+        value: New York,Boston,Philadelphia,Baltimore,Washington,Charlotte,Los Angeles,San Diego,San Jose,San Francisco,Houston,Dallas,Austin,San Antonio,Atlanta,Miami,El Paso,Jacksonville,Fort Worth,Nashville,Memphis,Chicago,Detroit,Indianapolis,Columbus,Louisville,Seattle,Portland,Denver,Phoenix,Las Vegas,Oklahoma City
         sync: false
 
   - type: worker
