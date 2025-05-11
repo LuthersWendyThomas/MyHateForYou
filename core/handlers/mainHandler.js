@@ -75,26 +75,24 @@ export function registerMainHandler(bot) {
           break;
       }
 
-      // ✅ Step-based session routing
-      const step = Number(session.step);
-      if (!Number.isInteger(step) || step < 1 || step > 9) {
-        console.warn(`⚠️ Corrupt step "${session.step}" → Resetting session for ${uid}`);
-        session.step = 1;
-      }
+      // 🧠 Handle button interactions via stepHandler
+import { stepHandler } from "./core/handlers/stepHandler.js";
 
-      return await safeCall(() => handleStep(bot, uid, text, userMessages));
-    } catch (err) {
-      console.error("❌ [MainHandler crash]:", err.message || err);
-      try {
-        return await bot.sendMessage(uid, "❗️ Internal error.\nTry again or type /start.", {
-          parse_mode: "Markdown",
-          reply_markup: MAIN_KEYBOARD
-        });
-      } catch (fallbackErr) {
-        console.warn("⚠️ [Fallback send failed]:", fallbackErr.message);
-      }
+BOT.INSTANCE.on("callback_query", async (query) => {
+  try {
+    await stepHandler(BOT.INSTANCE, query);
+  } catch (err) {
+    console.error("❌ [callback_query] stepHandler error:", err);
+    try {
+      await BOT.INSTANCE.answerCallbackQuery(query.id, {
+        text: "❌ Klaida vykdant veiksmą.",
+        show_alert: true,
+      });
+    } catch (callbackErr) {
+      console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
     }
-  });
+  }
+});
 }
 
 /**
@@ -114,22 +112,3 @@ async function safeCall(fn) {
     console.error("❌ [safeCall error]:", err.message || err);
   }
 }
-
-// 🧠 Handle button interactions via stepHandler
-import { stepHandler } from "./core/handlers/stepHandler.js";
-
-BOT.INSTANCE.on("callback_query", async (query) => {
-  try {
-    await stepHandler(BOT.INSTANCE, query);
-  } catch (err) {
-    console.error("❌ [callback_query] stepHandler error:", err);
-    try {
-      await BOT.INSTANCE.answerCallbackQuery(query.id, {
-        text: "❌ Klaida vykdant veiksmą.",
-        show_alert: true,
-      });
-    } catch (callbackErr) {
-      console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
-    }
-  }
-});
