@@ -1,3 +1,6 @@
+// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL v999999999.∞
+// FULL SYNC W/ ADMINPANEL • DISCOUNT CONTROL • ERROR SAFE • SESSION LOCKED
+
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages, userOrders } from "../../state/userState.js";
 import { safeStart } from "./finalHandler.js";
@@ -39,7 +42,7 @@ export function registerMainHandler(bot) {
 
       const isAdmin = uid === String(BOT.ADMIN_ID);
 
-      // ✅ Security & Spam check
+      // ✅ Security check
       const allowed = await canProceed(uid, bot, text);
       if (!allowed) return;
 
@@ -49,23 +52,12 @@ export function registerMainHandler(bot) {
         return await safeCall(() => safeStart(bot, uid));
       }
 
-      // ✅ Admin flow (if in progress)
+      // ✅ Admin flow step handling
       if (session.adminStep) {
-        return await safeCall(async () => {
-          try {
-            return await handleAdminAction(bot, msg, userSessions, userOrders);
-          } catch (err) {
-            console.error("❌ [AdminStep error]:", err.message);
-            session.adminStep = null;
-            return await bot.sendMessage(uid, "❗️ Admin error. Returning to panel.", {
-              parse_mode: "Markdown",
-              reply_markup: MAIN_KEYBOARD
-            });
-          }
-        });
+        return await safeCall(() => handleAdminAction(bot, msg, userSessions));
       }
 
-      // ✅ Static main menu routing
+      // ✅ Static routing
       switch (text) {
         case MENU_BUTTONS.BUY:
           return await safeCall(() => startOrder(bot, uid, userMessages));
@@ -83,7 +75,7 @@ export function registerMainHandler(bot) {
           break;
       }
 
-      // ✅ Flow routing via session step
+      // ✅ Step-based session routing
       const step = Number(session.step);
       if (!Number.isInteger(step) || step < 1 || step > 9) {
         console.warn(`⚠️ Corrupt step "${session.step}" → Resetting session for ${uid}`);
