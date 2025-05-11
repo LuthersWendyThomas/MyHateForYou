@@ -21,22 +21,6 @@ export const DISCOUNTS = {
   products: {}
 };
 
-// 🧠 Auto-sync categories/products from products.js
-for (const category of Object.keys(products)) {
-  DISCOUNTS.categories[category] ||= { active: false, percentage: 0 };
-  for (const product of products[category]) {
-    DISCOUNTS.products[product.name] ||= { active: false, percentage: 0 };
-  }
-}
-
-// 🧠 Auto-sync regions + cities from regions.js
-for (const [region, data] of Object.entries(REGION_MAP)) {
-  DISCOUNTS.regions[region] ||= { active: false, percentage: 0 };
-  for (const city of Object.keys(data.cities)) {
-    DISCOUNTS.cities[city] ||= { active: false, percentage: 0 };
-  }
-}
-
 export { resolveDiscount };
 
 export function getActiveDiscounts() {
