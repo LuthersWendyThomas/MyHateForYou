@@ -1,5 +1,5 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v3_999999999999.∞
-// GODMODE BULLETPROOF MATIC FIXED + QR + SYNC + ADMIN + SESSION LOCK
+// 📦 core/handlers/paymentHandler.js | DIAMOND FINAL v999999999999999.∞
+// 24/7 BULLETPROOF | BTC, ETH, MATIC, SOL | QR + PRICE SYNC + DELIVERY INTEGRATED
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -22,35 +22,16 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function fetchWithRetry(fn, retries = 5, baseDelay = 1500) {
-  let lastErr;
+async function fetchWithRetry(fn, retries = 4, delay = 1200) {
   for (let i = 0; i <= retries; i++) {
     try {
-      if (i > 0) await wait(i * baseDelay);
+      if (i > 0) await wait(i * delay);
       return await fn();
     } catch (err) {
-      lastErr = err;
-      console.warn(`⚠️ [fetchWithRetry ${i + 1}/${retries}]:`, err.message);
+      if (i === retries) throw err;
+      console.warn(`⚠️ [Retry ${i + 1}]`, err.message);
     }
   }
-  throw lastErr;
-}
-
-async function sendSafe(fn, ...args) {
-  for (let i = 0; i < 3; i++) {
-    try {
-      return await fn(...args);
-    } catch (err) {
-      if (err.response?.statusCode === 429 || err.message?.includes("429")) {
-        const delay = (i + 1) * 2000;
-        console.warn(`⏳ Telegram rate limit hit → waiting ${delay}ms`);
-        await wait(delay);
-        continue;
-      }
-      console.warn("⚠️ [sendSafe error]:", err.message);
-    }
-  }
-  return null;
 }
 
 function normalizeCurrency(input) {
@@ -60,14 +41,29 @@ function normalizeCurrency(input) {
 async function getSafeRate(currency) {
   const symbol = normalizeCurrency(currency);
   const coin = SUPPORTED[symbol];
-  if (!coin) throw new Error(`Unsupported currency: "${symbol}"`);
+  if (!coin) throw new Error(`Unsupported currency: ${symbol}`);
 
   const rate = await fetchWithRetry(() => fetchCryptoPrice(symbol));
-  if (!Number.isFinite(rate) || rate <= 0) {
-    throw new Error(`Invalid rate for "${symbol}"`);
-  }
-
+  if (!Number.isFinite(rate) || rate <= 0) throw new Error(`Invalid rate for ${symbol}`);
   return { rate, symbol };
+}
+
+async function sendSafe(fn, ...args) {
+  for (let i = 0; i < 3; i++) {
+    try {
+      return await fn(...args);
+    } catch (err) {
+      if (String(err?.message || "").includes("429")) {
+        const delay = 1500 + i * 1000;
+        console.warn(`⏳ Rate limit hit. Retrying in ${delay}ms`);
+        await wait(delay);
+      } else {
+        console.warn("⚠️ sendSafe error:", err.message);
+        break;
+      }
+    }
+  }
+  return null;
 }
 
 export async function handlePayment(bot, id, userMessages) {
@@ -81,7 +77,7 @@ export async function handlePayment(bot, id, userMessages) {
   try {
     const usd = parseFloat(s.totalPrice);
     if (!s.wallet || !s.currency || !s.product?.name || !s.quantity || !Number.isFinite(usd)) {
-      throw new Error("❌ Missing or invalid payment session data");
+      throw new Error("❌ Invalid payment session data");
     }
 
     const { rate, symbol } = await getSafeRate(s.currency);
@@ -89,11 +85,10 @@ export async function handlePayment(bot, id, userMessages) {
     if (!Number.isFinite(amount) || amount <= 0) throw new Error("❌ Invalid crypto amount");
 
     s.expectedAmount = amount;
+    s.step = 8;
 
     const qr = await generateQR(symbol, amount, s.wallet);
     if (!qr || !(qr instanceof Buffer)) throw new Error("❌ QR generation failed");
-
-    s.step = 8;
 
     const summary = `
 💸 *Payment summary:*
@@ -106,8 +101,8 @@ export async function handlePayment(bot, id, userMessages) {
 💰 ${usd.toFixed(2)}$ ≈ ${amount} ${symbol}
 🏦 Wallet: \`${s.wallet}\`
 
-⏱ Estimated delivery: ~30 minutes
-✅ Scan the QR or copy the address.`.trim();
+⏱ ETA: ~30 minutes
+✅ Scan QR or copy the address.`.trim();
 
     await sendSafe(() => bot.sendChatAction(id, "upload_photo"));
     await sendSafe(() => bot.sendPhoto(id, qr, {
@@ -118,7 +113,7 @@ export async function handlePayment(bot, id, userMessages) {
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
 
     const timer = setTimeout(() => {
-      console.warn(`⌛️ Payment expired: ${id}`);
+      console.warn(`⌛️ Payment timeout: ${id}`);
       delete paymentTimers[id];
       delete userSessions[id];
     }, 30 * 60 * 1000);
@@ -132,7 +127,7 @@ export async function handlePayment(bot, id, userMessages) {
     ], userMessages);
 
   } catch (err) {
-    console.error("❌ [handlePayment error]:", err.message);
+    console.error("❌ [handlePayment]:", err.message);
     s.paymentInProgress = false;
     return sendAndTrack(bot, id, `❗️ Payment setup failed.\n*${err.message}*`, {
       parse_mode: "Markdown"
@@ -146,49 +141,36 @@ export async function handlePaymentCancel(bot, id, userMessages) {
     return sendAndTrack(bot, id, "⚠️ No active payment to cancel.", {}, userMessages);
   }
 
-  if (s.paymentTimer) {
-    clearTimeout(s.paymentTimer);
-    delete s.paymentTimer;
-  }
-
-  if (paymentTimers[id]) {
-    clearTimeout(paymentTimers[id]);
-    delete paymentTimers[id];
-  }
-
-  s.paymentInProgress = false;
-  delete s.expectedAmount;
-
+  clearTimeout(s.paymentTimer);
+  delete paymentTimers[id];
   delete userSessions[id];
 
   await sendAndTrack(bot, id, "❌ Payment canceled. Returning to main menu...", {}, userMessages);
-  return setTimeout(() => safeStart(bot, id), 300);
+  return setTimeout(() => safeStart(bot, id), 500);
 }
 
 export async function handlePaymentConfirmation(bot, id, userMessages) {
   const s = userSessions[id];
   if (!(s && s.step === 9 && s.wallet && s.currency && s.expectedAmount)) {
-    return sendAndTrack(bot, id, "⚠️ Invalid session. Use /start to begin again.", {}, userMessages);
+    return sendAndTrack(bot, id, "⚠️ Invalid session. Type /start to begin.", {}, userMessages);
   }
 
   try {
-    await sendAndTrack(bot, id, "⏳ Verifying payment on the blockchain...", {}, userMessages);
+    await sendAndTrack(bot, id, "⏳ Checking payment on blockchain...", {}, userMessages);
 
     const symbol = normalizeCurrency(s.currency);
-    const confirmed = await fetchWithRetry(() =>
+    const paid = await fetchWithRetry(() =>
       checkPayment(s.wallet, symbol, s.expectedAmount, bot)
     );
 
-    if (!confirmed) {
-      return sendKeyboard(bot, id, "❌ Payment not yet detected. Try again or cancel:", [
+    if (!paid) {
+      return sendKeyboard(bot, id, "❌ Payment not yet detected. Try again:", [
         [{ text: "✅ CONFIRM" }],
         [{ text: "❌ Cancel payment" }]
       ], userMessages);
     }
 
-    if (s.paymentTimer) clearTimeout(s.paymentTimer);
-    if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
-    delete s.paymentTimer;
+    clearTimeout(s.paymentTimer);
     delete paymentTimers[id];
 
     delete s.paymentInProgress;
@@ -196,15 +178,15 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
 
     userOrders[id] = (userOrders[id] || 0) + 1;
 
-    await saveOrder(id, s.city, s.product.name, s.totalPrice).catch(err =>
-      console.warn("⚠️ [saveOrder error]:", err.message)
+    await saveOrder(id, s.city, s.product.name, s.totalPrice).catch(e =>
+      console.warn("⚠️ [saveOrder failed]:", e.message)
     );
 
-    await sendAndTrack(bot, id, "✅ Payment confirmed! Delivery is on the way...", {}, userMessages);
+    await sendAndTrack(bot, id, "✅ Payment confirmed! Delivery is starting...", {}, userMessages);
 
     if (BOT.ADMIN_ID && bot?.sendMessage) {
       await sendSafe(() =>
-        bot.sendMessage(BOT.ADMIN_ID, `✅ New successful payment from \`${s.wallet}\``, {
+        bot.sendMessage(BOT.ADMIN_ID, `✅ New payment confirmed → ${s.wallet}`, {
           parse_mode: "Markdown"
         })
       );
@@ -212,7 +194,7 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
 
     return simulateDelivery(bot, id);
   } catch (err) {
-    console.error("❌ [handlePaymentConfirmation error]:", err.message);
+    console.error("❌ [handlePaymentConfirmation]:", err.message);
     return sendAndTrack(bot, id, "❗️ Blockchain check failed. Try again later.", {}, userMessages);
   }
 }
