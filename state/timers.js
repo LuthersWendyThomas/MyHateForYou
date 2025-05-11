@@ -4,7 +4,7 @@ export const activeTimers = {};     // { userId: Timeout } – delivery, cleanup
 export const paymentTimers = {};    // { userId: Timeout } – payment step (8)
 
 /**
- * ✅ Assigns UI/delivery timer with auto-clear
+ * ✅ Assigns active UI/delivery timer with auto-clear
  */
 export function setActiveTimer(id, timerId) {
   const uid = safeId(id);
@@ -19,7 +19,7 @@ export function setActiveTimer(id, timerId) {
 }
 
 /**
- * ✅ Assigns payment timer with auto-clear
+ * ✅ Assigns payment confirmation timer
  */
 export function setPaymentTimer(id, timerId) {
   const uid = safeId(id);
@@ -34,19 +34,19 @@ export function setPaymentTimer(id, timerId) {
 }
 
 /**
- * ✅ Clears *all* timers globally
+ * ✅ Clears *ALL* system timers (for restart/reset)
  */
 export function clearAllTimers() {
   try {
-    Object.entries(activeTimers).forEach(([uid, timer]) => {
+    for (const [uid, timer] of Object.entries(activeTimers)) {
       if (isValidTimer(timer)) clearTimeout(timer);
       delete activeTimers[uid];
-    });
+    }
 
-    Object.entries(paymentTimers).forEach(([uid, timer]) => {
+    for (const [uid, timer] of Object.entries(paymentTimers)) {
       if (isValidTimer(timer)) clearTimeout(timer);
       delete paymentTimers[uid];
-    });
+    }
 
     console.log("🧨 [clearAllTimers] → All timers cleared (UI + payment)");
   } catch (err) {
@@ -55,22 +55,26 @@ export function clearAllTimers() {
 }
 
 /**
- * ✅ Clears timers for specific user
+ * ✅ Clears all timers for a specific user
  */
 export function clearTimersForUser(id) {
   const uid = safeId(id);
   if (!uid) return;
 
-  if (activeTimers[uid]) {
-    clearTimeout(activeTimers[uid]);
-    delete activeTimers[uid];
-    console.log(`🕒 [clearTimersForUser] UI timer cleared → ${uid}`);
-  }
+  try {
+    if (activeTimers[uid]) {
+      clearTimeout(activeTimers[uid]);
+      delete activeTimers[uid];
+      console.log(`🕒 [clearTimersForUser] UI timer cleared → ${uid}`);
+    }
 
-  if (paymentTimers[uid]) {
-    clearTimeout(paymentTimers[uid]);
-    delete paymentTimers[uid];
-    console.log(`💳 [clearTimersForUser] Payment timer cleared → ${uid}`);
+    if (paymentTimers[uid]) {
+      clearTimeout(paymentTimers[uid]);
+      delete paymentTimers[uid];
+      console.log(`💳 [clearTimersForUser] Payment timer cleared → ${uid}`);
+    }
+  } catch (err) {
+    console.error("❌ [clearTimersForUser error]:", err.message || err);
   }
 }
 
