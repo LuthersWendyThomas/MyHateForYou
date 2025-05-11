@@ -1,4 +1,4 @@
-// 📦 core/handlers/stepHandler.js | IMMORTAL FINAL v999999999999.∞
+// 📦 core/handlers/stepHandler.js | IMMORTAL FINAL v3.∞
 // REGION SYNC + PROMOCODE + DISCOUNT READY + WALLET SELECTOR + DELIVERY LOGIC POLISHED
 
 import { deliveryMethods } from "../../config/features.js";
