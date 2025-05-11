@@ -1,20 +1,21 @@
-// 📛 utils/punishUser.js | IMMORTAL v3.1 — FINAL BULLETPROOF SHIELD SYNCED
+// 📛 utils/punishUser.js | IMMORTAL FINAL v999999999.∞ — BULLETPROOF SHIELD + AUTO-DELETE SYNCED LOCKED
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { autodeleteEnabled } from "../config/features.js";
 import { userMessages } from "../state/userState.js";
 
 /**
- * ⚠️ Warns user about invalid action
- * Deletes the warning message after 3s if autodelete is enabled
+ * ⚠️ Warns user for invalid actions
+ * Auto-deletes the warning if feature is enabled
  */
 export async function punish(bot, id, messages = userMessages) {
   try {
     if (!bot || !id) return;
 
     const uid = String(id).trim();
-    const warning = "⚠️ *Invalid action.*\nPlease use the *buttons below*.";
+    if (!uid || uid === "undefined" || uid === "null") return;
 
+    const warning = "⚠️ *Invalid action.*\nPlease use the *buttons below*.";
     const msg = await sendAndTrack(
       bot,
       uid,
@@ -30,13 +31,17 @@ export async function punish(bot, id, messages = userMessages) {
     const shouldDelete = autodeleteEnabled?.status === true;
 
     if (shouldDelete && messageId) {
-      setTimeout(() => {
-        bot.deleteMessage(uid, messageId).catch(err => {
-          console.warn(`⚠️ Failed to delete punish message (${messageId}):`, err.message);
-        });
+      setTimeout(async () => {
+        try {
+          await bot.deleteMessage(uid, messageId);
+          if (process.env.DEBUG_MESSAGES === "true") {
+            console.log(`🗑️ [punish] Deleted warning → ${uid} :: ${messageId}`);
+          }
+        } catch (err) {
+          console.warn(`⚠️ [punish] Failed to delete message #${messageId}:`, err.message);
+        }
       }, 3000);
     }
-
   } catch (err) {
     console.error("❌ [punish error]:", err.message || err);
   }
