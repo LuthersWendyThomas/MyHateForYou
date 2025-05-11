@@ -1,9 +1,15 @@
-// 📦 utils/sendStart.js | FINAL IMMORTAL v999999999 — MAIN MENU WRAPPER (SAFE SYNC)
+// 📦 utils/sendStart.js | FINAL IMMORTAL v999999999 — MAIN ENTRYPOINT WRAPPER (SAFE MIRROR SYNCED)
 
 import { safeStart } from "../core/handlers/finalHandler.js";
 
 /**
- * ✅ Wrapper: start session and show main menu (uses safeStart internally)
+ * ✅ Entrypoint wrapper — launches main menu safely via internal safeStart
+ * 🔒 Fully synced with system reset, delivery handling, cleanup and sessions
+ *
+ * Used in:
+ *  • /start handler
+ *  • fallback recovery flow
+ *  • button-based relaunch from stepHandler / finalHandler
  */
 export async function sendStart(bot, id, userMessages = {}) {
   try {
@@ -15,6 +21,8 @@ export async function sendStart(bot, id, userMessages = {}) {
     console.error("❌ [sendStart error]:", err.message || err);
     try {
       return await bot.sendMessage(id, "⚠️ Failed to load start screen. Please type /start.");
-    } catch {}
+    } catch (fallbackErr) {
+      console.warn("⚠️ [sendStart fallback failed]:", fallbackErr.message);
+    }
   }
 }
