@@ -12,25 +12,6 @@ import { autoExpireSessions } from "./core/sessionManager.js";
 initBotInstance();
 registerMainHandler(BOT.INSTANCE);
 
-// 🧠 Handle button interactions via stepHandler
-import { stepHandler } from "./core/handlers/stepHandler.js";
-
-BOT.INSTANCE.on("callback_query", async (query) => {
-  try {
-    await stepHandler(BOT.INSTANCE, query);
-  } catch (err) {
-    console.error("❌ [callback_query] stepHandler error:", err);
-    try {
-      await BOT.INSTANCE.answerCallbackQuery(query.id, {
-        text: "❌ Klaida vykdant veiksmą.",
-        show_alert: true,
-      });
-    } catch (callbackErr) {
-      console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
-    }
-  }
-});
-
 // 🔁 Periodic zombie session killer
 setInterval(() => {
   try {
