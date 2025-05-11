@@ -1,9 +1,9 @@
-// 📦 helpers/keyboardConstants.js | IMMORTAL FINAL v9999999999 — SYNCED BULLETPROOF DIAMONDLOCK
+// 📦 helpers/keyboardConstants.js | FINAL IMMORTAL v99999999999 — SYNCED BULLETPROOF DIAMONDLOCK
 
 import { BOT } from "../config/config.js";
 
 /**
- * ✅ Centralized button labels for all flows
+ * ✅ Centralized button labels for all flows (user/admin)
  */
 export const MENU_BUTTONS = {
   START: "🚀 START",
@@ -12,13 +12,13 @@ export const MENU_BUTTONS = {
   ORDERS: "📋 MY ORDERS",
   HELP: "❓ HELP",
 
-  // Admin zone
+  // Admin section
   STATS: "📊 STATISTICS",
   ADMIN: "🔧 ADMIN PANEL"
 };
 
 /**
- * ✅ Legacy fallback keyboard (used as last resort)
+ * ✅ Static fallback keyboard (safe failover)
  */
 export const MAIN_KEYBOARD = {
   reply_markup: {
@@ -34,14 +34,14 @@ export const MAIN_KEYBOARD = {
 };
 
 /**
- * ✅ Builds smart user/admin keyboard on runtime
+ * ✅ Runtime dynamic main menu (user/admin-safe)
  * @param {string|number} id — Telegram user ID
- * @returns {object} Fully structured Telegram keyboard
+ * @returns {object} Telegram keyboard reply_markup
  */
 export function getMainMenu(id) {
   const uid = String(id || "").trim();
   const adminId = String(BOT?.ADMIN_ID || "").trim();
-  const isAdmin = uid && adminId && uid === adminId;
+  const isAdmin = uid === adminId;
 
   const rows = [
     [{ text: MENU_BUTTONS.BUY }, { text: MENU_BUTTONS.HELP }],
