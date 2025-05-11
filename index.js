@@ -99,4 +99,4 @@ async function notifyCrash(type, err) {
 }
 
 // 🔄 Final discount sync (MUST BE LAST)
-import "./config/discountSync.js"; // ✅ FINAL PLACEMENT — bulletproof, no circular risk
+import "./config/discountSync.js"; // ✅ BULLETPROOF FINAL PLACEMENT
