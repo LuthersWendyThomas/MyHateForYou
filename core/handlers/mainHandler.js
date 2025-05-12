@@ -24,6 +24,23 @@ export function registerMainHandler(bot) {
     return;
   }
 
+// 🧠 Handle button interactions via stepHandler
+BOT.INSTANCE.on("callback_query", async (query) => {
+  try {
+    await handleStep(BOT.INSTANCE, query.message.chat.id, query.data, userMessages);
+  } catch (err) {
+    console.error("❌ [callback_query] stepHandler error:", err);
+    try {
+      await BOT.INSTANCE.answerCallbackQuery(query.id, {
+        text: "❌ Error.",
+        show_alert: true,
+      });
+    } catch (callbackErr) {
+      console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
+    }
+  }
+});
+
   bot.on("message", async (msg) => {
     const id = msg?.chat?.id;
     let text = msg?.text;
@@ -114,20 +131,3 @@ async function safeCall(fn) {
     console.error("❌ [safeCall error]:", err.message || err);
   }
 }
-
-// 🧠 Handle button interactions via stepHandler
-BOT.INSTANCE.on("callback_query", async (query) => {
-  try {
-    await handleStep(BOT.INSTANCE, query.message.chat.id, query.data, userMessages);
-  } catch (err) {
-    console.error("❌ [callback_query] stepHandler error:", err);
-    try {
-      await BOT.INSTANCE.answerCallbackQuery(query.id, {
-        text: "❌ Error.",
-        show_alert: true,
-      });
-    } catch (callbackErr) {
-      console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
-    }
-  }
-});
