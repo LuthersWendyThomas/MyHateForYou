@@ -1,4 +1,4 @@
-// 📦 state/stateManager.js | FINAL IMMORTAL v1.0.0•GODMODE DIAMONDLOCK
+// 📦 state/stateManager.js | FINAL IMMORTAL v1.0.1•GODMODE DIAMONDLOCK
 // SYNCED • BULLETPROOF CORE • FULL RESET • ULTRA-OPTIMIZED
 
 import {
@@ -15,7 +15,8 @@ import {
 } from "./userState.js";
 
 /**
- * 🧼 Fully clears all state for a user: sessions, orders, messages, timers, bans, flags
+ * 🧼 Fully clears all state for a user:
+ * sessions, orders, messages, timers, bans, flags
  */
 export function resetUser(id) {
   const uid = sanitizeId(id);
@@ -24,6 +25,7 @@ export function resetUser(id) {
   try {
     clearTimers(uid);
 
+    // Wipe everything (including order count)
     [
       userSessions,
       userOrders,
@@ -37,6 +39,7 @@ export function resetUser(id) {
     });
 
     activeUsers.remove(uid);
+
     logAction("🧼 [resetUser]", "All state cleared", uid);
   } catch (err) {
     logError("❌ [resetUser error]", err, uid);
@@ -44,7 +47,8 @@ export function resetUser(id) {
 }
 
 /**
- * 🧹 Clears only security/activity flags and tracked messages (not orders or session)
+ * 🧹 Clears only security/activity flags and tracked messages
+ * (does NOT affect session data or order history)
  */
 export function clearUserActivity(id) {
   const uid = sanitizeId(id);
@@ -56,6 +60,7 @@ export function clearUserActivity(id) {
     delete antiSpam[uid];
     delete antiFlood[uid];
     bannedUntil[uid] = null;
+
     activeUsers.remove(uid);
 
     logAction("🧹 [clearUserActivity]", "Security flags cleared", uid);
@@ -65,7 +70,7 @@ export function clearUserActivity(id) {
 }
 
 /**
- * 🗑️ Clears only tracked messages for autodelete or cleanup logic
+ * 🗑️ Clears only tracked messages (for auto-delete logic)
  */
 export function clearUserMessages(id) {
   const uid = sanitizeId(id);
@@ -80,7 +85,8 @@ export function clearUserMessages(id) {
 }
 
 /**
- * 🕒 Stops and removes any delivery/payment timers and cleanup flags
+ * 🕒 Stops and removes any delivery/payment timers
+ * and clears the cleanupScheduled flag if present
  */
 export function clearTimers(id) {
   const uid = sanitizeId(id);
@@ -107,7 +113,8 @@ export function clearTimers(id) {
 }
 
 /**
- * 🚫 Completely unregisters a user: all state, messages, timers, and sessions
+ * 🚫 Completely unregisters a user:
+ * full clear of state, messages, timers, and sessions
  */
 export function unregisterUser(id) {
   const uid = sanitizeId(id);
@@ -137,24 +144,18 @@ export function isUserRegistered(id) {
 
 // ————— HELPERS —————
 
-/**
- * 🔒 Safely sanitize any ID into a non-empty string or return null
- */
+/** 🔒 Safely sanitize any ID into a non-empty string or return null */
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-/**
- * 📋 Uniform action logger
- */
+/** 📋 Uniform action logger */
 function logAction(action, message, uid = "") {
   console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (UID: ${uid})` : ""}`);
 }
 
-/**
- * 🚨 Uniform error logger
- */
+/** 🚨 Uniform error logger */
 function logError(action, error, uid = "") {
   const msg = error?.message || error;
   console.error(`${new Date().toISOString()} ${action} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
