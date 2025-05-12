@@ -1,9 +1,9 @@
-// 📦 helpers/keyboardConstants.js | FINAL IMMORTAL v999999999999.∞ — SYNC-GODMODE DIAMONDLOCK MAX-PERFECTION
+// 📦 helpers/keyboardConstants.js | FINAL IMMORTAL v999999999999.∞+1 — SYNC-GODMODE DIAMONDLOCK MAX-PERFECTION
 
 import { BOT } from "../config/config.js";
 
 /**
- * ✅ Centralizuoti mygtukų pavadinimai (vartotojams ir adminams)
+ * ✅ Centralized button labels (for users and admins)
  */
 export const MENU_BUTTONS = {
   START: "🚀 START",
@@ -12,65 +12,96 @@ export const MENU_BUTTONS = {
   ORDERS: "📋 MY ORDERS",
   HELP: "❓ HELP",
 
-  // Admin skiltis
+  // Admin section
   STATS: "📊 STATISTICS",
   ADMIN: "🔧 ADMIN PANEL"
 };
 
 /**
- * ✅ Fallback klaviatūra — naudojama kaip saugus rezervas (kai kiti nepavyksta)
+ * ✅ Fallback keyboard — used as a safe reserve (when others fail)
  */
 export const MAIN_KEYBOARD = {
-  reply_markup: {
-    keyboard: normalizeKeyboard([
-      [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
-      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS],
-      [MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN]
-    ]),
-    resize_keyboard: true,
-    one_time_keyboard: false,
-    selective: false
-  }
+  reply_markup: createKeyboard([
+    [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
+    [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS],
+    [MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN]
+  ])
 };
 
 /**
- * ✅ Dinaminė pagrindinio meniu generacija (admin saugi)
- * @param {string|number} id — Telegram vartotojo ID
- * @returns {object} Telegram klaviatūra (reply_markup)
+ * ✅ Dynamically generates the main menu (admin-safe)
+ * @param {string|number} id — Telegram user ID
+ * @returns {object} Telegram keyboard (reply_markup)
  */
 export function getMainMenu(id) {
   const uid = String(id || "").trim();
   const adminId = String(BOT?.ADMIN_ID || "").trim();
   const isAdmin = uid === adminId;
 
-  const rows = [
-    [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
-    [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS]
-  ];
+  try {
+    const rows = [
+      [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
+      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS]
+    ];
 
-  if (isAdmin) {
-    rows.push([MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN]);
-  }
-
-  return {
-    reply_markup: {
-      keyboard: normalizeKeyboard(rows),
-      resize_keyboard: true,
-      one_time_keyboard: false,
-      selective: false
+    if (isAdmin) {
+      rows.push([MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN]);
     }
+
+    const keyboard = createKeyboard(rows);
+    logAction("✅ [getMainMenu]", `Generated keyboard for user ${uid}${isAdmin ? " (admin)" : ""}`);
+    return { reply_markup: keyboard };
+  } catch (err) {
+    logError("❌ [getMainMenu error]", err, uid);
+    // Fallback to MAIN_KEYBOARD
+    return MAIN_KEYBOARD;
+  }
+}
+
+/**
+ * ✅ Creates a Telegram keyboard with safe formatting
+ * @param {string[][]} rows — Button rows
+ * @returns {object} Telegram reply_markup object
+ */
+function createKeyboard(rows) {
+  return {
+    keyboard: normalizeKeyboard(rows),
+    resize_keyboard: true,
+    one_time_keyboard: false,
+    selective: false
   };
 }
 
 /**
- * ✅ Klaviatūros normalizatorius — garantuoja saugų formatą
+ * ✅ Keyboard normalizer — guarantees safe formatting
  * @param {string[][]} keyboard
- * @returns {Array<Array<string>>}
+ * @returns {string[][]}
  */
 function normalizeKeyboard(keyboard) {
   if (!Array.isArray(keyboard)) return [];
   return keyboard.map(row => {
-    if (Array.isArray(row)) return row.map(String);
-    return [String(row)];
+    if (Array.isArray(row)) return row.map(button => String(button).trim());
+    return [String(row).trim()];
   });
+}
+
+/**
+ * 📝 Logs successful actions
+ * @param {string} action — Action description
+ * @param {string} message — Additional details
+ */
+function logAction(action, message) {
+  console.log(`${new Date().toISOString()} ${action} → ${message}`);
+}
+
+/**
+ * ⚠️ Logs errors
+ * @param {string} action — Action description
+ * @param {Error} error — Error object
+ * @param {string} [uid] — User ID (if applicable)
+ */
+function logError(action, error, uid = null) {
+  console.error(
+    `${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (uid: ${uid})` : ""}`
+  );
 }
