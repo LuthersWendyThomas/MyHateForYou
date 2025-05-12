@@ -7,7 +7,7 @@ import { WALLETS } from "../../config/config.js";
 import { products } from "../../config/products.js";
 import { userSessions } from "../../state/userState.js";
 import { sendKeyboard, sendAndTrack } from "../../helpers/messageUtils.js";
-import { sanitizeId, normalizeText } from "../../helpers/messageUtils.js";
+import { normalizeText } from "../../helpers/messageUtils.js";
 import { punish } from "../../utils/punishUser.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
 import { resetSession, safeStart } from "./finalHandler.js";
