@@ -11,11 +11,11 @@ import { safeStart } from "./finalHandler.js";
 import { userSessions, userOrders, paymentTimers } from "../../state/userState.js";
 import { BOT, ALIASES } from "../../config/config.js";
 
-const SUPPORTED = {
-  BTC:   { gecko: "bitcoin",        coincap: "bitcoin" },
-  ETH:   { gecko: "ethereum",       coincap: "ethereum" },
-  MATIC: { gecko: "matic-network",  coincap: "matic" },
-  SOL:   { gecko: "solana",         coincap: "solana" }
+const SUPPORTED_CURRENCIES = {
+  BTC: { gecko: "bitcoin", coincap: "bitcoin" },
+  ETH: { gecko: "ethereum", coincap: "ethereum" },
+  MATIC: { gecko: "matic-network", coincap: "matic" },
+  SOL: { gecko: "solana", coincap: "solana" }
 };
 
 /**
@@ -52,7 +52,7 @@ function normalizeCurrency(input) {
  */
 async function getSafeRate(currency) {
   const symbol = normalizeCurrency(currency);
-  const coin = SUPPORTED[symbol];
+  const coin = SUPPORTED_CURRENCIES[symbol];
   if (!coin) throw new Error(`Unsupported currency: ${symbol}`);
 
   const rate = await fetchWithRetry(() => fetchCryptoPrice(symbol));
@@ -85,42 +85,43 @@ async function sendSafe(fn, ...args) {
  * Handles payment setup and QR generation.
  */
 export async function handlePayment(bot, id, userMessages) {
-  const s = userSessions[id];
-  if (!s || s.step !== 7 || s.paymentInProgress) {
+  const session = userSessions[id];
+  if (!session || session.step !== 7 || session.paymentInProgress) {
     return sendAndTrack(bot, id, "⚠️ Invalid or duplicate payment attempt.", {}, userMessages);
   }
 
-  s.paymentInProgress = true;
+  session.paymentInProgress = true;
 
   try {
-    const usd = parseFloat(s.totalPrice);
-    if (!s.wallet || !s.currency || !s.product?.name || !s.quantity || !Number.isFinite(usd)) {
+    const usd = parseFloat(session.totalPrice);
+    if (!session.wallet || !session.currency || !session.product?.name || !session.quantity || !Number.isFinite(usd)) {
       throw new Error("❌ Invalid payment session data");
     }
 
-    const { rate, symbol } = await getSafeRate(s.currency);
+    const { rate, symbol } = await getSafeRate(session.currency);
     const amount = +(usd / rate).toFixed(6);
     if (!Number.isFinite(amount) || amount <= 0) throw new Error("❌ Invalid crypto amount");
 
-    s.expectedAmount = amount;
-    s.step = 8;
+    session.expectedAmount = amount;
+    session.step = 8;
 
-    const qr = await generateQR(symbol, amount, s.wallet);
+    const qr = await generateQR(symbol, amount, session.wallet);
     if (!qr || !(qr instanceof Buffer)) throw new Error("❌ QR generation failed");
 
     const summary = `
 💸 *Payment summary:*
 
-• Product: ${s.product.name}
-• Quantity: ${s.quantity}
-• Delivery: ${s.deliveryMethod} (${s.deliveryFee}$)
-• Location: ${s.city}
+• Product: ${session.product.name}
+• Quantity: ${session.quantity}
+• Delivery: ${session.deliveryMethod} (${session.deliveryFee}$)
+• Location: ${session.city}
 
 💰 ${usd.toFixed(2)}$ ≈ ${amount} ${symbol}
-🏦 Wallet: \`${s.wallet}\`
+🏦 Wallet: \`${session.wallet}\`
 
 ⏱ ETA: ~30 minutes
-✅ Scan QR or copy the address.`.trim();
+✅ Scan QR or copy the address.
+`.trim();
 
     await sendSafe(() => bot.sendChatAction(id, "upload_photo"));
     await sendSafe(() => bot.sendPhoto(id, qr, {
@@ -136,7 +137,7 @@ export async function handlePayment(bot, id, userMessages) {
       delete userSessions[id];
     }, 30 * 60 * 1000);
 
-    s.paymentTimer = timer;
+    session.paymentTimer = timer;
     paymentTimers[id] = timer;
 
     return sendKeyboard(bot, id, "❓ *Was the payment completed?*", [
@@ -146,7 +147,7 @@ export async function handlePayment(bot, id, userMessages) {
 
   } catch (err) {
     console.error("❌ [handlePayment]:", err.message);
-    s.paymentInProgress = false;
+    session.paymentInProgress = false;
     return sendAndTrack(bot, id, `❗️ Payment setup failed.\n*${err.message}*`, {
       parse_mode: "Markdown"
     }, userMessages);
@@ -157,12 +158,12 @@ export async function handlePayment(bot, id, userMessages) {
  * Handles payment cancellation.
  */
 export async function handlePaymentCancel(bot, id, userMessages) {
-  const s = userSessions[id];
-  if (!s || s.step !== 8 || !s.paymentInProgress) {
+  const session = userSessions[id];
+  if (!session || session.step !== 8 || !session.paymentInProgress) {
     return sendAndTrack(bot, id, "⚠️ No active payment to cancel.", {}, userMessages);
   }
 
-  clearTimeout(s.paymentTimer);
+  clearTimeout(session.paymentTimer);
   delete paymentTimers[id];
   delete userSessions[id];
 
@@ -174,17 +175,17 @@ export async function handlePaymentCancel(bot, id, userMessages) {
  * Handles payment confirmation after blockchain check.
  */
 export async function handlePaymentConfirmation(bot, id, userMessages) {
-  const s = userSessions[id];
-  if (!(s && s.step === 9 && s.wallet && s.currency && s.expectedAmount)) {
+  const session = userSessions[id];
+  if (!(session && session.step === 9 && session.wallet && session.currency && session.expectedAmount)) {
     return sendAndTrack(bot, id, "⚠️ Invalid session. Type /start to begin.", {}, userMessages);
   }
 
   try {
     await sendAndTrack(bot, id, "⏳ Checking payment on blockchain...", {}, userMessages);
 
-    const symbol = normalizeCurrency(s.currency);
+    const symbol = normalizeCurrency(session.currency);
     const paid = await fetchWithRetry(() =>
-      checkPayment(s.wallet, symbol, s.expectedAmount, bot)
+      checkPayment(session.wallet, symbol, session.expectedAmount, bot)
     );
 
     if (!paid) {
@@ -194,15 +195,15 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
       ], userMessages);
     }
 
-    clearTimeout(s.paymentTimer);
+    clearTimeout(session.paymentTimer);
     delete paymentTimers[id];
 
-    delete s.paymentInProgress;
-    delete s.expectedAmount;
+    delete session.paymentInProgress;
+    delete session.expectedAmount;
 
     userOrders[id] = (userOrders[id] || 0) + 1;
 
-    await saveOrder(id, s.city, s.product.name, s.totalPrice).catch(e =>
+    await saveOrder(id, session.city, session.product.name, session.totalPrice).catch(e =>
       console.warn("⚠️ [saveOrder failed]:", e.message)
     );
 
@@ -210,7 +211,7 @@ export async function handlePaymentConfirmation(bot, id, userMessages) {
 
     if (BOT.ADMIN_ID && bot?.sendMessage) {
       await sendSafe(() =>
-        bot.sendMessage(BOT.ADMIN_ID, `✅ New payment confirmed → ${s.wallet}`, {
+        bot.sendMessage(BOT.ADMIN_ID, `✅ New payment confirmed → ${session.wallet}`, {
           parse_mode: "Markdown"
         })
       );
