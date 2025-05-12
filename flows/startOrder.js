@@ -1,4 +1,4 @@
-// 📦 flows/startOrder.js | IMMORTAL FINAL v999999999+ULTIMATE — ULTRA-SYNC TANKLOCK MIRROR + 24/7 SAFE RESET MAX-PERFECTION
+// 📦 flows/startOrder.js | IMMORTAL FINAL v999999999+ULTIMATE — ULTRA-SYNC TANKLOCK MIRROR + 24/7 SAFE RESET DIAMONDLOCK MAX-PERFECTION
 
 import { userSessions, userMessages, userOrders } from "../state/userState.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
@@ -104,12 +104,26 @@ function initializeSession(id) {
  * @returns {Array<Array<object>>} - Telegram keyboard layout
  */
 function buildRegionKeyboard() {
-  const keyboard = REGION_LIST.map(region => [{ text: region }]);
-  
-  // Ensure buttons are properly structured
-  keyboard.push([{ text: MENU_BUTTONS.HELP.text, callback_data: "MENU_HELP" }]); // Unified button for help
-  keyboard.push([{ text: "🔙 Back", callback_data: "MENU_BACK" }]); // Back button for navigation
-  return normalizeKeyboard(keyboard); // Normalize keyboard for bulletproof formatting
+  try {
+    const keyboard = REGION_LIST.map(region => {
+      if (!region) {
+        logError("⚠️ [buildRegionKeyboard]", new Error("Empty region found"));
+        return [{ text: "❌ Invalid Region" }]; // Fallback for invalid regions
+      }
+      return [{ text: region }];
+    });
+
+    // Add Help and Back buttons
+    keyboard.push([{ text: MENU_BUTTONS.HELP.text, callback_data: "MENU_HELP" }]);
+    keyboard.push([{ text: "🔙 Back", callback_data: "MENU_BACK" }]);
+
+    const normalizedKeyboard = normalizeKeyboard(keyboard); // Ensure consistent formatting
+    logAction("✅ [buildRegionKeyboard Debug]", JSON.stringify(normalizedKeyboard, null, 2)); // Debugging output
+    return normalizedKeyboard;
+  } catch (err) {
+    logError("❌ [buildRegionKeyboard error]", err);
+    return [[{ text: "❌ Error Generating Keyboard" }]]; // Fallback keyboard
+  }
 }
 
 /**
@@ -165,10 +179,16 @@ function normalizeKeyboard(keyboard) {
 
   return keyboard.map(row => {
     if (Array.isArray(row)) {
-      return row.map(button => ({
-        text: String(button?.text || "").trim(),
-        callback_data: button?.callback_data ? String(button.callback_data).trim() : undefined
-      }));
+      return row.map(button => {
+        if (!button?.text) {
+          logError("⚠️ [normalizeKeyboard]", new Error("Button missing 'text' property"));
+          return { text: "❌ Invalid Button" }; // Fallback for invalid buttons
+        }
+        return {
+          text: String(button.text).trim(),
+          callback_data: button.callback_data ? String(button.callback_data).trim() : undefined
+        };
+      });
     }
     return [{ text: String(row).trim() }];
   });
