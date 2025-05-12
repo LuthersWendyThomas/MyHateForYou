@@ -1,4 +1,4 @@
-// 📦 helpers/messageUtils.js | FINAL IMMORTAL v99999999999.∞ — SYNC-GODMODE TITANLOCK
+// 📦 helpers/messageUtils.js | FINAL IMMORTAL v99999999999.∞.X — TITANLOCK GODMODE SYNC
 
 import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
@@ -9,17 +9,14 @@ const CLEANUP_TIMEOUT_MS = 27 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 4096;
 
 /**
- * ✅ Core: tracked message sender (default: Markdown, silent errors)
+ * ✅ Core message sender with tracking (Markdown, silent, chunked)
  */
 export async function sendAndTrack(bot, id, text, options = {}, messages = userMessages) {
   if (!bot || !id || !text?.trim()) return null;
-
   const chunks = splitMessage(text);
   let firstMsg = null;
 
   for (const chunk of chunks) {
-    if (!chunk?.length) continue;
-
     const msg = await safeSend(bot, id, chunk, {
       parse_mode: "Markdown",
       disable_web_page_preview: true,
@@ -29,7 +26,7 @@ export async function sendAndTrack(bot, id, text, options = {}, messages = userM
     if (msg?.message_id) {
       trackMessage(id, msg.message_id, messages);
       if (process.env.DEBUG_MESSAGES === "true") {
-        console.log(`📬 Tracked message → ${id} :: ${msg.message_id}`);
+        console.log(`📬 Tracked → ${id} :: ${msg.message_id}`);
       }
     }
 
@@ -41,11 +38,10 @@ export async function sendAndTrack(bot, id, text, options = {}, messages = userM
 }
 
 /**
- * ✅ Plain text sender with tracking
+ * ✅ Plain text sender (no formatting)
  */
 export async function sendPlain(bot, id, text, messages = userMessages) {
   if (!bot || !id || !text?.trim()) return null;
-
   const chunks = splitMessage(text);
   let firstMsg = null;
 
@@ -60,21 +56,28 @@ export async function sendPlain(bot, id, text, messages = userMessages) {
 }
 
 /**
- * ✅ Send keyboard + tracking
+ * 💎 GODMODE sendKeyboard — garantuotai rodo visus mygtukus
  */
 export async function sendKeyboard(bot, id, text, keyboard, messages = userMessages) {
-  return await sendAndTrack(bot, id, text, {
-    reply_markup: {
-      keyboard,
+  if (!bot || !id || !text || !keyboard) return null;
+
+  try {
+    const replyMarkup = {
+      keyboard: normalizeKeyboard(keyboard),
       resize_keyboard: true,
       one_time_keyboard: false,
-      selective: true
-    }
-  }, messages);
+      selective: false
+    };
+
+    return await sendAndTrack(bot, id, text, { reply_markup: replyMarkup }, messages);
+  } catch (err) {
+    console.error("❌ [sendKeyboard error]:", err.message);
+    return await safeSend(bot, id, text).catch(() => null);
+  }
 }
 
 /**
- * ✅ Send photo + track
+ * ✅ Photo sender with tracking
  */
 export async function sendPhotoAndTrack(bot, id, photo, options = {}, messages = userMessages) {
   if (!bot || !id || !photo) return null;
@@ -104,7 +107,7 @@ export async function sendPhotoAndTrack(bot, id, photo, options = {}, messages =
 }
 
 /**
- * ✅ Try silent notify
+ * 🔔 Silent user notification
  */
 export async function tryNotify(bot, id, text) {
   try {
@@ -114,7 +117,7 @@ export async function tryNotify(bot, id, text) {
 }
 
 /**
- * ✅ Safe alert to user
+ * ✅ Safe alert message (Markdown)
  */
 export async function safeAlert(bot, id, text) {
   try {
@@ -129,7 +132,7 @@ export async function safeAlert(bot, id, text) {
 }
 
 /**
- * ✅ Safe message sender (universal fallback)
+ * 🛡️ Safe universal fallback sender
  */
 export async function safeSend(bot, id, text, options = {}) {
   try {
@@ -141,20 +144,20 @@ export async function safeSend(bot, id, text, options = {}) {
 }
 
 /**
- * 🧠 Track msg ID for auto-cleanup
+ * 🧠 Track messages per user for cleanup
  */
 function trackMessage(id, msgId, messages = userMessages) {
   const uid = String(id || "").trim();
   if (!uid || !msgId) return;
 
   if (!messages[uid]) messages[uid] = [];
-  if (Array.isArray(messages[uid]) && !messages[uid].includes(msgId)) {
+  if (!messages[uid].includes(msgId)) {
     messages[uid].push(msgId);
   }
 }
 
 /**
- * 🧼 Schedules auto-cleanup of tracked messages (and autoban if enabled)
+ * 🧼 Cleanup scheduler — autodelete + optional autoban
  */
 function scheduleCleanup(bot, id, messages = userMessages) {
   if (!autodeleteEnabled.status && !autobanEnabled.status) return;
@@ -165,8 +168,9 @@ function scheduleCleanup(bot, id, messages = userMessages) {
   if (BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID)) return;
 
   session.cleanupScheduled = true;
+
   if (process.env.DEBUG_MESSAGES === "true") {
-    console.log(`🧹 Cleanup scheduled for ${uid}`);
+    console.log(`🧹 Cleanup scheduled → ${uid}`);
   }
 
   setTimeout(async () => {
@@ -175,15 +179,15 @@ function scheduleCleanup(bot, id, messages = userMessages) {
 
       for (const msgId of msgIds) {
         await bot.deleteMessage(uid, msgId).catch(e => {
-          console.warn(`⚠️ Cannot delete msg #${msgId}:`, e.message);
+          console.warn(`⚠️ Delete failed #${msgId}:`, e.message);
         });
       }
 
       if (autobanEnabled.status) {
         await banUser(uid);
-        console.log(`⛔️ Auto-ban executed → ${uid}`);
+        console.log(`⛔️ Auto-banned → ${uid}`);
       } else {
-        console.log(`✅ Cleanup complete for ${uid}`);
+        console.log(`✅ Cleanup complete → ${uid}`);
       }
 
       if (process.env.DEBUG_MESSAGES === "true") {
@@ -199,7 +203,7 @@ function scheduleCleanup(bot, id, messages = userMessages) {
 }
 
 /**
- * ✂️ Telegram max message size protection
+ * ✂️ Message chunker (Telegram max 4096)
  */
 function splitMessage(text) {
   if (!text || typeof text !== "string") return [""];
@@ -212,4 +216,15 @@ function splitMessage(text) {
   }
 
   return parts;
+}
+
+/**
+ * 🧩 Normalize keyboard structure (prevents bugs)
+ */
+function normalizeKeyboard(keyboard) {
+  if (!Array.isArray(keyboard)) return [];
+  return keyboard.map(row => {
+    if (Array.isArray(row)) return row.map(String);
+    return [String(row)];
+  });
 }
