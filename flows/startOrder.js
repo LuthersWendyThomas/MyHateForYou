@@ -1,34 +1,39 @@
-// 📦 flows/startOrder.js | IMMORTAL FINAL v999999999.∞+GODMODE DIAMONDLOCK SYNCED
-// ULTRA-FSM SYNC • BULLETPROOF REGION KEYBOARD • FULL STATE RESET • MAXIMUM IMMUNITY
+// 📦 flows/startOrder.js | IMMORTAL FINAL v1.0.0•GODMODE DIAMONDLOCK
+// ULTRA-FSM SYNC • BULLETPROOF REGION KEYBOARD • FULL STATE RESET
 
 import { userSessions, userMessages, userOrders } from "../state/userState.js";
 import { clearTimers, clearUserMessages } from "../state/stateManager.js";
 import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
+import { getRegionKeyboard } from "../config/regions.js";
 
 /**
  * 🚀 Starts a clean, FSM-synced, bulletproof order session
  */
-export async function startOrder(bot, id, userMsgs = userMessages) {
+export async function startOrder(bot, id, msgs = userMessages) {
   const uid = sanitizeId(id);
   if (!bot?.sendMessage || !uid) {
-    logError("❌ [startOrder]", "Invalid bot or UID", uid);
+    logError("❌ [startOrder]", "Invalid bot instance or UID", uid);
     return null;
   }
 
   try {
+    // 1) Reset all user state
     await resetUserState(uid);
     initializeSession(uid);
 
-    const keyboard = buildRegionKeyboard();
+    // 2) Send typing indicator
     await bot.sendChatAction(uid, "typing").catch(() => {});
 
+    // 3) Render region selection with your centralized keyboard
+    const keyboard = getRegionKeyboard();
     return await sendKeyboard(
       bot,
       uid,
-      "🗺 *Select the region where delivery is needed:*",
+      "🗺️ *Select the region where delivery is needed:*",
       keyboard,
-      userMsgs
+      msgs,
+      { parse_mode: "Markdown" }
     );
   } catch (err) {
     logError("❌ [startOrder error]", err, uid);
@@ -37,7 +42,8 @@ export async function startOrder(bot, id, userMsgs = userMessages) {
       uid,
       "❗️ Unexpected error. Please try again.",
       [[{ text: MENU_BUTTONS.HELP.text }]],
-      userMsgs
+      msgs,
+      { parse_mode: "Markdown" }
     );
   }
 }
@@ -46,76 +52,31 @@ export async function startOrder(bot, id, userMsgs = userMessages) {
 // 🧼 Helpers
 // ==============================
 
-async function resetUserState(id) {
-  await clearTimers(id);
-  await clearUserMessages(id);
+async function resetUserState(uid) {
+  // Clear any running timers or stored messages
+  await clearTimers(uid);
+  await clearUserMessages(uid);
 
-  delete userOrders[id];
-  delete userMessages[id];
+  // Delete past orders / messages
+  delete userOrders[uid];
+  delete userMessages[uid];
 
-  if (userSessions[id]) {
-    const keys = [
-      "step", "region", "city", "deliveryMethod", "deliveryFee",
-      "category", "product", "quantity", "unitPrice", "totalPrice",
-      "currency", "wallet", "expectedAmount", "paymentTimer",
-      "paymentInProgress", "cleanupScheduled", "promoCode",
-      "adminStep", "lastText"
-    ];
-    for (const key of keys) delete userSessions[id][key];
+  // Wipe session fields (but keep the object for reference)
+  if (userSessions[uid]) {
+    Object.keys(userSessions[uid]).forEach(k => {
+      delete userSessions[uid][k];
+    });
   }
 
-  logAction("🧼 [resetUserState]", "State cleared", id);
+  logAction("🧼 [resetUserState]", "State cleared", uid);
 }
 
-function initializeSession(id) {
-  userSessions[id] = {
+function initializeSession(uid) {
+  userSessions[uid] = {
     step: 1,
-    createdAt: Date.now()
+    createdAt: Date.now(),
   };
-  logAction("🔄 [initializeSession]", "Session started", id);
-}
-
-function buildRegionKeyboard() {
-  try {
-    const buttons = REGION_LIST.map(region => {
-      if (!region || typeof region !== "string") {
-        logError("⚠️ [buildRegionKeyboard]", new Error("Invalid region entry"));
-        return [{ text: "❌ Invalid Region" }];
-      }
-      return [{ text: region }];
-    });
-
-    buttons.push([{ text: MENU_BUTTONS.HELP.text }]);
-    buttons.push([{ text: MENU_BUTTONS.BACK.text }]);
-
-    const normalized = normalizeKeyboard(buttons);
-    logAction("✅ [buildRegionKeyboard]", JSON.stringify(normalized, null, 2));
-    return normalized;
-  } catch (err) {
-    logError("❌ [buildRegionKeyboard error]", err);
-    return [[{ text: "❌ Error building keyboard" }]];
-  }
-}
-
-function normalizeKeyboard(keyboard) {
-  if (!Array.isArray(keyboard)) {
-    logError("⚠️ [normalizeKeyboard]", new Error("Invalid keyboard structure"));
-    return [];
-  }
-
-  return keyboard.map(row => {
-    if (!Array.isArray(row)) return [{ text: String(row).trim() }];
-    return row.map(button => {
-      if (!button?.text) {
-        logError("⚠️ [normalizeKeyboard]", new Error("Missing button text"));
-        return { text: "❌ Invalid Button" };
-      }
-      return {
-        text: String(button.text).trim(),
-        callback_data: button.callback_data ? String(button.callback_data).trim() : undefined
-      };
-    });
-  });
+  logAction("🔄 [initializeSession]", "Session started", uid);
 }
 
 function sanitizeId(id) {
@@ -123,20 +84,11 @@ function sanitizeId(id) {
   return uid && uid !== "undefined" && uid !== "null" ? uid : null;
 }
 
-function logAction(action, message, uid = null) {
+function logAction(action, message, uid = "") {
   console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (ID: ${uid})` : ""}`);
 }
 
-function logError(action, error, uid = null) {
-  console.error(`${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`);
+function logError(action, error, uid = "") {
+  const msg = error?.message || error;
+  console.error(`${new Date().toISOString()} ${action} → ${msg}${uid ? ` (ID: ${uid})` : ""}`);
 }
-
-// 🌍 Centralized region list
-const REGION_LIST = [
-  "🗽 East Coast",
-  "🌴 West Coast",
-  "🛢️ South",
-  "⛰️ Midwest",
-  "🌲 Northwest",
-  "🏜️ Southwest"
-];
