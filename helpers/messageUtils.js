@@ -1,247 +1,241 @@
-// 📦 helpers/messageUtils.js | IMMORTAL FINAL v99999999999.∞+DIAMONDLOCK
+// 📦 helpers/messageUtils.js | IMMORTAL FINAL v1.0.0•GODMODE DIAMONDLOCK
+// BULLETPROOF • CHUNKED MARKDOWN • AUTO-CLEANUP • AUTO-BAN/DELETE • ULTRA-OPTIMIZED
 
 import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
 import { banUser } from "../utils/bans.js";
 import { BOT } from "../config/config.js";
 
-const CLEANUP_TIMEOUT_MS = 27 * 60 * 1000;
-const MAX_MESSAGE_LENGTH = 4096;
+const CLEANUP_DELAY_MS     = 27 * 60 * 1000;    // 27 minutes
+const MAX_TELEGRAM_LENGTH  = 4096;              // per-message limit
+
+// ————— PUBLIC SENDERS —————
 
 /**
- * ✅ Core tracked message sender (Markdown, chunked)
+ * ✅ Sends Markdown text (chunked), tracks messages, schedules cleanup.
  */
 export async function sendAndTrack(bot, id, text, options = {}, messages = userMessages) {
-  if (!bot || !id || !text?.trim()) return null;
-  const chunks = splitMessage(text);
-  let firstMsg = null;
+  const uid = sanitizeId(id);
+  if (!bot || !uid || !text?.trim()) return null;
 
-  for (const chunk of chunks) {
-    const msg = await safeSend(bot, id, chunk, {
-      parse_mode: "Markdown",
+  let firstMsg = null;
+  for (const chunk of splitText(text)) {
+    const msg = await safeSend(bot, uid, chunk, {
+      parse_mode:       "Markdown",
       disable_web_page_preview: true,
       ...options
     });
-
     if (msg?.message_id) {
-      trackMessage(id, msg.message_id, messages);
-      logAction("📬 [sendAndTrack]", `→ ${id}`, msg.message_id);
+      track(uid, msg.message_id, messages);
+      logAction("📬 sendAndTrack", `→ ${uid}`, msg.message_id);
+      firstMsg ||= msg;
     }
-
-    if (!firstMsg && msg) firstMsg = msg;
   }
 
-  scheduleCleanup(bot, id, messages);
+  scheduleCleanup(bot, uid, messages);
   return firstMsg;
 }
 
 /**
- * ✅ Plain text sender (no Markdown)
+ * ✅ Sends plain text (no Markdown), tracks messages, schedules cleanup.
  */
 export async function sendPlain(bot, id, text, messages = userMessages) {
-  if (!bot || !id || !text?.trim()) return null;
-  const chunks = splitMessage(text);
-  let firstMsg = null;
+  const uid = sanitizeId(id);
+  if (!bot || !uid || !text?.trim()) return null;
 
-  for (const chunk of chunks) {
-    const msg = await safeSend(bot, id, chunk);
-    if (msg?.message_id) trackMessage(id, msg.message_id, messages);
-    if (!firstMsg && msg) firstMsg = msg;
+  let firstMsg = null;
+  for (const chunk of splitText(text)) {
+    const msg = await safeSend(bot, uid, chunk);
+    if (msg?.message_id) {
+      track(uid, msg.message_id, messages);
+      firstMsg ||= msg;
+    }
   }
 
-  scheduleCleanup(bot, id, messages);
+  scheduleCleanup(bot, uid, messages);
   return firstMsg;
 }
 
 /**
- * 💎 GODMODE keyboard sender — 10000% reliable layout
+ * 💎 Sends a reply with a custom keyboard, tracks messages, schedules cleanup.
+ * keyboard: Array<Array<{ text: string, callback_data?: string } | string>>
  */
 export async function sendKeyboard(bot, id, text, keyboard, messages = userMessages, options = {}) {
-  if (!bot || !id || !text || !keyboard) return null;
+  const uid = sanitizeId(id);
+  if (!bot || !uid || !text || !Array.isArray(keyboard)) return null;
 
   try {
-    const normalized = normalizeKeyboard(keyboard);
-    logAction("✅ [sendKeyboard]", `Keyboard sent to ${id}`);
-
     const markup = {
-      keyboard: normalized,
+      keyboard: normalizeKeyboard(keyboard),
       resize_keyboard: true,
       one_time_keyboard: false,
       selective: false
     };
-
-    return await sendAndTrack(bot, id, text, { reply_markup: markup, ...options }, messages);
+    logAction("✅ sendKeyboard", `Keyboard → ${uid}`);
+    return await sendAndTrack(bot, uid, text, { reply_markup: markup, ...options }, messages);
   } catch (err) {
-    logError("❌ [sendKeyboard error]", err, id);
-    return await safeSend(bot, id, text).catch(() => null);
+    logError("❌ sendKeyboard", err, uid);
+    // fallback to plain send
+    return await safeSend(bot, uid, text).catch(() => null);
   }
 }
 
 /**
- * ✅ Sends photo with tracking
+ * ✅ Sends a photo buffer, tracks it, schedules cleanup.
  */
 export async function sendPhotoAndTrack(bot, id, photo, options = {}, messages = userMessages) {
-  if (!bot || !id || !photo) return null;
+  const uid = sanitizeId(id);
+  if (!bot || !uid || !photo) return null;
 
   try {
-    const msg = await bot.sendPhoto(id, photo, { parse_mode: "Markdown", ...options }).catch((e) => {
-      logError("⚠️ [sendPhoto error]", e, id);
-      return null;
-    });
+    const msg = await bot.sendPhoto(uid, photo, {
+      parse_mode: "Markdown",
+      ...options
+    }).catch(e => { logError("⚠️ sendPhoto error", e, uid); return null; });
 
     if (msg?.message_id) {
-      trackMessage(id, msg.message_id, messages);
-      logAction("🖼️ [sendPhotoAndTrack]", `→ ${id}`, msg.message_id);
+      track(uid, msg.message_id, messages);
+      logAction("🖼️ sendPhotoAndTrack", `→ ${uid}`, msg.message_id);
     }
 
-    scheduleCleanup(bot, id, messages);
+    scheduleCleanup(bot, uid, messages);
     return msg;
   } catch (err) {
-    logError("❌ [sendPhotoAndTrack error]", err, id);
+    logError("❌ sendPhotoAndTrack", err, uid);
     return null;
   }
 }
 
 /**
- * 🔕 Silent notifier
+ * 🔕 Sends silent notification (no tracking, no cleanup).
  */
 export async function tryNotify(bot, id, text) {
-  if (!bot || !id || !text) return;
+  const uid = sanitizeId(id);
+  if (!bot || !uid || !text) return;
   try {
-    await bot.sendMessage(id, text, { disable_notification: true }).catch(() => {});
+    await bot.sendMessage(uid, text, { disable_notification: true }).catch(() => {});
   } catch (err) {
-    logError("⚠️ [tryNotify error]", err, id);
+    logError("⚠️ tryNotify", err, uid);
   }
 }
 
 /**
- * ✅ Markdown alert
+ * ✅ Alerts via Markdown (no tracking).
  */
 export async function safeAlert(bot, id, text) {
+  const uid = sanitizeId(id);
+  if (!bot || !uid || !text) return null;
   try {
-    return await bot.sendMessage(id, text, {
+    return await bot.sendMessage(uid, text, {
       parse_mode: "Markdown",
       disable_web_page_preview: true
     });
   } catch (err) {
-    logError("⚠️ [safeAlert failed]", err, id);
+    logError("⚠️ safeAlert", err, uid);
     return null;
   }
 }
 
 /**
- * 🛡️ Fallback sender
+ * 🛡️ Fallback send (no Markdown, no tracking).
  */
 export async function safeSend(bot, id, text, options = {}) {
+  const uid = sanitizeId(id);
+  if (!bot || !uid || !text) return null;
   try {
-    return await bot.sendMessage(id, text, options);
+    return await bot.sendMessage(uid, text, options);
   } catch (err) {
-    logError("⚠️ [safeSend failed]", err, id);
+    logError("⚠️ safeSend", err, uid);
     return null;
   }
 }
 
-/**
- * 🧠 Message tracker
- */
-function trackMessage(id, msgId, messages = userMessages) {
-  const uid = String(id || "").trim();
-  if (!uid || !msgId) return;
+// ————— INTERNAL HELPERS —————
 
+/** Tracks a sent message ID for later cleanup */
+function track(uid, msgId, messages) {
   if (!messages[uid]) messages[uid] = [];
   if (!messages[uid].includes(msgId)) messages[uid].push(msgId);
 }
 
-/**
- * 🧼 Cleanup scheduler
- */
-function scheduleCleanup(bot, id, messages = userMessages) {
-  if (!autodeleteEnabled.status && !autobanEnabled.status) return;
-
-  const uid = String(id || "").trim();
+/** Schedules auto-cleanup (delete & optional ban) after delay */
+function scheduleCleanup(bot, uid, messages) {
+  if (!(autodeleteEnabled.status || autobanEnabled.status)) return;
   const session = userSessions[uid];
   if (!session || session.cleanupScheduled) return;
   if (BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID)) return;
 
   session.cleanupScheduled = true;
-  logAction("🧹 [scheduleCleanup]", `→ ${uid}`);
+  logAction("🧹 scheduleCleanup", `→ ${uid}`);
 
   setTimeout(async () => {
     try {
-      const msgIds = Array.isArray(messages[uid]) ? messages[uid] : [];
-      for (const msgId of msgIds) {
-        await bot.deleteMessage(uid, msgId).catch((e) => {
-          logError(`⚠️ [Delete failed #${msgId}]`, e, uid);
-        });
+      const ids = Array.isArray(messages[uid]) ? messages[uid] : [];
+      for (const msgId of ids) {
+        await bot.deleteMessage(uid, msgId).catch(e => { logError("⚠️ deleteMessage", e, uid); });
       }
 
       if (autobanEnabled.status) {
         await banUser(uid);
-        logAction("⛔️ [scheduleCleanup] Auto-banned →", uid);
+        logAction("⛔ scheduleCleanup", `Auto-banned → ${uid}`);
       } else {
-        logAction("✅ [scheduleCleanup] Cleanup complete →", uid);
+        logAction("✅ scheduleCleanup", `Deleted ${ids.length} messages → ${uid}`);
       }
     } catch (err) {
-      logError("❌ [scheduleCleanup error]", err, uid);
+      logError("❌ scheduleCleanup", err, uid);
     } finally {
       delete messages[uid];
       if (userSessions[uid]) delete userSessions[uid].cleanupScheduled;
     }
-  }, CLEANUP_TIMEOUT_MS);
+  }, CLEANUP_DELAY_MS);
 }
 
-/**
- * ✂️ Message chunker (4096 max)
- */
-function splitMessage(text) {
-  if (!text || typeof text !== "string") return [""];
-  const parts = [];
-  let index = 0;
-
-  while (index < text.length) {
-    parts.push(text.slice(index, index + MAX_MESSAGE_LENGTH));
-    index += MAX_MESSAGE_LENGTH;
+/** Splits long text into Telegram-safe chunks */
+function splitText(text) {
+  if (typeof text !== "string" || !text.length) return [""];
+  const chunks = [];
+  for (let i = 0; i < text.length; i += MAX_TELEGRAM_LENGTH) {
+    chunks.push(text.slice(i, i + MAX_TELEGRAM_LENGTH));
   }
-
-  return parts;
+  return chunks;
 }
 
-/**
- * 🧩 Safe keyboard normalizer
- */
+/** Normalizes arbitrary keyboard arrays into Telegram format */
 function normalizeKeyboard(keyboard) {
-  if (!Array.isArray(keyboard)) {
-    logError("⚠️ [normalizeKeyboard]", new Error("Invalid keyboard array"));
-    return [];
-  }
-
   return keyboard.map((row, rIdx) => {
     if (!Array.isArray(row)) {
-      logError("⚠️ [normalizeKeyboard]", new Error(`Row ${rIdx} is not an array`));
-      return [fallbackButton()];
+      logError("⚠️ normalizeKeyboard", new Error(`Row ${rIdx} not an array`));
+      return [{ text: "❌ Invalid" }];
     }
-
-    return row.map((btn, bIdx) => {
-      if (typeof btn === "string") return btn.trim();
-      if (typeof btn?.text === "string") return btn.text.trim();
-
-      logError("⚠️ [normalizeKeyboard]", new Error(`Invalid button @ row:${rIdx}, col:${bIdx}`));
-      return fallbackButton();
+    return row.map((btn, cIdx) => {
+      if (typeof btn === "string") {
+        return { text: btn.trim() };
+      }
+      if (btn && typeof btn.text === "string") {
+        return {
+          text: btn.text.trim(),
+          ...(btn.callback_data ? { callback_data: String(btn.callback_data).trim() } : {})
+        };
+      }
+      logError("⚠️ normalizeKeyboard", new Error(`Invalid button at [${rIdx},${cIdx}]`));
+      return { text: "❌ Invalid" };
     });
   });
 }
 
-function fallbackButton() {
-  return "❌ Invalid";
+/** Sanitizes chat IDs */
+function sanitizeId(id) {
+  const s = String(id ?? "").trim();
+  return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-/**
- * 📄 Logger
- */
-function logAction(action, msg, id = null) {
+/** Uniform action logger */
+function logAction(action, msg, id = "") {
   console.log(`${new Date().toISOString()} ${action} → ${msg}${id ? ` (ID: ${id})` : ""}`);
 }
 
-function logError(action, err, id = null) {
-  console.error(`${new Date().toISOString()} ${action} → ${err.message || err}${id ? ` (ID: ${id})` : ""}`);
+/** Uniform error logger */
+function logError(action, err, id = "") {
+  const m = err?.message || err;
+  console.error(`${new Date().toISOString()} ${action} → ${m}${id ? ` (ID: ${id})` : ""}`);
 }
