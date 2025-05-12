@@ -16,21 +16,25 @@ export function getMainMenu(id) {
   const isAdmin = uid === adminId;
 
   try {
-    // Dynamically creating the menu based on admin status
-    const menu = [
-      [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
-      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS]
+    // Main user menu
+    const userMenu = [
+      [{ text: "🛒 BUY" }, { text: "❓ HELP" }],
+      [{ text: "👤 PROFILE" }, { text: "📦 ORDERS" }]
     ];
 
-    if (isAdmin) {
-      menu.push([MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN]);
-    }
+    // Admin-specific menu
+    const adminMenu = [
+      [{ text: "📊 STATS" }, { text: "🛠 ADMIN" }]
+    ];
 
-    const keyboard = normalizeKeyboard(menu);
+    // Combine menus based on user role
+    const keyboard = isAdmin ? [...userMenu, ...adminMenu] : userMenu;
+
     logAction(
       "✅ [getMainMenu]",
       `Generated main menu for user ${uid}${isAdmin ? " (admin)" : ""}`
     );
+
     return {
       keyboard,
       resize_keyboard: true,
@@ -41,7 +45,7 @@ export function getMainMenu(id) {
     logError("❌ [getMainMenu error]", err, uid);
     // Fallback to a basic menu structure
     return {
-      keyboard: normalizeKeyboard([[MENU_BUTTONS.HELP]]),
+      keyboard: [[{ text: "❓ HELP" }]],
       resize_keyboard: true,
       one_time_keyboard: false,
       selective: true
