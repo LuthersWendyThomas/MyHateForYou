@@ -38,7 +38,7 @@ export async function safeStart(bot, id) {
     await bot.sendChatAction(uid, "typing").catch(() => {});
 
     // 3️⃣ prepare menu + image
-    const menu    = getMainMenu(uid);             // { reply_markup }
+    const menu    = getMainMenu(uid);             // raw reply_markup object
     const imgPath = path.join(process.cwd(), "assets", "greeting.jpg");
     let buffer;
     try {
@@ -58,7 +58,7 @@ export async function safeStart(bot, id) {
         {
           caption: greetingText(count),
           parse_mode: "Markdown",
-          reply_markup: menu.reply_markup
+          reply_markup: menu        // ← use menu directly
         },
         userMessages
       );
@@ -69,7 +69,7 @@ export async function safeStart(bot, id) {
         fallbackText(count),
         {
           parse_mode: "Markdown",
-          reply_markup: menu.reply_markup
+          reply_markup: menu        // ← use menu directly
         },
         userMessages
       );
@@ -83,7 +83,7 @@ export async function safeStart(bot, id) {
       "⚠️ Failed to start. Please try again.",
       {
         parse_mode: "Markdown",
-        reply_markup: menu.reply_markup
+        reply_markup: menu        // ← use menu directly
       },
       userMessages
     );
@@ -117,7 +117,7 @@ export async function finishOrder(bot, id) {
       "✅ Order confirmed!\n🚚 Delivery started...\n\nMain menu:",
       {
         parse_mode: "Markdown",
-        reply_markup: menu.reply_markup
+        reply_markup: menu      // ← use menu directly
       },
       userMessages
     );
@@ -130,7 +130,7 @@ export async function finishOrder(bot, id) {
       "❗️ Delivery error. Try again or use /start.",
       {
         parse_mode: "Markdown",
-        reply_markup: menu.reply_markup
+        reply_markup: menu      // ← use menu directly
       },
       userMessages
     );
