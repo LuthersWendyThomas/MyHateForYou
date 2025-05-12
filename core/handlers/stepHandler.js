@@ -190,13 +190,13 @@ async function renderStep(bot, uid, step, userMessages) {
 export async function handleStep(bot, id, text, userMessages) {
   const uid   = sanitizeId(id);
   const input = normalizeText(text);
-
+  
   // ensure session exists
-  if (!userSessions[uid])                 userSessions[uid] = { step: 1, createdAt: Date.now() };
+  if (!userSessions[uid])                   userSessions[uid] = { step: 1, createdAt: Date.now() };
   if (!isValidStep(userSessions[uid].step)) userSessions[uid].step = 1;
   const session = userSessions[uid];
 
-  // 🔄 Step 2 guard: only accept valid labels or Back
+  // 🔄 Step-2 guard: only accept valid labels or Back
   if (session.step === 2) {
     const validLabels = deliveryMethods.map(m => m.label.toLowerCase());
     const backLabel   = MENU_BUTTONS.BACK.text.toLowerCase();
@@ -205,28 +205,34 @@ export async function handleStep(bot, id, text, userMessages) {
     }
   }
 
-  // empty → re-render current step
+  // empty input → re-render
   if (!input) {
     return renderStep(bot, uid, session.step, userMessages);
   }
 
   // BACK pressed?
   if (input === MENU_BUTTONS.BACK.text.toLowerCase()) {
+    // at step 1 → full reset + greeting
+    if (session.step === 1) {
+      await resetSession(uid);
+      return safeStart(bot, uid);
+    }
+    // otherwise step-back in FSM
     return handleBackButton(bot, uid, session, userMessages);
   }
 
   try {
     switch (session.step) {
-      case 1:   return handleRegion(bot, uid, input, session, userMessages);
-      case 1.2: return handleCity(  bot, uid, input, session, userMessages);
-      case 2:   return handleDelivery(bot, uid, input, session, userMessages);
-      case 2.1: return handlePromoDecision(bot, uid, input, session, userMessages);
-      case 2.2: return handlePromoCode(bot, uid, text,   session, userMessages);
-      case 3:   return handleCategory(bot, uid, input, session, userMessages);
-      case 4:   return handleProduct(bot, uid, input, session, userMessages);
-      case 5:   return handleQuantity(bot, uid, input, session, userMessages);
-      case 6:   return handleCurrency(bot, uid, input, session, userMessages);
-      case 7:   return handleOrderConfirm(bot, uid, input, session, userMessages);
+      case 1:   return handleRegion(         bot, uid, input, session, userMessages);
+      case 1.2: return handleCity(           bot, uid, input, session, userMessages);
+      case 2:   return handleDelivery(       bot, uid, input, session, userMessages);
+      case 2.1: return handlePromoDecision(  bot, uid, input, session, userMessages);
+      case 2.2: return handlePromoCode(      bot, uid, text,   session, userMessages);
+      case 3:   return handleCategory(       bot, uid, input, session, userMessages);
+      case 4:   return handleProduct(        bot, uid, input, session, userMessages);
+      case 5:   return handleQuantity(       bot, uid, input, session, userMessages);
+      case 6:   return handleCurrency(       bot, uid, input, session, userMessages);
+      case 7:   return handleOrderConfirm(   bot, uid, input, session, userMessages);
       case 8:   return handleConfirmOrCancel(bot, uid, input, session, userMessages);
       default:
         await resetSession(uid);
@@ -239,31 +245,30 @@ export async function handleStep(bot, id, text, userMessages) {
   }
 }
 
-// ————— INDIVIDUAL HANDLERS —————
+// ————— Individual handlers —————
 
 async function handleRegion(bot, uid, input, session, userMessages) {
-  // strip leading non-alphanumerics, match either full key or stripped name
+  // strip leading non-alphanumerics, match full key or stripped name
   const cleaned = input.replace(/^[^a-z0-9]+/i, "").trim().toLowerCase();
   const entry = Object.entries(REGION_MAP).find(([key, { active }]) => {
     if (!active) return false;
-    const keyLC   = key.toLowerCase();
-    const base    = key.replace(/^[^a-z0-9]+/i, "").toLowerCase();
+    const keyLC = key.toLowerCase();
+    const base  = key.replace(/^[^a-z0-9]+/i, "").toLowerCase();
     return keyLC === input || base === cleaned;
   });
   if (!entry) {
     return renderStep(bot, uid, 1, userMessages);
   }
-  const [regionKey] = entry;
-  session.region = regionKey;
+  session.region = entry[0];
   session.step   = 1.2;
   return renderStep(bot, uid, 1.2, userMessages);
 }
 
 async function handleCity(bot, uid, input, session, userMessages) {
   // strip leading non-alphanumerics
-  const cleaned = input.replace(/^[^a-z0-9]+/i, "").trim().toLowerCase();
+  const cleaned   = input.replace(/^[^a-z0-9]+/i, "").trim().toLowerCase();
   const citiesMap = REGION_MAP[session.region]?.cities || {};
-  const cityKey = Object.keys(citiesMap)
+  const cityKey   = Object.keys(citiesMap)
     .find(c => c.toLowerCase() === cleaned);
   if (!cityKey) {
     return renderStep(bot, uid, 1.2, userMessages);
@@ -346,7 +351,7 @@ async function handleQuantity(bot, uid, input, session, userMessages) {
 
 async function handleCurrency(bot, uid, input, session, userMessages) {
   const wallet = WALLETS[input.toUpperCase()];
-  if (!wallet) return renderStep(bot, uid, 6, userMessages);
+  if (!wallet) return renderStep(bot, uid, 6, userMessages);  
   session.currency = input.toUpperCase();
   session.wallet   = wallet;
   session.step     = 7;
@@ -379,7 +384,7 @@ function handleBackButton(bot, uid, session, userMessages) {
   return renderStep(bot, uid, session.step, userMessages);
 }
 
-// ————— HELPERS —————
+// ————— Helpers —————
 
 function sanitizeId(id) {
   const s = String(id || "").trim();
