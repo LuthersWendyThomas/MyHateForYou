@@ -1,47 +1,34 @@
-// 📦 flows/startOrder.js | IMMORTAL FINAL v999999999+ULTIMATE — ULTRA-SYNC TANKLOCK MIRROR + 24/7 SAFE RESET DIAMONDLOCK MAX-PERFECTION
+// 📦 flows/startOrder.js | IMMORTAL FINAL v999999999.∞+GODMODE DIAMONDLOCK
+// ULTRA-FSM SYNC • TANKLOCK SESSION RESET • MAXIMUM STABILITY • 24/7 BULLETPROOF
 
 import { userSessions, userMessages, userOrders } from "../state/userState.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
 import { clearTimers, clearUserMessages } from "../state/stateManager.js";
 import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 
-// 🌍 Region choices — centralized for uniformity
-const REGION_LIST = [
-  "🗽 East Coast",
-  "🌴 West Coast",
-  "🛢️ South",
-  "⛰️ Midwest",
-  "🌲 Northwest",
-  "🏜️ Southwest"
-];
-
 /**
- * 🧼 Starts a fully clean order session — safe for retry or new user
+ * 🚀 Starts a fully clean order session — safe for retry, fallback, FSM sync
  * @param {object} bot - Telegram bot instance
  * @param {string|number} id - Telegram user ID
- * @param {object} [userMsgs] - User message tracking object
- * @returns {Promise<object|null>} - The result of the keyboard send operation
+ * @param {object} [userMsgs] - Optional message tracking object
  */
 export async function startOrder(bot, id, userMsgs = userMessages) {
   const uid = sanitizeId(id);
   if (!bot || !uid || typeof bot.sendMessage !== "function") {
-    logError("❌ [startOrder]", "Invalid bot instance or user ID", uid);
+    logError("❌ [startOrder]", "Invalid bot or UID", uid);
     return null;
   }
 
   try {
-    // 🔁 1. Total reset of previous session state
+    // 🧼 Step 1 — Clean reset of all user data
     await resetUserState(uid);
 
-    // 🔄 2. Initialize clean session
+    // 🔄 Step 2 — Start new FSM session
     initializeSession(uid);
 
-    // ⌨️ 3. Show region selector
+    // ⌨️ Step 3 — Build and send region selection keyboard
     const keyboard = buildRegionKeyboard();
-
-    await bot.sendChatAction(uid, "typing").catch(() => {
-      logWarning("⚠️ [startOrder]", "Failed to send chat action", uid);
-    });
+    await bot.sendChatAction(uid, "typing").catch(() => {});
 
     return await sendKeyboard(
       bot,
@@ -56,14 +43,14 @@ export async function startOrder(bot, id, userMsgs = userMessages) {
       bot,
       uid,
       "❗️ Unexpected error. Please try again.",
-      [[MENU_BUTTONS.HELP]],
+      [[{ text: MENU_BUTTONS.HELP.text }]],
       userMsgs
     );
   }
 }
 
 /**
- * ✅ Resets the user's session, messages, and orders
+ * 🧼 Clears all session-related user data before fresh order
  * @param {string} id - Telegram user ID
  */
 async function resetUserState(id) {
@@ -78,17 +65,19 @@ async function resetUserState(id) {
       "step", "region", "city", "deliveryMethod", "deliveryFee",
       "category", "product", "quantity", "unitPrice", "totalPrice",
       "currency", "wallet", "expectedAmount", "paymentTimer",
-      "paymentInProgress", "cleanupScheduled", "promoCode"
+      "paymentInProgress", "cleanupScheduled", "promoCode",
+      "adminStep", "lastText"
     ];
     for (const key of fieldsToClear) {
       delete userSessions[id][key];
     }
   }
-  logAction("🧼 [resetUserState]", "User state fully reset", id);
+
+  logAction("🧼 [resetUserState]", "State cleared", id);
 }
 
 /**
- * ✅ Initializes a clean session for the user
+ * 🔄 Initializes a new session for FSM
  * @param {string} id - Telegram user ID
  */
 function initializeSession(id) {
@@ -96,40 +85,13 @@ function initializeSession(id) {
     step: 1,
     createdAt: Date.now()
   };
-  logAction("🔄 [initializeSession]", "New session initialized", id);
+  logAction("🔄 [initializeSession]", "New session started", id);
 }
 
 /**
- * ✅ Builds the region selection keyboard
- * @returns {Array<Array<object>>} - Telegram keyboard layout
- */
-function buildRegionKeyboard() {
-  try {
-    const keyboard = REGION_LIST.map(region => {
-      if (!region) {
-        logError("⚠️ [buildRegionKeyboard]", new Error("Empty region found"));
-        return [{ text: "❌ Invalid Region" }]; // Fallback for invalid regions
-      }
-      return [{ text: region }];
-    });
-
-    // Add Help and Back buttons
-    keyboard.push([{ text: MENU_BUTTONS.HELP.text, callback_data: "MENU_HELP" }]);
-    keyboard.push([{ text: "🔙 Back", callback_data: "MENU_BACK" }]);
-
-    const normalizedKeyboard = normalizeKeyboard(keyboard); // Ensure consistent formatting
-    logAction("✅ [buildRegionKeyboard Debug]", JSON.stringify(normalizedKeyboard, null, 2)); // Debugging output
-    return normalizedKeyboard;
-  } catch (err) {
-    logError("❌ [buildRegionKeyboard error]", err);
-    return [[{ text: "❌ Error Generating Keyboard" }]]; // Fallback keyboard
-  }
-}
-
-/**
- * 🧠 Sanitizes user ID input
- * @param {string|number} id - Input ID
- * @returns {string|null} - Sanitized ID or null if invalid
+ * 🧠 Sanitizes Telegram user ID
+ * @param {string|number} id
+ * @returns {string|null}
  */
 function sanitizeId(id) {
   const uid = String(id || "").trim();
@@ -137,39 +99,35 @@ function sanitizeId(id) {
 }
 
 /**
- * 📝 Logs successful actions
- * @param {string} action - Action description
- * @param {string} message - Additional details
- * @param {string} [uid] - User ID (optional)
+ * ✅ Builds bulletproof region selector keyboard with fallback validation
+ * @returns {Array<Array<{text: string, callback_data?: string}>>}
  */
-function logAction(action, message, uid = null) {
-  console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (ID: ${uid})` : ""}`);
+function buildRegionKeyboard() {
+  try {
+    const keyboard = REGION_LIST.map(region => {
+      if (!region || typeof region !== "string") {
+        logError("⚠️ [buildRegionKeyboard]", new Error("Invalid region detected"));
+        return [{ text: "❌ Invalid Region" }];
+      }
+      return [{ text: region }];
+    });
+
+    keyboard.push([{ text: MENU_BUTTONS.HELP.text }]);
+    keyboard.push([{ text: "🔙 Back" }]);
+
+    const normalized = normalizeKeyboard(keyboard);
+    logAction("✅ [buildRegionKeyboard]", JSON.stringify(normalized, null, 2));
+    return normalized;
+  } catch (err) {
+    logError("❌ [buildRegionKeyboard error]", err);
+    return [[{ text: "❌ Error building keyboard" }]];
+  }
 }
 
 /**
- * ⚠️ Logs warnings
- * @param {string} action - Action description
- * @param {string} message - Additional details
- * @param {string} [uid] - User ID (optional)
- */
-function logWarning(action, message, uid = null) {
-  console.warn(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (ID: ${uid})` : ""}`);
-}
-
-/**
- * ⚠️ Logs errors
- * @param {string} action - Action description
- * @param {Error|string} error - Error object or message
- * @param {string} [uid] - User ID (optional)
- */
-function logError(action, error, uid = null) {
-  console.error(`${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`);
-}
-
-/**
- * ✅ Normalizes keyboard structure (ensures formatting consistency)
- * @param {Array<Array<{ text: string, callback_data?: string }>>} keyboard
- * @returns {Array<Array<{ text: string, callback_data?: string }>>}
+ * ✅ Ensures keyboard buttons have valid structure
+ * @param {Array<Array<{text: string, callback_data?: string}>>} keyboard
+ * @returns {Array<Array<{text: string, callback_data?: string}>>}
  */
 function normalizeKeyboard(keyboard) {
   if (!Array.isArray(keyboard)) {
@@ -178,18 +136,40 @@ function normalizeKeyboard(keyboard) {
   }
 
   return keyboard.map(row => {
-    if (Array.isArray(row)) {
-      return row.map(button => {
-        if (!button?.text) {
-          logError("⚠️ [normalizeKeyboard]", new Error("Button missing 'text' property"));
-          return { text: "❌ Invalid Button" }; // Fallback for invalid buttons
-        }
-        return {
-          text: String(button.text).trim(),
-          callback_data: button.callback_data ? String(button.callback_data).trim() : undefined
-        };
-      });
-    }
-    return [{ text: String(row).trim() }];
+    if (!Array.isArray(row)) return [{ text: String(row).trim() }];
+    return row.map(button => {
+      if (!button?.text) {
+        logError("⚠️ [normalizeKeyboard]", new Error("Missing button text"));
+        return { text: "❌ Invalid Button" };
+      }
+      return {
+        text: String(button.text).trim(),
+        callback_data: button.callback_data ? String(button.callback_data).trim() : undefined
+      };
+    });
   });
 }
+
+/**
+ * 📝 Standard log for successful operations
+ */
+function logAction(action, message, uid = null) {
+  console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (ID: ${uid})` : ""}`);
+}
+
+/**
+ * ⚠️ Standard error logger
+ */
+function logError(action, error, uid = null) {
+  console.error(`${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`);
+}
+
+// 🌍 Centralized region list
+const REGION_LIST = [
+  "🗽 East Coast",
+  "🌴 West Coast",
+  "🛢️ South",
+  "⛰️ Midwest",
+  "🌲 Northwest",
+  "🏜️ Southwest"
+];
