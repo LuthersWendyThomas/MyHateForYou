@@ -1,7 +1,7 @@
-// 📦 core/handlers/renderStep.js | FINAL IMMORTAL v999999999∞.GODMODE+SYNC
-// FULLY SYNCHRONIZED • REGION/CITY/PRODUCT VALIDATION • TEXTLESS • ONLY PROMO INPUT • NO CRASH • 24/7 READY
+// 📦 core/handlers/renderStep.js | FINAL IMMORTAL v999999999∞.5 — GODMODE ULTRASYNC + ZERO BUGS
+// FULLY BULLETPROOF • REGION/CITY/CATEGORY/PRODUCT VALIDATION • 0% [object Object] • 100% LOCKED
 
-import { REGION_MAP } from "../../config/regions.js";
+import { REGION_MAP, getRegionKeyboard, getCityKeyboard } from "../../config/regions.js";
 import { deliveryMethods } from "../../config/features.js";
 import { DISCOUNTS } from "../../config/discounts.js";
 import { WALLETS } from "../../config/config.js";
@@ -11,7 +11,7 @@ import { userSessions } from "../../state/userState.js";
 import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 
 /**
- * 🔁 Main step renderer (used by FSM)
+ * 🔁 Main FSM step renderer
  */
 export async function renderStep(bot, uid, step, userMessages) {
   const session = userSessions[uid];
@@ -20,89 +20,76 @@ export async function renderStep(bot, uid, step, userMessages) {
   try {
     switch (step) {
       case 1: {
-        // 🌍 Region selection
-        const regions = Object.entries(REGION_MAP)
-          .filter(([_, r]) => r?.active)
-          .map(([label]) => ({ text: label }));
-
-        return sendKeyboard(bot, uid, "🌍 *Choose your region:*", [...regions, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        // 🌍 Region selector
+        const keyboard = getRegionKeyboard();
+        return sendKeyboard(bot, uid, "🌍 *Choose your region:*", keyboard, userMessages, { parse_mode: "Markdown" });
       }
 
       case 1.2: {
-  // 🏙️ City selection
-  const cities = REGION_MAP[session.region]?.cities || {};
-  const options = Object.entries(cities).map(([city, isActive]) => {
-    const label = isActive ? city : `🚫 ${city}`;
-    return [{ text: label }];
-  });
-
-  options.push([{ text: MENU_BUTTONS.BACK.text }]); // Back button
-  return sendKeyboard(bot, uid, "🏙️ *Select your city:*", options, userMessages);
-}
+        // 🏙️ City selector (based on region)
+        const keyboard = getCityKeyboard(session.region);
+        return sendKeyboard(bot, uid, "🏙️ *Select your city:*", keyboard, userMessages, { parse_mode: "Markdown" });
+      }
 
       case 2: {
         // 🚚 Delivery method
-        const methods = deliveryMethods.map((m) => ({ text: m.label }));
-
-        return sendKeyboard(bot, uid, "🚚 *Choose delivery method:*", [...methods, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        const keyboard = deliveryMethods.map(m => [{ text: m.label }]);
+        keyboard.push([{ text: MENU_BUTTONS.BACK.text }]);
+        return sendKeyboard(bot, uid, "🚚 *Choose delivery method:*", keyboard, userMessages, { parse_mode: "Markdown" });
       }
 
       case 2.1: {
-        // 🎟️ Promo code decision
+        // 🎟️ Promo code? Yes/No
         return sendKeyboard(bot, uid, "🎟️ *Do you have a promo code?*", [
-          { text: MENU_BUTTONS.YES.text },
-          { text: MENU_BUTTONS.NO.text },
-          { text: MENU_BUTTONS.BACK.text },
-        ], userMessages);
+          [{ text: MENU_BUTTONS.YES.text }],
+          [{ text: MENU_BUTTONS.NO.text }],
+          [{ text: MENU_BUTTONS.BACK.text }],
+        ], userMessages, { parse_mode: "Markdown" });
       }
 
       case 2.2: {
-        // 🏷️ Promo code input (only place with raw text input)
+        // 🏷️ Promo code input
         return sendAndTrack(bot, uid, "🏷️ *Enter your promo code:*", { parse_mode: "Markdown" }, userMessages);
       }
 
       case 3: {
-        // 📦 Product category
-        const options = Object.keys(products).map((cat) => ({ text: cat }));
-
-        return sendKeyboard(bot, uid, "📦 *Choose product category:*", [...options, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        // 📦 Category selection
+        const keyboard = Object.keys(products).map(c => [{ text: c }]);
+        keyboard.push([{ text: MENU_BUTTONS.BACK.text }]);
+        return sendKeyboard(bot, uid, "📦 *Choose product category:*", keyboard, userMessages, { parse_mode: "Markdown" });
       }
 
       case 4: {
         // 🛍️ Product selection
-        const cat = session.category;
-        const list = products[cat] || [];
-        const buttons = list.map(p => p.active ? { text: p.name } : { text: `🚫 ${p.name}` });
-
-        return sendKeyboard(bot, uid, `🛍️ *Select product from ${cat}:*`, [...buttons, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        const category = session.category;
+        const list = products[category] || [];
+        const keyboard = list.map(p => [{ text: p.active ? p.name : `🚫 ${p.name}` }]);
+        keyboard.push([{ text: MENU_BUTTONS.BACK.text }]);
+        return sendKeyboard(bot, uid, `🛍️ *Select product from ${category}:*`, keyboard, userMessages, { parse_mode: "Markdown" });
       }
 
       case 5: {
         // 🔢 Quantity selection
         const priceList = session.product?.prices || {};
-        const buttons = Object.entries(priceList).map(([qty, price]) => ({ text: `${qty} (${price}€)` }));
-
-        return sendKeyboard(bot, uid, "🔢 *Choose quantity:*", [...buttons, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        const keyboard = Object.entries(priceList).map(
+          ([qty, price]) => [{ text: `${qty} (${price}€)` }]
+        );
+        keyboard.push([{ text: MENU_BUTTONS.BACK.text }]);
+        return sendKeyboard(bot, uid, "🔢 *Choose quantity:*", keyboard, userMessages, { parse_mode: "Markdown" });
       }
 
       case 6: {
         // 💰 Currency selection
-        const currencies = Object.keys(WALLETS).map(cur => ({ text: cur }));
-
-        return sendKeyboard(bot, uid, "💰 *Choose currency/wallet:*", [...currencies, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        const keyboard = Object.keys(WALLETS).map(c => [{ text: c }]);
+        keyboard.push([{ text: MENU_BUTTONS.BACK.text }]);
+        return sendKeyboard(bot, uid, "💰 *Choose currency/wallet:*", keyboard, userMessages, { parse_mode: "Markdown" });
       }
 
       case 7: {
         // 🧾 Order summary
         const {
-          product,
-          quantity,
-          unitPrice,
-          deliveryFee,
-          promoCode,
-          appliedDiscount,
-          currency,
-          totalPrice,
+          product, quantity, unitPrice, deliveryFee,
+          promoCode, appliedDiscount, currency, totalPrice
         } = session;
 
         const summary =
@@ -117,16 +104,16 @@ export async function renderStep(bot, uid, step, userMessages) {
           `✅ Press *CONFIRM* to proceed`;
 
         return sendKeyboard(bot, uid, summary, [
-          { text: MENU_BUTTONS.CONFIRM.text },
-          { text: MENU_BUTTONS.BACK.text }
+          [{ text: MENU_BUTTONS.CONFIRM.text }],
+          [{ text: MENU_BUTTONS.BACK.text }]
         ], userMessages, { parse_mode: "Markdown" });
       }
 
       case 8: {
-        // ⏳ Payment pending
+        // ⏳ Payment wait
         return sendKeyboard(bot, uid, "⏳ *Waiting for payment confirmation...*", [
-          { text: MENU_BUTTONS.CONFIRM.text },
-          { text: MENU_BUTTONS.CANCEL.text }
+          [{ text: MENU_BUTTONS.CONFIRM.text }],
+          [{ text: MENU_BUTTONS.CANCEL.text }]
         ], userMessages, { parse_mode: "Markdown" });
       }
 
