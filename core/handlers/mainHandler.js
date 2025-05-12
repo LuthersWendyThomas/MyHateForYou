@@ -1,7 +1,7 @@
-// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v1.0.0•GODMODE DIAMONDLOCK
-// ULTRA-FSM SYNC • BULLETPROOF MAIN MENU • FULL ERROR-CATCH • MAXIMUM IMMUNITY
+// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
+// ULTRA-FSM SYNC • BULLETPROOF MAIN MENU • FULL ERROR‐CATCH • MAXIMUM IMMUNITY
 
-import { BOT } from "../../config/config.js";
+import { BOT, ALIASES } from "../../config/config.js";
 import { userSessions, userMessages } from "../../state/userState.js";
 import { safeStart } from "./finalHandler.js";
 import { handleStep } from "./stepHandler.js";
@@ -13,12 +13,12 @@ import { sendProfile } from "../../utils/sendProfile.js";
 import { openAdminPanel, handleAdminAction } from "../../utils/adminPanel.js";
 import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 import { getMainMenu } from "../../helpers/menu.js";
+import { sendKeyboard } from "../../helpers/messageUtils.js";
 import { markUserActive } from "../sessionManager.js";
 import { canProceed } from "../security.js";
-import { sendKeyboard } from "../../helpers/messageUtils.js";
 
 /**
- * 🚪 Registers the bot's entry points for callbacks & messages
+ * 🚪 Registers the bot’s entry points for callbacks & messages
  */
 export function registerMainHandler(bot) {
   if (!bot?.on) {
@@ -26,9 +26,9 @@ export function registerMainHandler(bot) {
     return;
   }
 
-  // 💥 Handle button callbacks
+  // 💥 Handle inline button callbacks
   bot.on("callback_query", async (query) => {
-    const uid = sanitizeId(query?.message?.chat?.id);
+    const uid  = sanitizeId(query?.message?.chat?.id);
     const data = query?.data;
     if (!uid || !data) return;
 
@@ -42,31 +42,27 @@ export function registerMainHandler(bot) {
         case MENU_BUTTONS.BUY.callback_data:
           await safeCall(() => startOrder(bot, uid, userMessages), uid);
           break;
-
         case MENU_BUTTONS.PROFILE.callback_data:
           await safeCall(() => sendProfile(bot, uid, userMessages), uid);
           break;
-
         case MENU_BUTTONS.ORDERS.callback_data:
           await safeCall(() => sendOrders(bot, uid, userMessages), uid);
           break;
-
         case MENU_BUTTONS.HELP.callback_data:
           await safeCall(() => sendHelp(bot, uid, userMessages), uid);
           break;
-
         case MENU_BUTTONS.STATS.callback_data:
           if (isAdmin(uid)) {
             await safeCall(() => sendStats(bot, uid, userMessages), uid);
             break;
           }
-          // fallthrough to default
+          // else fallthrough to default
         case MENU_BUTTONS.ADMIN.callback_data:
           if (isAdmin(uid)) {
             await safeCall(() => openAdminPanel(bot, uid), uid);
             break;
           }
-          // fallthrough
+          // else fallthrough
         default:
           console.warn(`⚠️ Unknown callback: ${data}`);
           await bot.answerCallbackQuery(query.id, {
@@ -75,14 +71,14 @@ export function registerMainHandler(bot) {
           });
       }
     } catch (err) {
-      console.error("❌ [callback_query error]:", err.message || err);
+      console.error("❌ [callback_query error]:", err);
     } finally {
-      // always ack to remove spinner
+      // always acknowledge to stop the loading spinner
       await bot.answerCallbackQuery(query.id).catch(() => {});
     }
   });
 
-  // 💬 Handle text messages
+  // 💬 Handle incoming text messages
   bot.on("message", async (msg) => {
     const uid = sanitizeId(msg?.chat?.id);
     const raw = msg?.text;
@@ -92,27 +88,27 @@ export function registerMainHandler(bot) {
     await markUserActive(uid);
     if (!(await canProceed(uid, bot, text))) return;
 
+    console.log(`📩 [message] ${uid}: ${text}`);
+
     // Ensure session exists
     userSessions[uid] ||= { step: 1, createdAt: Date.now() };
     userSessions[uid].lastText = text;
 
-    console.log(`📩 [message] ${uid}: ${text}`);
-
     try {
-      // 🚀 /start — always resets to main menu
+      // 🚀 /start resets everything
       if (text === "/start") {
         console.log(`🚀 ${uid} triggered /start`);
         return await safeCall(() => safeStart(bot, uid), uid);
       }
 
-      // 🛡️ Admin flows
+      // 🔐 Admin flows
       if (userSessions[uid].adminStep) {
         return await safeCall(() =>
           handleAdminAction(bot, msg, userSessions), uid
         );
       }
 
-      // 📋 Static commands via main menu buttons
+      // 📋 Static main‐menu commands
       if (isMatch(text, MENU_BUTTONS.BUY)) {
         return await safeCall(() => startOrder(bot, uid, userMessages), uid);
       }
@@ -132,39 +128,47 @@ export function registerMainHandler(bot) {
         return await safeCall(() => openAdminPanel(bot, uid), uid);
       }
 
-      // 🔄 Everything else → FSM
+      // 🔄 Fallback to FSM flow
       return await safeCall(() =>
         handleStep(bot, uid, raw, userMessages), uid
       );
     } catch (err) {
-      console.error("❌ [message error]:", err.message || err);
+      console.error("❌ [message error]:", err);
     }
   });
 }
 
 // ————— HELPERS —————
 
+/** Sanitize chat ID */
 function sanitizeId(id) {
-  const uid = String(id || "").trim();
-  return uid && uid !== "undefined" && uid !== "null" ? uid : null;
+  const s = String(id ?? "").trim();
+  return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
+/** Normalize text for matching */
 function normalizeText(txt) {
   return txt?.toString().trim().toLowerCase();
 }
 
+/** Match button text exactly */
 function isMatch(text, button) {
   return normalizeText(button?.text) === text;
 }
 
+/** Check if user is admin */
 function isAdmin(uid) {
   return String(uid) === String(BOT.ADMIN_ID);
 }
 
+/**
+ * Safely invoke a handler and catch errors
+ * @param {Function} fn – async function
+ */
 async function safeCall(fn, uid = "unknown") {
   try {
     return await fn();
   } catch (err) {
-    console.error(`❌ [safeCall uid=${uid}]:`, err.message || err);
+    console.error(`❌ [safeCall uid=${uid}]:`, err);
   }
 }
