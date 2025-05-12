@@ -32,7 +32,6 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
-
       case 1.2: {
         const keyboard = getCityKeyboard(session.region);
         return sendKeyboard(
@@ -43,9 +42,8 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
-
       case 2: {
-        // guard: only keyboard taps allowed here
+        // ❗ guard: only valid delivery labels or Back
         const keyboard = deliveryMethods.map(m => [{ text: m.label }]);
         keyboard.push([{ text: MENU_BUTTONS.BACK.text }]);
         const city = session.city || "your city";
@@ -57,7 +55,6 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
-
       case 2.1: {
         const keyboard = [
           [{ text: MENU_BUTTONS.YES.text }],
@@ -72,7 +69,6 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
-
       case 2.2: {
         return sendKeyboard(
           bot, uid,
@@ -82,7 +78,6 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
-
       case 3: {
         const keyboard = Object.keys(products).map(c => [{ text: c }]);
         keyboard.push([{ text: MENU_BUTTONS.BACK.text }]);
@@ -94,7 +89,6 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
-
       case 4: {
         const list = products[session.category] || [];
         const keyboard = list.map(p => [{ text: p.active ? p.name : `🚫 ${p.name}` }]);
@@ -107,7 +101,6 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
-
       case 5: {
         const priceList = session.product?.prices || {};
         const keyboard = Object.entries(priceList).map(
@@ -122,7 +115,6 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
-
       case 6: {
         const keyboard = Object.keys(WALLETS).map(c => [{ text: c }]);
         keyboard.push([{ text: MENU_BUTTONS.BACK.text }]);
@@ -134,7 +126,6 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
-
       case 7: {
         const {
           product, quantity, unitPrice, deliveryFee,
@@ -162,7 +153,6 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
-
       case 8: {
         const keyboard = [
           [{ text: MENU_BUTTONS.CONFIRM.text }],
@@ -176,7 +166,6 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
-
       default: {
         console.warn(`⚠️ renderStep unknown step=${step} for UID=${uid}`);
         return sendAndTrack(
@@ -202,27 +191,21 @@ export async function handleStep(bot, id, text, userMessages) {
   const uid   = sanitizeId(id);
   const input = normalizeText(text);
 
-  // ensure session object
-  if (!userSessions[uid]) {
-    userSessions[uid] = { step: 1, createdAt: Date.now() };
-  }
-  if (!isValidStep(userSessions[uid].step)) {
-    userSessions[uid].step = 1;
-  }
+  // ensure session exists
+  if (!userSessions[uid])                 userSessions[uid] = { step: 1, createdAt: Date.now() };
+  if (!isValidStep(userSessions[uid].step)) userSessions[uid].step = 1;
   const session = userSessions[uid];
 
-  // Step-2 guard: only allow deliveryMethods labels or BACK
+  // 🔄 Step 2 guard: only accept valid labels or Back
   if (session.step === 2) {
-    const labels = deliveryMethods.map(m => m.label.toLowerCase());
-    if (
-      input !== MENU_BUTTONS.BACK.text.toLowerCase() &&
-      !labels.includes(input)
-    ) {
+    const validLabels = deliveryMethods.map(m => m.label.toLowerCase());
+    const backLabel   = MENU_BUTTONS.BACK.text.toLowerCase();
+    if (!validLabels.includes(input) && input !== backLabel) {
       return renderStep(bot, uid, 2, userMessages);
     }
   }
 
-  // empty or SPACE: re-render current step
+  // empty → re-render current step
   if (!input) {
     return renderStep(bot, uid, session.step, userMessages);
   }
@@ -234,17 +217,17 @@ export async function handleStep(bot, id, text, userMessages) {
 
   try {
     switch (session.step) {
-      case 1:    return handleRegion(bot, uid, input, session, userMessages);
-      case 1.2:  return handleCity(bot,   uid, input, session, userMessages);
-      case 2:    return handleDelivery(bot, uid, input, session, userMessages);
-      case 2.1:  return handlePromoDecision(bot, uid, input, session, userMessages);
-      case 2.2:  return handlePromoCode(bot,    uid, text,    session, userMessages);
-      case 3:    return handleCategory(bot,    uid, input,  session, userMessages);
-      case 4:    return handleProduct(bot,     uid, input,  session, userMessages);
-      case 5:    return handleQuantity(bot,    uid, input,  session, userMessages);
-      case 6:    return handleCurrency(bot,    uid, input,  session, userMessages);
-      case 7:    return handleOrderConfirm(bot,uid, input,  session, userMessages);
-      case 8:    return handleConfirmOrCancel(bot,uid,input,  session, userMessages);
+      case 1:   return handleRegion(bot, uid, input, session, userMessages);
+      case 1.2: return handleCity(  bot, uid, input, session, userMessages);
+      case 2:   return handleDelivery(bot, uid, input, session, userMessages);
+      case 2.1: return handlePromoDecision(bot, uid, input, session, userMessages);
+      case 2.2: return handlePromoCode(bot, uid, text,   session, userMessages);
+      case 3:   return handleCategory(bot, uid, input, session, userMessages);
+      case 4:   return handleProduct(bot, uid, input, session, userMessages);
+      case 5:   return handleQuantity(bot, uid, input, session, userMessages);
+      case 6:   return handleCurrency(bot, uid, input, session, userMessages);
+      case 7:   return handleOrderConfirm(bot, uid, input, session, userMessages);
+      case 8:   return handleConfirmOrCancel(bot, uid, input, session, userMessages);
       default:
         await resetSession(uid);
         return safeStart(bot, uid);
@@ -256,30 +239,32 @@ export async function handleStep(bot, id, text, userMessages) {
   }
 }
 
-// ————— Handlers for each step —————
+// ————— INDIVIDUAL HANDLERS —————
 
 async function handleRegion(bot, uid, input, session, userMessages) {
-  // strip leading emojis/non-word chars
-  const clean = input.replace(/^[^a-z0-9]+/i, "").trim().toLowerCase();
-  // match KEY or base name
-  const entry = Object.entries(REGION_MAP).find(([key,{active}]) => {
+  // strip leading non-alphanumerics, match either full key or stripped name
+  const cleaned = input.replace(/^[^a-z0-9]+/i, "").trim().toLowerCase();
+  const entry = Object.entries(REGION_MAP).find(([key, { active }]) => {
     if (!active) return false;
-    const keyLC  = key.toLowerCase();
-    const base   = key.replace(/^[^a-z0-9]+/i,"").toLowerCase();
-    return keyLC === input || base === clean;
+    const keyLC   = key.toLowerCase();
+    const base    = key.replace(/^[^a-z0-9]+/i, "").toLowerCase();
+    return keyLC === input || base === cleaned;
   });
   if (!entry) {
     return renderStep(bot, uid, 1, userMessages);
   }
-  session.region = entry[0];
+  const [regionKey] = entry;
+  session.region = regionKey;
   session.step   = 1.2;
   return renderStep(bot, uid, 1.2, userMessages);
 }
 
 async function handleCity(bot, uid, input, session, userMessages) {
-  const clean = input.replace(/^[^a-z0-9]+/i, "").trim().toLowerCase();
-  const cities = REGION_MAP[session.region]?.cities||{};
-  const cityKey = Object.keys(cities).find(c=>c.toLowerCase()===clean);
+  // strip leading non-alphanumerics
+  const cleaned = input.replace(/^[^a-z0-9]+/i, "").trim().toLowerCase();
+  const citiesMap = REGION_MAP[session.region]?.cities || {};
+  const cityKey = Object.keys(citiesMap)
+    .find(c => c.toLowerCase() === cleaned);
   if (!cityKey) {
     return renderStep(bot, uid, 1.2, userMessages);
   }
@@ -289,23 +274,23 @@ async function handleCity(bot, uid, input, session, userMessages) {
 }
 
 async function handleDelivery(bot, uid, input, session, userMessages) {
-  const method = deliveryMethods.find(m=>m.label.toLowerCase()===input);
+  const method = deliveryMethods.find(m => m.label.toLowerCase() === input);
   if (!method) return renderStep(bot, uid, 2, userMessages);
   session.deliveryMethod = method.key;
-  session.deliveryFee    = Number(method.fee)||0;
+  session.deliveryFee    = Number(method.fee) || 0;
   session.step           = 2.1;
   return renderStep(bot, uid, 2.1, userMessages);
 }
 
 async function handlePromoDecision(bot, uid, input, session, userMessages) {
-  if (input === MENU_BUTTONS.YES.text.toLowerCase()) session.step = 2.2;
+  if (input === MENU_BUTTONS.YES.text.toLowerCase())    session.step = 2.2;
   else if (input === MENU_BUTTONS.NO.text.toLowerCase()) session.step = 3;
   else return renderStep(bot, uid, 2.1, userMessages);
   return renderStep(bot, uid, session.step, userMessages);
 }
 
 async function handlePromoCode(bot, uid, raw, session, userMessages) {
-  const code = raw.toUpperCase().trim();
+  const code  = raw.toUpperCase().trim();
   const promo = DISCOUNTS.codes?.[code];
   if (!promo?.active) {
     await sendAndTrack(bot, uid, `❌ Invalid promo: \`${code}\``, { parse_mode: "Markdown" }, userMessages);
@@ -319,7 +304,7 @@ async function handlePromoCode(bot, uid, raw, session, userMessages) {
 }
 
 async function handleCategory(bot, uid, input, session, userMessages) {
-  const cat = Object.keys(products).find(c=>c.toLowerCase()===input);
+  const cat = Object.keys(products).find(c => c.toLowerCase() === input);
   if (!cat) return renderStep(bot, uid, 3, userMessages);
   session.category = cat;
   session.step     = 4;
@@ -327,7 +312,7 @@ async function handleCategory(bot, uid, input, session, userMessages) {
 }
 
 async function handleProduct(bot, uid, input, session, userMessages) {
-  const prod = products[session.category]?.find(p=>p.name.toLowerCase()===input);
+  const prod = products[session.category]?.find(p => p.name.toLowerCase() === input);
   if (!prod) return renderStep(bot, uid, 4, userMessages);
   session.product = prod;
   session.step    = 5;
@@ -348,7 +333,7 @@ async function handleQuantity(bot, uid, input, session, userMessages) {
     productName: session.product.name
   }, DISCOUNTS);
 
-  const unit  = +(price - (price*discount)/100).toFixed(2);
+  const unit  = +(price - (price * discount) / 100).toFixed(2);
   const total = +(unit + session.deliveryFee).toFixed(2);
 
   session.quantity        = qty;
@@ -394,13 +379,12 @@ function handleBackButton(bot, uid, session, userMessages) {
   return renderStep(bot, uid, session.step, userMessages);
 }
 
-// ————— Helpers —————
+// ————— HELPERS —————
 
 function sanitizeId(id) {
-  const s = String(id||"").trim();
-  return s && s!=="undefined" && s!=="null" ? s : null;
+  const s = String(id || "").trim();
+  return s && s !== "undefined" && s !== "null" ? s : null;
 }
-
 function normalizeText(txt) {
   return txt?.toString().trim().toLowerCase();
 }
