@@ -1,4 +1,4 @@
-// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999999999.∞.3
+// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999999999.∞.4
 // 24/7 BULLETPROOF • COMMENT RESTORED • SYNCED • UNTRIMMED • GODMODE∞
 
 import { deliveryMethods } from "../../config/features.js";
