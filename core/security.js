@@ -1,9 +1,11 @@
-// 🛡️ core/security.js | IMMORTAL FINAL v1.0.0•GODMODE DIAMONDLOCK
+// 🛡️ core/security.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
 // TITANLOCK SYNCED • BULLETPROOF • ULTRA-SAFE • AUTO-MUTE/FLOOD-PROOF
 
 import { isBanned, banUser } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { antiSpam, antiFlood, bannedUntil } from "../state/userState.js";
+import { userSessions } from "../state/userState.js";
+import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { BOT } from "../config/config.js";
 
 // ⛔ Security thresholds
@@ -47,8 +49,8 @@ export function isSpamming(id) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
 
-  const now   = Date.now();
-  const last  = antiSpam[uid] || 0;
+  const now  = Date.now();
+  const last = antiSpam[uid] || 0;
   antiSpam[uid] = now;
 
   const spam = now - last < SPAM_INTERVAL_MS;
@@ -64,8 +66,8 @@ export async function handleFlood(id, bot) {
   if (!uid || isAdmin(uid)) return false;
 
   try {
-    const now   = Date.now();
-    let state   = antiFlood[uid];
+    const now = Date.now();
+    let state = antiFlood[uid];
 
     if (!state) {
       antiFlood[uid] = { count: 1, start: now };
@@ -150,11 +152,23 @@ export async function canProceed(id, bot, text = "") {
   if (!uid) return false;
   if (isAdmin(uid)) return true;
 
+  // ─── Allow rapid Confirm/Cancel during payment steps ───
+  const session = userSessions[uid];
+  const txt = String(text ?? "").trim().toLowerCase();
+  if (session?.step >= 8) {
+    if (
+      txt === MENU_BUTTONS.CONFIRM.text.toLowerCase() ||
+      txt === MENU_BUTTONS.CANCEL.text.toLowerCase()
+    ) {
+      return true;
+    }
+  }
+
   try {
-    if (isMuted(uid))       return false;
-    if (await handleFlood(uid, bot)) return false;
-    if (isSpamming(uid))    return false;
-    if (isMessageDangerous(uid, text)) return false;
+    if (isMuted(uid))                           return false;
+    if (await handleFlood(uid, bot))            return false;
+    if (isSpamming(uid))                        return false;
+    if (isMessageDangerous(uid, text))          return false;
     if (await isBanned(uid)) {
       logAction("⛔ [canProceed]", "User is permanently banned", uid);
       return false;
