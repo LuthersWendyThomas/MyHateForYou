@@ -1,4 +1,4 @@
-// 📦 flows/startOrder.js | IMMORTAL FINAL v999999999+ULTIMATE — ULTRA-SYNC TANKLOCK MIRROR + 24/7 SAFE RESET
+// 📦 flows/startOrder.js | IMMORTAL FINAL v999999999+ULTIMATE — ULTRA-SYNC TANKLOCK MIRROR + 24/7 SAFE RESET MAX-PERFECTION
 
 import { userSessions, userMessages, userOrders } from "../state/userState.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
@@ -105,9 +105,11 @@ function initializeSession(id) {
  */
 function buildRegionKeyboard() {
   const keyboard = REGION_LIST.map(region => [{ text: region }]);
-  keyboard.push([{ text: MENU_BUTTONS.HELP.text }]); // Unified button for help
-  keyboard.push([{ text: "🔙 Back" }]); // Back button for navigation
-  return keyboard;
+  
+  // Ensure buttons are properly structured
+  keyboard.push([{ text: MENU_BUTTONS.HELP.text, callback_data: "MENU_HELP" }]); // Unified button for help
+  keyboard.push([{ text: "🔙 Back", callback_data: "MENU_BACK" }]); // Back button for navigation
+  return normalizeKeyboard(keyboard); // Normalize keyboard for bulletproof formatting
 }
 
 /**
@@ -148,4 +150,26 @@ function logWarning(action, message, uid = null) {
  */
 function logError(action, error, uid = null) {
   console.error(`${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`);
+}
+
+/**
+ * ✅ Normalizes keyboard structure (ensures formatting consistency)
+ * @param {Array<Array<{ text: string, callback_data?: string }>>} keyboard
+ * @returns {Array<Array<{ text: string, callback_data?: string }>>}
+ */
+function normalizeKeyboard(keyboard) {
+  if (!Array.isArray(keyboard)) {
+    logError("⚠️ [normalizeKeyboard]", new Error("Invalid keyboard structure"));
+    return [];
+  }
+
+  return keyboard.map(row => {
+    if (Array.isArray(row)) {
+      return row.map(button => ({
+        text: String(button?.text || "").trim(),
+        callback_data: button?.callback_data ? String(button.callback_data).trim() : undefined
+      }));
+    }
+    return [{ text: String(row).trim() }];
+  });
 }
