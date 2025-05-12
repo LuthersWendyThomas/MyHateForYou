@@ -1,4 +1,4 @@
-// 📦 state/stateManager.js | FINAL IMMORTAL v999999999.999 — CORE SYSTEM LOCK + GODMODE SYNC
+// 📦 state/stateManager.js | FINAL IMMORTAL v999999999.9999 — CORE SYSTEM LOCK + GODMODE SYNC
 
 import {
   userSessions,
@@ -35,14 +35,11 @@ export function resetUser(id) {
       if (store?.[uid] !== undefined) delete store[uid];
     });
 
-    delete activeTimers[uid];
-    delete paymentTimers[uid];
-
     activeUsers.remove(uid);
 
-    console.log(`🧼 [resetUser] → State fully cleared: ${uid}`);
+    logAction("🧼 [resetUser]", `State fully cleared`, uid);
   } catch (err) {
-    console.error("❌ [resetUser error]:", err.message || err);
+    logError("❌ [resetUser error]", err, uid);
   }
 }
 
@@ -61,9 +58,9 @@ export function clearUserActivity(id) {
 
     activeUsers.remove(uid);
 
-    console.log(`🧹 [clearUserActivity] → Security flags cleared: ${uid}`);
+    logAction("🧹 [clearUserActivity]", `Security flags cleared`, uid);
   } catch (err) {
-    console.error("❌ [clearUserActivity error]:", err.message || err);
+    logError("❌ [clearUserActivity error]", err, uid);
   }
 }
 
@@ -76,9 +73,9 @@ export function clearUserMessages(id) {
 
   try {
     delete userMessages[uid];
-    console.log(`🗑️ [clearUserMessages] → Messages cleared: ${uid}`);
+    logAction("🗑️ [clearUserMessages]", `Messages cleared`, uid);
   } catch (err) {
-    console.error("❌ [clearUserMessages error]:", err.message || err);
+    logError("❌ [clearUserMessages error]", err, uid);
   }
 }
 
@@ -93,21 +90,21 @@ export function clearTimers(id) {
     if (activeTimers[uid]) {
       clearTimeout(activeTimers[uid]);
       delete activeTimers[uid];
-      console.log(`🕒 [clearTimers] UI timer stopped: ${uid}`);
+      logAction("🕒 [clearTimers]", `UI timer stopped`, uid);
     }
 
     if (paymentTimers[uid]) {
       clearTimeout(paymentTimers[uid]);
       delete paymentTimers[uid];
-      console.log(`💳 [clearTimers] Payment timer stopped: ${uid}`);
+      logAction("💳 [clearTimers]", `Payment timer stopped`, uid);
     }
 
     if (userSessions[uid]?.cleanupScheduled) {
       delete userSessions[uid].cleanupScheduled;
-      console.log(`🧼 [clearTimers] Cleanup flag removed: ${uid}`);
+      logAction("🧼 [clearTimers]", `Cleanup flag removed`, uid);
     }
   } catch (err) {
-    console.error("❌ [clearTimers error]:", err.message || err);
+    logError("❌ [clearTimers error]", err, uid);
   }
 }
 
@@ -122,10 +119,19 @@ export function unregisterUser(id) {
     clearTimers(uid);
     clearUserMessages(uid);
     resetUser(uid);
-    console.log(`🚫 [unregisterUser] → User fully unregistered: ${uid}`);
+
+    logAction("🚫 [unregisterUser]", `User fully unregistered`, uid);
   } catch (err) {
-    console.error("❌ [unregisterUser error]:", err.message || err);
+    logError("❌ [unregisterUser error]", err, uid);
   }
+}
+
+/**
+ * ✅ Checks if a user is registered in the system
+ */
+export function isUserRegistered(id) {
+  const uid = safeId(id);
+  return uid && userSessions[uid] !== undefined;
 }
 
 /**
@@ -134,4 +140,18 @@ export function unregisterUser(id) {
 function safeId(id) {
   const str = String(id ?? "").trim();
   return str && str !== "undefined" && str !== "null" ? str : null;
+}
+
+/**
+ * 📝 Logs successful actions with timestamps
+ */
+function logAction(action, message, uid) {
+  console.log(`${new Date().toISOString()} ${action} → ${message}: ${uid}`);
+}
+
+/**
+ * ⚠️ Logs errors with timestamps
+ */
+function logError(action, error, uid) {
+  console.error(`${new Date().toISOString()} ${action} → ${error.message || error} (uid: ${uid})`);
 }
