@@ -1,4 +1,4 @@
-// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v99999999999999.∞
+// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v99999999999999.∞+1
 // DIAMOND LOCKED • FULLY SYNCED • GREETING • RESET • DELIVERY • BULLETPROOF
 
 import fs from "fs/promises";
@@ -11,6 +11,8 @@ import { simulateDelivery } from "./deliveryHandler.js";
 
 /**
  * 🚀 Starts a fresh session (/start)
+ * @param {object} bot - Telegram bot instance
+ * @param {string|number} id - User ID
  */
 export async function safeStart(bot, id) {
   const uid = String(id);
@@ -56,6 +58,8 @@ export async function safeStart(bot, id) {
 
 /**
  * ✅ Finalizes confirmed order + starts delivery
+ * @param {object} bot - Telegram bot instance
+ * @param {string|number} id - User ID
  */
 export async function finishOrder(bot, id) {
   const uid = String(id);
@@ -82,6 +86,7 @@ export async function finishOrder(bot, id) {
 
 /**
  * 🧼 Public session reset (post-payment or cancel)
+ * @param {string|number} id - User ID
  */
 export async function resetSession(id) {
   await fullSessionReset(String(id));
@@ -89,6 +94,7 @@ export async function resetSession(id) {
 
 /**
  * 🧯 Absolute session wipe — state, timers, flags, messages
+ * @param {string} uid - User ID
  */
 async function fullSessionReset(uid) {
   try {
@@ -125,6 +131,8 @@ async function fullSessionReset(uid) {
 
 /**
  * 📸 Greeting caption
+ * @param {number} count - Active user count
+ * @returns {string} - Greeting text
  */
 function greetingText(count) {
   return `
@@ -150,6 +158,8 @@ function greetingText(count) {
 
 /**
  * 💬 Text fallback (no greeting.jpg)
+ * @param {number} count - Active user count
+ * @returns {string} - Fallback text
  */
 function fallbackText(count) {
   return `
