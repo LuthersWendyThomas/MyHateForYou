@@ -1,4 +1,4 @@
-// 📦 core/handlers/stepHandler.js | IMMORTAL FINAL v1.0.1•ULTIMATE.GODMODE+SYNC+DIAMONDLOCK
+// 📦 core/handlers/stepHandler.js | IMMORTAL FINAL v1.0.2•ULTIMATE.GODMODE+SYNC+DIAMONDLOCK
 // 24/7 BULLETPROOF • INLINE FSM • DIAMOND SAFE • FULL USD SUPPORT
 
 import { deliveryMethods } from "../../config/features.js";
@@ -60,7 +60,7 @@ async function renderStep(bot, uid, step, userMessages) {
       case 5: {
         const priceList = session.product?.prices || {};
         const keyboard = Object.entries(priceList).map(
-          ([qty, price]) => [{ text: `${qty} ($${price})` }]
+          ([qty, price]) => [{ text: `${qty} ($${price.toFixed(2)})` }]
         );
         keyboard.push([{ text: MENU_BUTTONS.BACK.text }]);
         return sendKeyboard(bot, uid, "🔢 *Choose quantity:*", keyboard, userMessages, { parse_mode: "Markdown" });
@@ -132,7 +132,7 @@ export async function handleStep(bot, id, text, userMessages) {
   try {
     switch (session.step) {
       case 1:   return handleRegion(bot, uid, input, session, userMessages);
-      case 1.2: return handleCity(bot,   uid, input, session, userMessages);
+      case 1.2: return handleCity(bot, uid, input, session, userMessages);
       case 2:   return handleDelivery(bot, uid, input, session, userMessages);
       case 2.1: return handlePromoDecision(bot, uid, input, session, userMessages);
       case 2.2: return handlePromoCode(bot, uid, text,   session, userMessages);
@@ -156,19 +156,33 @@ export async function handleStep(bot, id, text, userMessages) {
 // ————— Individual handlers —————
 
 async function handleRegion(bot, uid, input, session, userMessages) {
-  const match = Object.entries(REGION_MAP)
-    .find(([key]) => key.toLowerCase() === input && REGION_MAP[key].active);
-  if (!match) return renderStep(bot, uid, 1, userMessages);
-  session.region = match[0];
+  // strip leading emojis/non-word chars
+  const cleanRegion = input.replace(/^[^a-z0-9]+/i, "").trim();
+  // find active region by full key or stripped name
+  const entry = Object.entries(REGION_MAP).find(([key, {active}]) => {
+    if (!active) return false;
+    const keyLC   = key.toLowerCase();
+    const base    = key.replace(/^[^a-z0-9]+/i, "").toLowerCase();
+    return keyLC === input || base === cleanRegion.toLowerCase();
+  });
+  if (!entry) {
+    return renderStep(bot, uid, 1, userMessages);
+  }
+  const [regionKey] = entry;
+  session.region = regionKey;
   session.step   = 1.2;
   return renderStep(bot, uid, 1.2, userMessages);
 }
 
 async function handleCity(bot, uid, input, session, userMessages) {
-  const clean = input.replace(/^🚫\s*/, "");
-  const cities = REGION_MAP[session.region]?.cities || {};
-  if (!cities[clean]) return renderStep(bot, uid, 1.2, userMessages);
-  session.city = clean;
+  // strip leading non-alphanumeric chars
+  const cleanCity = input.replace(/^[^a-z0-9]+/i, "").trim();
+  const citiesMap = REGION_MAP[session.region]?.cities || {};
+  const cityKey   = Object.keys(citiesMap).find(c => c.toLowerCase() === cleanCity.toLowerCase());
+  if (!cityKey) {
+    return renderStep(bot, uid, 1.2, userMessages);
+  }
+  session.city = cityKey;
   session.step = 2;
   return renderStep(bot, uid, 2, userMessages);
 }
@@ -198,8 +212,8 @@ async function handlePromoCode(bot, uid, raw, session, userMessages) {
     return renderStep(bot, uid, 2.1, userMessages);
   }
   session.promoCode = code;
+  session.step      = 3;
   await sendAndTrack(bot, uid, `🏷️ Promo applied: *${code}* (-${promo.percentage}%)`, { parse_mode: "Markdown" }, userMessages);
-  session.step = 3;
   return renderStep(bot, uid, 3, userMessages);
 }
 
@@ -283,7 +297,7 @@ function sanitizeId(id) {
   const s = String(id||"").trim();
   return s && s!=="undefined" && s!=="null" ? s : null;
 }
-
 function normalizeText(txt) {
   return txt?.toString().trim().toLowerCase();
 }
+
