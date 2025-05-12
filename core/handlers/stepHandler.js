@@ -1,5 +1,5 @@
-// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999999999.∞+2
-// 24/7 BULLETPROOF • COMMENT RESTORED • SYNCED • UNTRIMMED • GODMODE∞
+// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999999999.∞+ULTIMATE
+// 24/7 BULLETPROOF • COMMENT RESTORED • SYNCED • UNIFIED BUTTONS • GODMODE∞
 
 import { renderStep } from "./renderStep.js";
 import { deliveryMethods } from "../../config/features.js";
@@ -14,6 +14,7 @@ import { REGION_MAP } from "../../config/regions.js";
 import { resolveDiscount } from "../../config/discountUtils.js";
 import { DISCOUNTS } from "../../config/discounts.js";
 import { isValidStep } from "../../state/userState.js";
+import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 
 /**
  * ✅ Handles user input step-by-step
@@ -24,7 +25,7 @@ import { isValidStep } from "../../state/userState.js";
  * @returns {Promise<void>}
  */
 export async function handleStep(bot, id, text, userMessages) {
-  const uid = String(id).trim();
+  const uid = sanitizeId(id);
   const input = (text || "").trim();
 
   if (!input) {
@@ -37,7 +38,7 @@ export async function handleStep(bot, id, text, userMessages) {
   const session = userSessions[uid];
 
   // 🧭 Universal back button
-  if (input === "🔙 Back" || input === "🖙 Back") {
+  if (input === MENU_BUTTONS.BACK?.text) {
     return await handleBackButton(bot, uid, session, userMessages);
   }
 
@@ -143,11 +144,11 @@ async function handleDeliveryMethod(bot, uid, input, session, userMessages) {
 }
 
 async function handlePromoDecision(bot, uid, input, session, userMessages) {
-  if (input === "Yes") {
+  if (input === MENU_BUTTONS.YES?.text) {
     session.step = 2.2;
     return renderStep(bot, uid, session.step, userMessages);
   }
-  if (input === "No") {
+  if (input === MENU_BUTTONS.NO?.text) {
     session.step = 3;
     return renderStep(bot, uid, session.step, userMessages);
   }
@@ -230,18 +231,18 @@ async function handleWalletSelection(bot, uid, input, session, userMessages) {
 }
 
 async function handleFinalConfirmation(bot, uid, input, session, userMessages) {
-  if (input !== "✅ CONFIRM") return await punish(bot, uid, userMessages);
+  if (input !== MENU_BUTTONS.CONFIRM?.text) return await punish(bot, uid, userMessages);
 
   return await handlePayment(bot, uid, userMessages);
 }
 
 async function handlePaymentConfirmationStep(bot, uid, input, session, userMessages) {
-  if (input === "✅ CONFIRM") {
+  if (input === MENU_BUTTONS.CONFIRM?.text) {
     session.step = 9;
     return await handlePaymentConfirmation(bot, uid, userMessages);
   }
 
-  if (input === "❌ Cancel payment") {
+  if (input === MENU_BUTTONS.CANCEL?.text) {
     await sendAndTrack(bot, uid, "❌ Payment canceled. Returning to main menu...", {}, userMessages);
     await resetSession(uid);
     return setTimeout(() => safeStart(bot, uid), 300);
@@ -264,4 +265,14 @@ function validateUserSession(uid) {
     console.warn(`⚠️ Invalid step "${session.step}" for user ${uid}. Resetting to step 1.`);
     session.step = 1;
   }
+}
+
+/**
+ * 🧠 Sanitizes user ID input
+ * @param {string|number} id - Input ID
+ * @returns {string|null} - Sanitized ID or null if invalid
+ */
+function sanitizeId(id) {
+  const uid = String(id || "").trim();
+  return uid && uid !== "undefined" && uid !== "null" ? uid : null;
 }
