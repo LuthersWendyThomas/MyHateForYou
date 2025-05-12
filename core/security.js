@@ -1,4 +1,5 @@
-// 🛡️ core/security.js | FINAL IMMORTAL v999999999.∞+2 — TITANLOCK SYNCED BULLETPROOF
+// 🛡️ core/security.js | FINAL IMMORTAL v999999999.∞+ULTIMATE
+// TITANLOCK SYNCED • BULLETPROOF • ULTRA-SAFE • AUTO-BAN • FLOOD-PROOF
 
 import { isBanned, banUser } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
@@ -6,15 +7,15 @@ import { antiSpam, antiFlood, bannedUntil } from "../state/userState.js";
 import { BOT } from "../config/config.js";
 
 // ⛔ Security thresholds
-const SPAM_INTERVAL_MS = 3300;
-const FLOOD_LIMIT = 6;
-const FLOOD_WINDOW_MS = 11000;
-const TEMP_MUTE_MS = 4 * 60 * 1000; // 4 minutes
-const MAX_MESSAGE_LENGTH = 600;
-const MAX_INPUT_FREQUENCY = 4;
-const MAX_DISTINCT_INPUTS = 20;
+const SPAM_INTERVAL_MS = 3300; // Minimum interval between messages to avoid spam
+const FLOOD_LIMIT = 6; // Max actions allowed within FLOOD_WINDOW_MS
+const FLOOD_WINDOW_MS = 11000; // Time window for flood detection
+const TEMP_MUTE_MS = 4 * 60 * 1000; // Temporary mute duration (4 minutes)
+const MAX_MESSAGE_LENGTH = 600; // Maximum allowed message length
+const MAX_INPUT_FREQUENCY = 4; // Max repeated inputs within recent history
+const MAX_DISTINCT_INPUTS = 20; // Max distinct inputs to track in history
 
-const recentTexts = {}; // 🧠 Track recent input strings
+const recentTexts = {}; // 🧠 Track recent input strings for each user
 
 /**
  * ✅ Checks if user is admin
@@ -26,7 +27,7 @@ function isAdmin(id) {
 }
 
 /**
- * ⛔ Spam: Too frequent input
+ * ⛔ Detects spam: Too frequent input
  * @param {string|number} id - User ID
  * @returns {boolean} - True if user is spamming
  */
@@ -42,7 +43,7 @@ export function isSpamming(id) {
 }
 
 /**
- * 🌊 Flood: Too many actions in short time
+ * 🌊 Handles flood detection: Too many actions in a short time
  * @param {string|number} id - User ID
  * @param {object} bot - Telegram bot instance
  * @returns {Promise<boolean>} - True if user triggered flood protection
@@ -64,13 +65,7 @@ export async function handleFlood(id, bot) {
       bannedUntil[id] = now + TEMP_MUTE_MS;
       delete antiFlood[id];
 
-      await sendAndTrack(
-        bot,
-        id,
-        "⛔ *Too many actions!*\nYou’ve been muted for *4 minutes*.",
-        { parse_mode: "Markdown" }
-      );
-
+      await notifyUserMuted(bot, id);
       logAction("⛔ [handleFlood]", `User flooded → Muted for 4 minutes → ${id}`);
       return true;
     }
@@ -82,7 +77,7 @@ export async function handleFlood(id, bot) {
 }
 
 /**
- * 🔇 Temp mute status check
+ * 🔇 Checks if a user is temporarily muted
  * @param {string|number} id - User ID
  * @returns {boolean} - True if user is muted
  */
@@ -92,12 +87,12 @@ export function isMuted(id) {
   if (!until) return false;
 
   const muted = Date.now() < until;
-  if (!muted) delete bannedUntil[id];
+  if (!muted) delete bannedUntil[id]; // Cleanup expired mute
   return muted;
 }
 
 /**
- * 💣 Detect dangerous message (too long or repeated)
+ * 💣 Detects dangerous message: Too long or repeated
  * @param {string|number} id - User ID
  * @param {string} rawText - Message text
  * @returns {boolean} - True if message is dangerous
@@ -106,8 +101,8 @@ function isMessageDangerous(id, rawText) {
   if (!id || isAdmin(id)) return false;
 
   const txt = String(rawText || "").trim();
-  if (!txt) return true;
-  if (txt.length > MAX_MESSAGE_LENGTH) return true;
+  if (!txt) return true; // Empty message considered dangerous
+  if (txt.length > MAX_MESSAGE_LENGTH) return true; // Exceeds max length
 
   const uid = String(id);
   const history = recentTexts[uid] ||= [];
@@ -156,6 +151,24 @@ export async function canProceed(id, bot, text = "") {
 }
 
 // ————— HELPERS —————
+
+/**
+ * 🔔 Sends a mute notification to the user
+ * @param {object} bot - Telegram bot instance
+ * @param {string|number} id - User ID
+ */
+async function notifyUserMuted(bot, id) {
+  try {
+    await sendAndTrack(
+      bot,
+      id,
+      "⛔ *Too many actions!*\nYou’ve been muted for *4 minutes*.",
+      { parse_mode: "Markdown" }
+    );
+  } catch (err) {
+    logError("❌ [notifyUserMuted error]", err, id);
+  }
+}
 
 /**
  * 📝 Logs successful actions
