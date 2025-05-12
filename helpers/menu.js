@@ -1,154 +1,175 @@
-// 📦 helpers/menu.js | FINAL IMMORTAL v99999999999.∞+ULTRA-SYNC+DIAMONDLOCK
+// 📦 helpers/menu.js | FINAL IMMORTAL v1.0.0•GODMODE DIAMONDLOCK
 // SKYLOCKED ADMIN-SAFE BULLETPROOF MENU SYSTEM — MAX BUTTON VALIDATION + INLINE + FALLBACK
 
 import { BOT } from "../config/config.js";
 import { MENU_BUTTONS } from "./keyboardConstants.js";
 
 /**
- * ✅ Generates user/admin main menu (safe formatting, full validation)
- * @param {string|number} id - Telegram user ID
- * @returns {object} - Telegram keyboard (reply_markup)
+ * ✅ Generates the main menu keyboard for users/admins
+ * @param {string|number} id — Telegram user ID
+ * @returns {{ keyboard: Array<Array<{ text: string }>>, resize_keyboard: boolean, one_time_keyboard: boolean, selective: boolean }}
  */
 export function getMainMenu(id) {
-  const uid = safeId(id);
-  const adminId = safeId(BOT?.ADMIN_ID);
-  const isAdmin = uid === adminId;
+  const uid     = sanitizeId(id);
+  const isAdmin = uid && String(uid) === String(BOT.ADMIN_ID);
 
   try {
-    const userMenu = [
-      [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
-      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS],
+    const rows = [
+      [ MENU_BUTTONS.BUY,     MENU_BUTTONS.HELP    ],
+      [ MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS  ]
     ];
+    if (isAdmin) {
+      rows.push([ MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN ]);
+    }
 
-    const adminMenu = [
-      [MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN],
-    ];
-
-    const fullMenu = isAdmin ? [...userMenu, ...adminMenu] : userMenu;
-    const normalized = normalizeKeyboard(fullMenu);
-
-    logAction("✅ [getMainMenu]", `Generated main menu for ${uid}${isAdmin ? " (admin)" : ""}`);
+    const keyboard = normalizeKeyboard(rows);
+    logAction("getMainMenu", `Generated for ${uid}${isAdmin ? " (admin)" : ""}`);
     return {
-      keyboard: normalized,
-      resize_keyboard: true,
+      keyboard,
+      resize_keyboard:   true,
       one_time_keyboard: false,
-      selective: true,
+      selective:         true
     };
   } catch (err) {
-    logError("❌ [getMainMenu error]", err, uid);
+    logError("getMainMenu", err, uid);
     return getFallbackKeyboard();
   }
 }
 
 /**
- * ✅ Inline keyboard generator with strict validation
+ * ✅ Generates an inline keyboard from validated button rows
  * @param {Array<Array<{ text: string, callback_data: string }>>} inlineButtons
- * @returns {object} Inline keyboard markup
+ * @returns {{ inline_keyboard: Array<Array<{ text: string, callback_data: string }>> }}
  */
 export function getInlineKeyboard(inlineButtons) {
-  try {
-    if (!Array.isArray(inlineButtons)) throw new Error("Invalid inline structure");
+  const keyboard = [];
 
-    const keyboard = inlineButtons.map(row =>
-      row.map(btn => {
-        if (!btn.text || !btn.callback_data) {
-          logError("⚠️ [getInlineKeyboard]", new Error("Missing button data"));
-          return { text: "❌ Invalid", callback_data: "INVALID" };
-        }
-        return {
-          text: String(btn.text).trim(),
-          callback_data: String(btn.callback_data).trim(),
-        };
-      })
-    );
-
-    logAction("✅ [getInlineKeyboard]", JSON.stringify(keyboard, null, 2));
-    return { inline_keyboard: keyboard };
-  } catch (err) {
-    logError("❌ [getInlineKeyboard error]", err);
+  if (!Array.isArray(inlineButtons)) {
+    logError("getInlineKeyboard", new Error("Inline buttons must be an array"));
     return { inline_keyboard: [] };
   }
+
+  for (let r = 0; r < inlineButtons.length; r++) {
+    const row = inlineButtons[r];
+    if (!Array.isArray(row)) {
+      logError("getInlineKeyboard", new Error(`Row ${r} is not an array`));
+      continue;
+    }
+    const validatedRow = [];
+    for (let c = 0; c < row.length; c++) {
+      const btn = row[c];
+      if (btn && typeof btn.text === "string" && typeof btn.callback_data === "string") {
+        validatedRow.push({
+          text: btn.text.trim(),
+          callback_data: btn.callback_data.trim()
+        });
+      } else {
+        logError(
+          "getInlineKeyboard",
+          new Error(`Invalid button at [${r},${c}]`)
+        );
+        validatedRow.push({ text: "❌ Invalid", callback_data: "INVALID" });
+      }
+    }
+    keyboard.push(validatedRow);
+  }
+
+  logAction("getInlineKeyboard", `Built inline keyboard`);
+  return { inline_keyboard: keyboard };
 }
 
 /**
- * ✅ Validates a full keyboard (standard layout)
- * @param {object} keyboard - Telegram keyboard structure
+ * ✅ Validates a standard reply keyboard structure
+ * @param {object} keyboard — The reply_markup object
  * @returns {boolean}
  */
 export function validateMenuButtons(keyboard) {
-  if (!keyboard || !Array.isArray(keyboard.keyboard)) {
-    logError("❌ [validateMenuButtons]", new Error("Invalid keyboard wrapper"));
+  if (
+    !keyboard ||
+    !Array.isArray(keyboard.keyboard) ||
+    keyboard.keyboard.length === 0
+  ) {
+    logError("validateMenuButtons", new Error("Invalid keyboard object"));
     return false;
   }
 
-  const buttons = keyboard.keyboard.flat();
-  const valid = buttons.every(b => typeof b.text === "string" && b.text.trim().length > 0);
+  const allValid = keyboard.keyboard.every(row =>
+    Array.isArray(row) &&
+    row.every(btn => btn?.text && typeof btn.text === "string")
+  );
 
-  if (!valid) {
-    logError("❌ [validateMenuButtons]", new Error("One or more buttons invalid"));
+  if (allValid) {
+    logAction("validateMenuButtons", "All buttons valid");
   } else {
-    logAction("✅ [validateMenuButtons]", "All buttons valid");
+    logError("validateMenuButtons", new Error("Some buttons are invalid"));
   }
-
-  return valid;
+  return allValid;
 }
 
 /**
- * ✅ Returns fallback keyboard when formatting fails
- * @returns {object}
+ * ✅ Fallback for when menu generation fails
+ * @returns {{ keyboard: Array<Array<{ text: string }>>, resize_keyboard: boolean, one_time_keyboard: boolean, selective: boolean }}
  */
 export function getFallbackKeyboard() {
   const kb = {
-    keyboard: [[MENU_BUTTONS.HELP]],
-    resize_keyboard: true,
+    keyboard: [ [ { text: MENU_BUTTONS.HELP.text } ] ],
+    resize_keyboard:   true,
     one_time_keyboard: false,
-    selective: true,
+    selective:         true
   };
-  logAction("✅ [getFallbackKeyboard]", JSON.stringify(kb, null, 2));
+  logAction("getFallbackKeyboard", `Returned fallback keyboard`);
   return kb;
 }
 
+// ————— INTERNAL HELPERS —————
+
 /**
- * ✅ Normalizes any keyboard layout (text-only)
- * @param {Array<Array<{ text: string, callback_data?: string }>>} raw
+ * 🔒 Sanitizes any ID into a non-empty string or returns null
+ */
+function sanitizeId(id) {
+  const s = String(id ?? "").trim();
+  return s && s !== "undefined" && s !== "null" ? s : null;
+}
+
+/**
+ * ✅ Normalizes button rows into { text } objects
+ * @param {Array<Array<{ text: string, callback_data?: string }>>} rows
  * @returns {Array<Array<{ text: string }>>}
  */
-function normalizeKeyboard(raw) {
-  if (!Array.isArray(raw)) {
-    logError("⚠️ [normalizeKeyboard]", new Error("Invalid structure"));
+function normalizeKeyboard(rows) {
+  if (!Array.isArray(rows)) {
+    logError("normalizeKeyboard", new Error("Rows must be an array"));
     return [];
   }
-
-  return raw.map(row => {
-    if (!Array.isArray(row)) return [];
-    return row.map(btn => {
-      if (!btn?.text) {
-        logError("⚠️ [normalizeKeyboard]", new Error("Missing 'text' in button"));
-        return { text: "❌ Invalid Button" };
+  return rows.map((row, rIdx) => {
+    if (!Array.isArray(row)) {
+      logError("normalizeKeyboard", new Error(`Row ${rIdx} not an array`));
+      return [];
+    }
+    return row.map((btn, cIdx) => {
+      if (btn && typeof btn.text === "string") {
+        return { text: btn.text.trim() };
       }
-      return { text: String(btn.text).trim() };
+      logError(
+        "normalizeKeyboard",
+        new Error(`Invalid button at [${rIdx},${cIdx}]`)
+      );
+      return { text: "❌ Invalid Button" };
     });
   });
 }
 
 /**
- * ✅ Converts any ID to safe string
+ * 📋 Logs actions uniformly
  */
-function safeId(id) {
-  const str = String(id || "").trim();
-  return str && str !== "undefined" && str !== "null" ? str : null;
+function logAction(fn, message) {
+  console.log(`${new Date().toISOString()} [${fn}] → ${message}`);
 }
 
 /**
- * 📋 Log action
+ * ⚠️ Logs errors uniformly
  */
-function logAction(action, message) {
-  console.log(`${new Date().toISOString()} ${action} → ${message}`);
-}
-
-/**
- * ⚠️ Log error
- */
-function logError(action, error, uid = null) {
-  console.error(`${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`);
+function logError(fn, error, uid = "") {
+  const msg = error?.message || error;
+  console.error(`${new Date().toISOString()} [${fn}] → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
 }
