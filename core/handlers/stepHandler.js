@@ -13,6 +13,7 @@ import { resetSession, safeStart } from "./finalHandler.js";
 import { REGION_MAP } from "../../config/regions.js";
 import { resolveDiscount } from "../../config/discountUtils.js";
 import { DISCOUNTS } from "../../config/discounts.js";
+import { isValidStep } from "../../state/userState.js";
 
 /**
  * ✅ Handles user input step-by-step
