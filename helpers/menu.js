@@ -1,4 +1,4 @@
-// 📦 helpers/menu.js | FINAL IMMORTAL v999999999.∞+2 — SKYLOCKED ADMIN-SAFE SYNCED
+// 📦 helpers/menu.js | FINAL IMMORTAL v999999999.∞+3 — SKYLOCKED ADMIN-SAFE SYNCED + BULLETPROOF BUTTONS
 
 import { BOT } from "../config/config.js";
 import { MENU_BUTTONS } from "./keyboardConstants.js";
@@ -29,7 +29,7 @@ export function getMainMenu(id) {
     const keyboard = normalizeKeyboard(menu);
     logAction(
       "✅ [getMainMenu]",
-      `Generated menu for user ${uid}${isAdmin ? " (admin)" : ""}`
+      `Generated main menu for user ${uid}${isAdmin ? " (admin)" : ""}`
     );
     return {
       keyboard,
@@ -66,7 +66,7 @@ function normalizeKeyboard(keyboard) {
 }
 
 /**
- * 🧠 Safely sanitizes user/admin ID
+ * ✅ Safely sanitizes user/admin ID
  * @param {string|number} id
  * @returns {string|null} Sanitized ID or null
  */
@@ -76,7 +76,7 @@ function safeId(id) {
 }
 
 /**
- * 📝 Logs successful actions
+ * ✅ Logs successful actions
  * @param {string} action — Action description
  * @param {string} message — Additional details
  */
@@ -93,7 +93,7 @@ function logAction(action, message) {
 function logError(action, error, uid = null) {
   console.error(
     `${new Date().toISOString()} ${action} → ${error.message || error}${
-      uid ? ` (uid: ${uid})` : ""
+      uid ? ` (ID: ${uid})` : ""
     }`
   );
 }
@@ -122,4 +122,27 @@ export function getInlineKeyboard(inlineButtons) {
     logError("❌ [getInlineKeyboard error]", err);
     return { inline_keyboard: [] }; // Fallback to an empty inline keyboard
   }
+}
+
+/**
+ * ✅ Validates main menu buttons to ensure functionality
+ * @param {object} keyboard — Keyboard object
+ * @returns {boolean} - True if valid, false otherwise
+ */
+export function validateMenuButtons(keyboard) {
+  if (!keyboard || !Array.isArray(keyboard.keyboard)) {
+    logError("❌ [validateMenuButtons]", new Error("Invalid keyboard format"));
+    return false;
+  }
+
+  const allButtons = keyboard.keyboard.flat();
+  const valid = allButtons.every(button => typeof button === "string" && button.trim().length > 0);
+
+  if (!valid) {
+    logError("❌ [validateMenuButtons]", new Error("Invalid buttons found in menu"));
+  } else {
+    logAction("✅ [validateMenuButtons]", "All menu buttons are valid");
+  }
+
+  return valid;
 }
