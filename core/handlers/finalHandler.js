@@ -1,12 +1,11 @@
 // 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
 // 24/7 LOCKED • GREETING+RESET IMMORTAL • MENU+DELIVERY BULLETPROOF
 
-import fs from "fs/promises";
-import path from "path";
+import fs    from "fs/promises";
+import path  from "path";
 import {
   sendAndTrack,
-  sendPhotoAndTrack,
-  sendKeyboard
+  sendPhotoAndTrack
 } from "../../helpers/messageUtils.js";
 import { getMainMenu } from "../../helpers/menu.js";
 import {
@@ -23,84 +22,123 @@ import {
 import { simulateDelivery } from "./deliveryHandler.js";
 
 /**
- * 🚀 /start → full reset, greeting + menu
+ * 🚀 /start — full session wipe, greeting + main menu
  */
 export async function safeStart(bot, id) {
   const uid = sanitizeId(id);
   if (!bot?.sendMessage || !uid) return;
+
   try {
+    // 1️⃣ full reset
     await fullSessionReset(uid);
     userSessions[uid] = { step: 1, createdAt: Date.now() };
     activeUsers.add(uid);
 
+    // 2️⃣ typing indicator
     await bot.sendChatAction(uid, "typing").catch(() => {});
 
-    const menu    = getMainMenu(uid);
+    // 3️⃣ prepare menu + image
+    const menu    = getMainMenu(uid);             // { reply_markup }
     const imgPath = path.join(process.cwd(), "assets", "greeting.jpg");
-    let buf;
-    try { buf = await fs.readFile(imgPath); }
-    catch { buf = null; }
+    let buffer;
+    try {
+      buffer = await fs.readFile(imgPath);
+    } catch {
+      buffer = null;
+    }
 
     const count = activeUsers.count || 1;
-    if (buf && buf.byteLength > 10) {
-      return await sendPhotoAndTrack(
-        bot, uid, buf,
-        { caption: greetingText(count), parse_mode: "Markdown", reply_markup: menu },
+
+    // 4️⃣ send greeting
+    if (buffer && buffer.byteLength > 10) {
+      return sendPhotoAndTrack(
+        bot,
+        uid,
+        buffer,
+        {
+          caption: greetingText(count),
+          parse_mode: "Markdown",
+          reply_markup: menu.reply_markup
+        },
+        userMessages
+      );
+    } else {
+      return sendAndTrack(
+        bot,
+        uid,
+        fallbackText(count),
+        {
+          parse_mode: "Markdown",
+          reply_markup: menu.reply_markup
+        },
         userMessages
       );
     }
-    return await sendKeyboard(
-      bot, uid, fallbackText(count),
-      menu, userMessages,
-      { parse_mode: "Markdown" }
-    );
   } catch (err) {
-    logError("❌ [safeStart error]", err, uid);
-    return await sendKeyboard(
-      bot, uid,
+    console.error("❌ [safeStart error]:", err);
+    const menu = getMainMenu(uid);
+    return sendAndTrack(
+      bot,
+      uid,
       "⚠️ Failed to start. Please try again.",
-      getMainMenu(uid),
-      userMessages,
-      { parse_mode: "Markdown" }
+      {
+        parse_mode: "Markdown",
+        reply_markup: menu.reply_markup
+      },
+      userMessages
     );
   }
 }
 
 /**
- * ✅ After delivery simulation, show main menu again
+ * ✅ finishOrder — simulate delivery then reset → show menu
  */
 export async function finishOrder(bot, id) {
   const uid = sanitizeId(id);
   if (!bot?.sendMessage || !uid) return;
+
   try {
     const session = userSessions[uid];
     if (!session?.deliveryMethod) throw new Error("Missing delivery method");
 
+    // 🚚 simulate delivery
     await simulateDelivery(bot, uid, session.deliveryMethod, userMessages);
+
+    // 🔄 reset session
     await resetSession(uid);
 
     const menu = getMainMenu(uid);
     await bot.sendChatAction(uid, "typing").catch(() => {});
-    return await sendKeyboard(
-      bot, uid,
+
+    // 📬 show main menu
+    return sendAndTrack(
+      bot,
+      uid,
       "✅ Order confirmed!\n🚚 Delivery started...\n\nMain menu:",
-      menu, userMessages,
-      { parse_mode: "Markdown" }
+      {
+        parse_mode: "Markdown",
+        reply_markup: menu.reply_markup
+      },
+      userMessages
     );
   } catch (err) {
-    logError("❌ [finishOrder error]", err, uid);
-    return await sendKeyboard(
-      bot, uid,
+    console.error("❌ [finishOrder error]:", err);
+    const menu = getMainMenu(uid);
+    return sendAndTrack(
+      bot,
+      uid,
       "❗️ Delivery error. Try again or use /start.",
-      getMainMenu(uid),
-      userMessages,
-      { parse_mode: "Markdown" }
+      {
+        parse_mode: "Markdown",
+        reply_markup: menu.reply_markup
+      },
+      userMessages
     );
   }
 }
 
 /**
- * 🔄 Reset session (after cancel, finish)
+ * 🔄 resetSession — public hook to wipe session state
  */
 export async function resetSession(id) {
   const uid = sanitizeId(id);
@@ -108,32 +146,39 @@ export async function resetSession(id) {
   await fullSessionReset(uid);
 }
 
-/** FULL wipe */
+/**
+ * 🧯 fullSessionReset — clear timers, messages, state, sessions
+ */
 async function fullSessionReset(uid) {
+  if (!uid) return;
   try {
     await clearTimers(uid);
     await clearUserMessages(uid);
     await resetUser(uid);
+
     if (paymentTimers[uid]) {
       clearTimeout(paymentTimers[uid]);
       delete paymentTimers[uid];
     }
+
     delete userSessions[uid];
     activeUsers.remove
       ? activeUsers.remove(uid)
       : activeUsers.delete(uid);
-    logAction("🧯 [fullSessionReset]", "Session reset", uid);
+
   } catch (err) {
-    logError("❌ [fullSessionReset error]", err, uid);
+    console.error("❌ [fullSessionReset error]:", err);
   }
 }
 
+/** 🧠 sanitizeId — ensure valid string ID */
 function sanitizeId(id) {
-  const s = String(id ?? "").trim();
+  const s = String(id || "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-function greetingText(count = 1) {
+/** 📸 greetingText — image caption */
+function greetingText(count) {
   return `
 🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
 
@@ -154,7 +199,8 @@ function greetingText(count = 1) {
 `.trim();
 }
 
-function fallbackText(count = 1) {
+/** 🧾 fallbackText — no-image version */
+function fallbackText(count) {
   return `
 🇺🇸 *BalticPharmacyBot* — 30+ cities live  
 
@@ -164,12 +210,4 @@ function fallbackText(count = 1) {
 
 👥 Active users: *${count}*
 `.trim();
-}
-
-function logAction(action, message, uid = "") {
-  console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (ID: ${uid})` : ""}`);
-}
-function logError(action, error, uid = "") {
-  const m = error?.message || error;
-  console.error(`${new Date().toISOString()} ${action} → ${m}${uid ? ` (ID: ${uid})` : ""}`);
 }
