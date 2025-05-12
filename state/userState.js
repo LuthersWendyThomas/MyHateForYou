@@ -1,4 +1,4 @@
-// 📦 state/userState.js | FINAL IMMORTAL BULLETPROOF LOCKED v999999999.999
+// 📦 state/userState.js | FINAL IMMORTAL BULLETPROOF LOCKED v999999999.9999
 
 import fs from "fs";
 import path from "path";
@@ -120,9 +120,33 @@ export function clearTimersForUser(id) {
   }
 }
 
-function safeString(id) {
-  const str = String(id || "").trim();
-  return str && str !== "undefined" && str !== "null" ? str : null;
+// ==============================
+// 🧠 Session Validation & Sync
+// ==============================
+
+/**
+ * ✅ Validates and synchronizes user step
+ * Auto-resets to 1 if invalid or undefined
+ */
+export function verifySessionStep(id) {
+  const uid = safeString(id);
+  if (!uid) return;
+
+  const session = userSessions[uid] || {};
+  if (!isValidStep(session.step)) {
+    console.warn(`⚠️ Invalid step "${session.step}" for user ${uid}. Resetting to step 1.`);
+    session.step = 1;
+  }
+
+  userSessions[uid] = session;
+  return session.step;
+}
+
+/**
+ * ✅ Checks if a step is valid
+ */
+export function isValidStep(step) {
+  return Number.isInteger(step) && step >= 1 && step <= 9;
 }
 
 // ==============================
@@ -161,4 +185,12 @@ export function exportUserStats() {
     console.error("❌ [exportUserStats error]:", err.message);
     return null;
   }
+}
+
+/**
+ * ✅ Converts any ID to a safe string
+ */
+function safeString(id) {
+  const str = String(id || "").trim();
+  return str && str !== "undefined" && str !== "null" ? str : null;
 }
