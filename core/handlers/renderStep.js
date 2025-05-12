@@ -27,29 +27,40 @@ export async function renderStep(bot, uid, step, userMessages) {
         // 🌍 Region selection
         const regions = Object.entries(REGION_MAP)
           .filter(([_, region]) => region.active)
-          .map(([key]) => key);
+          .map(([key]) => ({ text: key }));
 
-        return await sendKeyboard(bot, uid, "🌍 *Choose your region:*", regions, userMessages);
+        return await sendKeyboard(bot, uid, "🌍 *Choose your region:*", [...regions, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 1.2: {
         // 🏙️ City selection
-        const cities = Object.keys(REGION_MAP[session.region]?.cities || {})
-          .map(city => REGION_MAP[session.region].cities[city] ? city : `🚫 ${city}`);
-        
-        return await sendKeyboard(bot, uid, "🏙️ *Select your city:*", [...cities, MENU_BUTTONS.BACK.text], userMessages);
+        const cities = Object.entries(REGION_MAP[session.region]?.cities || {}).map(([city, active]) =>
+          active ? { text: city } : { text: `🚫 ${city}` }
+        );
+
+        return await sendKeyboard(bot, uid, "🏙️ *Select your city:*", [...cities, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 2: {
         // 🚚 Delivery method
-        const options = deliveryMethods.map(method => method.label);
+        const options = deliveryMethods.map(method => ({ text: method.label }));
 
-        return await sendKeyboard(bot, uid, "🚚 *Choose delivery method:*", [...options, MENU_BUTTONS.BACK.text], userMessages);
+        return await sendKeyboard(bot, uid, "🚚 *Choose delivery method:*", [...options, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 2.1: {
         // 🎟️ Promo code decision
-        return await sendKeyboard(bot, uid, "🎟️ *Do you have a promo code?*", [MENU_BUTTONS.YES.text, MENU_BUTTONS.NO.text, MENU_BUTTONS.BACK.text], userMessages);
+        return await sendKeyboard(
+          bot,
+          uid,
+          "🎟️ *Do you have a promo code?*",
+          [
+            { text: MENU_BUTTONS.YES.text },
+            { text: MENU_BUTTONS.NO.text },
+            { text: MENU_BUTTONS.BACK.text }
+          ],
+          userMessages
+        );
       }
 
       case 2.2: {
@@ -59,32 +70,34 @@ export async function renderStep(bot, uid, step, userMessages) {
 
       case 3: {
         // 📦 Product category
-        const categories = Object.keys(products);
+        const categories = Object.keys(products).map(category => ({ text: category }));
 
-        return await sendKeyboard(bot, uid, "📦 *Choose product category:*", [...categories, MENU_BUTTONS.BACK.text], userMessages);
+        return await sendKeyboard(bot, uid, "📦 *Choose product category:*", [...categories, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 4: {
         // 🛍️ Product selection
-        const items = products[session.category]?.map(product => product.name) || [];
+        const items = products[session.category]?.map(product =>
+          product.active ? { text: product.name } : { text: `🚫 ${product.name}` }
+        );
 
-        return await sendKeyboard(bot, uid, `🛍️ *Select product from ${session.category}:*`, [...items, MENU_BUTTONS.BACK.text], userMessages);
+        return await sendKeyboard(bot, uid, `🛍️ *Select product from ${session.category}:*`, [...items, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 5: {
         // 🔢 Quantity & pricing
-        const priceOptions = session.product?.prices 
-          ? Object.entries(session.product.prices).map(([qty, price]) => `${qty} (${price}€)`) 
+        const priceOptions = session.product?.prices
+          ? Object.entries(session.product.prices).map(([qty, price]) => ({ text: `${qty} (${price}€)` }))
           : [];
 
-        return await sendKeyboard(bot, uid, "🔢 *Choose quantity:*", [...priceOptions, MENU_BUTTONS.BACK.text], userMessages);
+        return await sendKeyboard(bot, uid, "🔢 *Choose quantity:*", [...priceOptions, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 6: {
         // 💰 Wallet/currency selection
-        const currencies = Object.keys(WALLETS);
+        const currencies = Object.keys(WALLETS).map(currency => ({ text: currency }));
 
-        return await sendKeyboard(bot, uid, "💰 *Choose currency/wallet:*", [...currencies, MENU_BUTTONS.BACK.text], userMessages);
+        return await sendKeyboard(bot, uid, "💰 *Choose currency/wallet:*", [...currencies, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 7: {
@@ -103,7 +116,10 @@ export async function renderStep(bot, uid, step, userMessages) {
           bot,
           uid,
           summary,
-          [MENU_BUTTONS.CONFIRM.text, MENU_BUTTONS.BACK.text],
+          [
+            { text: MENU_BUTTONS.CONFIRM.text },
+            { text: MENU_BUTTONS.BACK.text }
+          ],
           userMessages,
           { parse_mode: "Markdown" }
         );
@@ -115,7 +131,10 @@ export async function renderStep(bot, uid, step, userMessages) {
           bot,
           uid,
           "⏳ *Waiting for blockchain confirmation...*",
-          [MENU_BUTTONS.CONFIRM.text, MENU_BUTTONS.CANCEL.text],
+          [
+            { text: MENU_BUTTONS.CONFIRM.text },
+            { text: MENU_BUTTONS.CANCEL.text }
+          ],
           userMessages,
           { parse_mode: "Markdown" }
         );
