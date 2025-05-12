@@ -1,5 +1,5 @@
-// 📦 core/handlers/renderStep.js | FINAL IMMORTAL v999999999∞+ULTIMATE
-// FULLY SYNCED • BULLETPROOF • COMMENTED • 24/7 READY • MAXIMUM UPGRADE
+// 📦 core/handlers/renderStep.js | FINAL IMMORTAL v999999999∞.GODMODE+SYNC
+// FULLY SYNCHRONIZED • REGION/CITY/PRODUCT VALIDATION • TEXTLESS • ONLY PROMO INPUT • NO CRASH • 24/7 READY
 
 import { REGION_MAP } from "../../config/regions.js";
 import { deliveryMethods } from "../../config/features.js";
@@ -11,11 +11,7 @@ import { userSessions } from "../../state/userState.js";
 import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 
 /**
- * Renders the appropriate step UI for the user.
- * @param {object} bot - Telegram bot instance
- * @param {string|number} uid - User ID
- * @param {number} step - Current workflow step
- * @param {object} userMessages - Message tracking object
+ * 🔁 Main step renderer (used by FSM)
  */
 export async function renderStep(bot, uid, step, userMessages) {
   const session = userSessions[uid];
@@ -26,136 +22,126 @@ export async function renderStep(bot, uid, step, userMessages) {
       case 1: {
         // 🌍 Region selection
         const regions = Object.entries(REGION_MAP)
-          .filter(([_, region]) => region.active)
-          .map(([key]) => ({ text: key }));
+          .filter(([_, r]) => r?.active)
+          .map(([label]) => ({ text: label }));
 
-        return await sendKeyboard(bot, uid, "🌍 *Choose your region:*", [...regions, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        return sendKeyboard(bot, uid, "🌍 *Choose your region:*", [...regions, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 1.2: {
         // 🏙️ City selection
-        const cities = Object.entries(REGION_MAP[session.region]?.cities || {}).map(([city, active]) =>
+        const cities = REGION_MAP[session.region]?.cities || {};
+        const options = Object.entries(cities).map(([city, active]) =>
           active ? { text: city } : { text: `🚫 ${city}` }
         );
 
-        return await sendKeyboard(bot, uid, "🏙️ *Select your city:*", [...cities, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        return sendKeyboard(bot, uid, "🏙️ *Select your city:*", [...options, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 2: {
         // 🚚 Delivery method
-        const options = deliveryMethods.map(method => ({ text: method.label }));
+        const methods = deliveryMethods.map((m) => ({ text: m.label }));
 
-        return await sendKeyboard(bot, uid, "🚚 *Choose delivery method:*", [...options, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        return sendKeyboard(bot, uid, "🚚 *Choose delivery method:*", [...methods, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 2.1: {
         // 🎟️ Promo code decision
-        return await sendKeyboard(
-          bot,
-          uid,
-          "🎟️ *Do you have a promo code?*",
-          [
-            { text: MENU_BUTTONS.YES.text },
-            { text: MENU_BUTTONS.NO.text },
-            { text: MENU_BUTTONS.BACK.text }
-          ],
-          userMessages
-        );
+        return sendKeyboard(bot, uid, "🎟️ *Do you have a promo code?*", [
+          { text: MENU_BUTTONS.YES.text },
+          { text: MENU_BUTTONS.NO.text },
+          { text: MENU_BUTTONS.BACK.text },
+        ], userMessages);
       }
 
       case 2.2: {
-        // 🏷️ Promo code input
-        return await sendAndTrack(bot, uid, "🏷️ *Enter your promo code:*", { parse_mode: "Markdown" }, userMessages);
+        // 🏷️ Promo code input (only place with raw text input)
+        return sendAndTrack(bot, uid, "🏷️ *Enter your promo code:*", { parse_mode: "Markdown" }, userMessages);
       }
 
       case 3: {
         // 📦 Product category
-        const categories = Object.keys(products).map(category => ({ text: category }));
+        const options = Object.keys(products).map((cat) => ({ text: cat }));
 
-        return await sendKeyboard(bot, uid, "📦 *Choose product category:*", [...categories, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        return sendKeyboard(bot, uid, "📦 *Choose product category:*", [...options, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 4: {
         // 🛍️ Product selection
-        const items = products[session.category]?.map(product =>
-          product.active ? { text: product.name } : { text: `🚫 ${product.name}` }
-        );
+        const cat = session.category;
+        const list = products[cat] || [];
+        const buttons = list.map(p => p.active ? { text: p.name } : { text: `🚫 ${p.name}` });
 
-        return await sendKeyboard(bot, uid, `🛍️ *Select product from ${session.category}:*`, [...items, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        return sendKeyboard(bot, uid, `🛍️ *Select product from ${cat}:*`, [...buttons, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 5: {
-        // 🔢 Quantity & pricing
-        const priceOptions = session.product?.prices
-          ? Object.entries(session.product.prices).map(([qty, price]) => ({ text: `${qty} (${price}€)` }))
-          : [];
+        // 🔢 Quantity selection
+        const priceList = session.product?.prices || {};
+        const buttons = Object.entries(priceList).map(([qty, price]) => ({ text: `${qty} (${price}€)` }));
 
-        return await sendKeyboard(bot, uid, "🔢 *Choose quantity:*", [...priceOptions, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        return sendKeyboard(bot, uid, "🔢 *Choose quantity:*", [...buttons, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 6: {
-        // 💰 Wallet/currency selection
-        const currencies = Object.keys(WALLETS).map(currency => ({ text: currency }));
+        // 💰 Currency selection
+        const currencies = Object.keys(WALLETS).map(cur => ({ text: cur }));
 
-        return await sendKeyboard(bot, uid, "💰 *Choose currency/wallet:*", [...currencies, { text: MENU_BUTTONS.BACK.text }], userMessages);
+        return sendKeyboard(bot, uid, "💰 *Choose currency/wallet:*", [...currencies, { text: MENU_BUTTONS.BACK.text }], userMessages);
       }
 
       case 7: {
         // 🧾 Order summary
-        const summary = `🧾 *Order summary:*\n\n` +
-          `📦 Product: *${session.product?.name || "Not selected"}*\n` +
-          `🔢 Quantity: *${session.quantity || "Not selected"}*\n` +
-          `💵 Unit Price: *${session.unitPrice || 0}€*\n` +
-          `🚚 Delivery Fee: *${session.deliveryFee || 0}€*\n` +
-          (session.promoCode ? `🏷️ Promo: *${session.promoCode}* (-${session.appliedDiscount || 0}%)\n` : "") +
-          `💳 Currency: *${session.currency || "Not selected"}*\n\n` +
-          `💸 *Total: ${session.totalPrice || 0}€*\n\n` +
-          `Press ✅ CONFIRM to proceed with payment.`;
+        const {
+          product,
+          quantity,
+          unitPrice,
+          deliveryFee,
+          promoCode,
+          appliedDiscount,
+          currency,
+          totalPrice,
+        } = session;
 
-        return await sendKeyboard(
-          bot,
-          uid,
-          summary,
-          [
-            { text: MENU_BUTTONS.CONFIRM.text },
-            { text: MENU_BUTTONS.BACK.text }
-          ],
-          userMessages,
-          { parse_mode: "Markdown" }
-        );
+        const summary =
+          `🧾 *Order Summary:*\n\n` +
+          `📦 Product: *${product?.name || "—"}*\n` +
+          `🔢 Quantity: *${quantity || "—"}*\n` +
+          `💵 Unit Price: *${unitPrice || 0}€*\n` +
+          `🚚 Delivery Fee: *${deliveryFee || 0}€*\n` +
+          (promoCode ? `🏷️ Promo: *${promoCode}* (-${appliedDiscount || 0}%)\n` : "") +
+          `💳 Currency: *${currency || "—"}*\n\n` +
+          `💸 *Total: ${totalPrice || 0}€*\n\n` +
+          `✅ Press *CONFIRM* to proceed`;
+
+        return sendKeyboard(bot, uid, summary, [
+          { text: MENU_BUTTONS.CONFIRM.text },
+          { text: MENU_BUTTONS.BACK.text }
+        ], userMessages, { parse_mode: "Markdown" });
       }
 
       case 8: {
-        // ⏳ Blockchain confirmation
-        return await sendKeyboard(
-          bot,
-          uid,
-          "⏳ *Waiting for blockchain confirmation...*",
-          [
-            { text: MENU_BUTTONS.CONFIRM.text },
-            { text: MENU_BUTTONS.CANCEL.text }
-          ],
-          userMessages,
-          { parse_mode: "Markdown" }
-        );
+        // ⏳ Payment pending
+        return sendKeyboard(bot, uid, "⏳ *Waiting for payment confirmation...*", [
+          { text: MENU_BUTTONS.CONFIRM.text },
+          { text: MENU_BUTTONS.CANCEL.text }
+        ], userMessages, { parse_mode: "Markdown" });
       }
 
       default: {
-        // 🧨 Fallback for unknown steps
-        console.warn(`⚠️ Unknown step=${step} for uid=${uid}`);
-        return await sendAndTrack(bot, uid, "⚠️ Unknown step. Returning to start...", {}, userMessages);
+        console.warn(`⚠️ Unknown step="${step}" for uid=${uid}`);
+        return sendAndTrack(bot, uid, "⚠️ Unknown step. Returning to start...", {}, userMessages);
       }
     }
   } catch (err) {
-    console.error("❌ [renderStep error]:", err.message || err);
-    return await sendAndTrack(bot, uid, "❗️ An error occurred. Please try again.", {}, userMessages);
+    console.error("❌ [renderStep]:", err.message || err);
+    return sendAndTrack(bot, uid, "❗️ Something went wrong. Please try again.", {}, userMessages);
   }
 }
 
 /**
- * ✅ Centralized fallback for invalid sessions
- * @param {object} session - User session object
+ * 🛡️ Validates session existence
  */
 function validateSession(session) {
-  if (!session) throw new Error("Session is undefined or invalid.");
+  if (!session) throw new Error("⚠️ No valid session found.");
 }
