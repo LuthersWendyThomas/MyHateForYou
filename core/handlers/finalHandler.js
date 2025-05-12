@@ -1,4 +1,4 @@
-// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v99999999999999.∞+1
+// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v99999999999999.∞+ULTIMATE
 // DIAMOND LOCKED • FULLY SYNCED • GREETING • RESET • DELIVERY • BULLETPROOF
 
 import fs from "fs/promises";
@@ -15,7 +15,7 @@ import { simulateDelivery } from "./deliveryHandler.js";
  * @param {string|number} id - User ID
  */
 export async function safeStart(bot, id) {
-  const uid = String(id);
+  const uid = sanitizeId(id);
   if (!bot || !uid) return;
 
   try {
@@ -62,7 +62,7 @@ export async function safeStart(bot, id) {
  * @param {string|number} id - User ID
  */
 export async function finishOrder(bot, id) {
-  const uid = String(id);
+  const uid = sanitizeId(id);
   try {
     const session = userSessions[uid];
     if (!session || !session.deliveryMethod) throw new Error("❌ No delivery method");
@@ -89,7 +89,7 @@ export async function finishOrder(bot, id) {
  * @param {string|number} id - User ID
  */
 export async function resetSession(id) {
-  await fullSessionReset(String(id));
+  await fullSessionReset(sanitizeId(id));
 }
 
 /**
@@ -119,7 +119,7 @@ async function fullSessionReset(uid) {
       delete userSessions[uid];
     }
 
-    activeUsers.remove(uid);
+    activeUsers.delete(uid);
 
     if (process.env.DEBUG_MESSAGES === "true") {
       console.log(`🧯 [fullSessionReset] Finished for ${uid}`);
@@ -171,4 +171,14 @@ function fallbackText(count) {
 
 👥 Active users: *${count}*
 `.trim();
+}
+
+/**
+ * ✅ Sanitizes user ID input
+ * @param {string|number} id - Input ID
+ * @returns {string|null} - Sanitized ID or null if invalid
+ */
+function sanitizeId(id) {
+  const uid = String(id || "").trim();
+  return uid && uid !== "undefined" && uid !== "null" ? uid : null;
 }
