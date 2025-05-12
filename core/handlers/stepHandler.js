@@ -1,6 +1,7 @@
 // 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999999999.∞.7
 // 24/7 BULLETPROOF • COMMENT RESTORED • SYNCED • UNTRIMMED • GODMODE∞
 
+import { renderStep } from "./renderStep.js";
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
 import { products } from "../../config/products.js";
