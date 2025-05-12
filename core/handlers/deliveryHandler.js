@@ -1,4 +1,4 @@
-// 📦 core/handlers/deliveryHandler.js | FINAL IMMORTAL v999999999999.∞
+// 📦 core/handlers/deliveryHandler.js | FINAL IMMORTAL v999999999999.∞+1
 // FULLY SYNCED • AUTO-BAN • AUTO-DELETE • CLEANUP-SAFE • DELIVERY LOCKED
 
 import { banUser } from "../../utils/bans.js";
@@ -26,6 +26,13 @@ const DELIVERY_STEPS = {
   ]
 };
 
+/**
+ * Simulates the delivery process step-by-step.
+ * @param {object} bot - Telegram bot instance
+ * @param {string|number} id - User ID
+ * @param {string} [method="drop"] - Delivery method ("drop" or "courier")
+ * @param {object} userMsgs - User message tracking object
+ */
 export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) {
   const uid = String(id);
   if (!bot || !uid) return;
@@ -59,10 +66,16 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
   }
 }
 
+/**
+ * Schedules intermediate delivery steps.
+ */
 function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
   setTimeout(() => safeSendStep(bot, id, text, true, userMsgs), delayMs);
 }
 
+/**
+ * Schedules the final delivery step with cleanup.
+ */
 function scheduleFinalStep(bot, id, text, delayMs = 0, userMsgs = {}) {
   setTimeout(() => {
     safeSendStep(bot, id, text, false, userMsgs).then(() => {
@@ -71,6 +84,9 @@ function scheduleFinalStep(bot, id, text, delayMs = 0, userMsgs = {}) {
   }, delayMs);
 }
 
+/**
+ * Sends a delivery step message safely.
+ */
 async function safeSendStep(bot, id, text, silent = true, userMsgs = {}) {
   try {
     await bot.sendChatAction(id, "typing").catch(() => {});
@@ -88,6 +104,9 @@ async function safeSendStep(bot, id, text, silent = true, userMsgs = {}) {
   }
 }
 
+/**
+ * Triggers the final cleanup process.
+ */
 async function triggerFinalCleanup(bot, id, userMsgs = {}) {
   const uid = String(id);
   try {
@@ -130,6 +149,9 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
   }
 }
 
+/**
+ * Cleans up the delivery session.
+ */
 async function cleanupDeliverySession(uid) {
   try {
     if (activeTimers[uid]) {
@@ -142,16 +164,25 @@ async function cleanupDeliverySession(uid) {
   }
 }
 
+/**
+ * Determines if auto-delete is enabled for the user.
+ */
 function shouldAutoDelete(id) {
   const uid = String(id);
   const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
   return autodeleteEnabled?.status && !isAdmin;
 }
 
+/**
+ * Adds a delay for asynchronous operations.
+ */
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Logs debugging information if enabled.
+ */
 function debug(...args) {
   if (process.env.DEBUG_MESSAGES === "true") {
     console.log(...args);
