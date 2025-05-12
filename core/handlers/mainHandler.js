@@ -116,16 +116,14 @@ async function safeCall(fn) {
 }
 
 // 🧠 Handle button interactions via stepHandler
-import { stepHandler } from "./stepHandler.js";
-
 BOT.INSTANCE.on("callback_query", async (query) => {
   try {
-    await stepHandler(BOT.INSTANCE, query);
+    await handleStep(BOT.INSTANCE, query.message.chat.id, query.data, userMessages);
   } catch (err) {
     console.error("❌ [callback_query] stepHandler error:", err);
     try {
       await BOT.INSTANCE.answerCallbackQuery(query.id, {
-        text: "❌ Klaida vykdant veiksmą.",
+        text: "❌ Error.",
         show_alert: true,
       });
     } catch (callbackErr) {
