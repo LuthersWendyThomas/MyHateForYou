@@ -1,12 +1,11 @@
 // 🛡️ core/security.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
 // TITANLOCK SYNCED • BULLETPROOF • ULTRA-SAFE • AUTO-MUTE/FLOOD-PROOF
 
-import { isBanned, banUser } from "../utils/bans.js";
-import { sendAndTrack } from "../helpers/messageUtils.js";
-import { antiSpam, antiFlood, bannedUntil } from "../state/userState.js";
-import { userSessions } from "../state/userState.js";
-import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
-import { BOT } from "../config/config.js";
+import { isBanned, banUser }                     from "../utils/bans.js";
+import { sendAndTrack }                          from "../helpers/messageUtils.js";
+import { antiSpam, antiFlood, bannedUntil, userSessions } from "../state/userState.js";
+import { MENU_BUTTONS }                          from "../helpers/keyboardConstants.js";
+import { BOT }                                   from "../config/config.js";
 
 // ⛔ Security thresholds
 const SPAM_INTERVAL_MS      = 3_300;        // min ms between messages
@@ -154,7 +153,7 @@ export async function canProceed(id, bot, text = "") {
 
   // ─── Allow rapid Confirm/Cancel during payment steps ───
   const session = userSessions[uid];
-  const txt = String(text ?? "").trim().toLowerCase();
+  const txt     = String(text ?? "").trim().toLowerCase();
   if (session?.step >= 8) {
     if (
       txt === MENU_BUTTONS.CONFIRM.text.toLowerCase() ||
@@ -165,10 +164,10 @@ export async function canProceed(id, bot, text = "") {
   }
 
   try {
-    if (isMuted(uid))                           return false;
-    if (await handleFlood(uid, bot))            return false;
-    if (isSpamming(uid))                        return false;
-    if (isMessageDangerous(uid, text))          return false;
+    if (isMuted(uid))                   return false;
+    if (await handleFlood(uid, bot))    return false;
+    if (isSpamming(uid))                return false;
+    if (isMessageDangerous(uid, text))  return false;
     if (await isBanned(uid)) {
       logAction("⛔ [canProceed]", "User is permanently banned", uid);
       return false;
