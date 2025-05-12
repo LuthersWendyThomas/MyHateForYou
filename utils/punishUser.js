@@ -1,107 +1,84 @@
-// 📛 utils/punishUser.js | IMMORTAL FINAL v999999999.∞+2 — BULLETPROOF SHIELD + AUTO-DELETE SYNCED LOCKED
+// 📛 utils/punishUser.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
+// BULLETPROOF SHIELD + AUTO-DELETE SYNCED LOCKED
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
-import { MAIN_KEYBOARD } from "../helpers/keyboardConstants.js";
+import { MAIN_KEYBOARD, MENU_BUTTONS } from "../helpers/keyboardConstants.js";
+import { resetSession } from "../core/handlers/finalHandler.js";
+
+// Precompute all valid button texts
+const BUTTON_TEXTS = Object.values(MENU_BUTTONS)
+  .map(btn => String(btn.text || "").trim().toLowerCase())
+  .filter(Boolean);
 
 /**
  * ⚠️ Warns user for invalid actions
- * Auto-deletes the warning if feature is enabled and ensures users see the main menu.
- * @param {object} bot - Telegram bot instance
- * @param {string|number} id - User ID
- * @param {object} messages - User message tracking
+ *  • Skips any punish if user just pressed a valid button
+ *  • Auto-deletes warning if feature enabled
+ *  • Always shows MAIN_KEYBOARD (or a fallback)
  */
 export async function punish(bot, id, messages = userMessages) {
   try {
-    if (!bot || !id) {
-      console.warn("⚠️ [punish] Invalid bot or user ID provided.");
-      return;
-    }
-
+    if (!bot || !id) return;
     const uid = String(id).trim();
-    if (!uid || uid === "undefined" || uid === "null") {
-      console.warn(`⚠️ [punish] Invalid UID received: ${uid}`);
+    if (!uid || uid === "undefined" || uid === "null") return;
+
+    // 1) Don’t punish if last action was a menu/button press:
+    const last = userSessions[uid]?.lastText?.toString().trim().toLowerCase();
+    if (last && BUTTON_TEXTS.includes(last)) {
       return;
     }
 
-    // Validate and reset session if needed
-    validateUserSession(uid);
+    // 2) If they’ve somehow lost session, reset entirely:
+    if (!userSessions[uid] || !isValidStep(userSessions[uid].step)) {
+      await resetSession(uid);
+      userSessions[uid] = { step: 1, createdAt: Date.now() };
+    }
 
     const warning = "⚠️ *Invalid action.*\nPlease use the *buttons below*.";
-    const keyboard = MAIN_KEYBOARD || getFallbackKeyboard();
+    // MAIN_KEYBOARD should be a full reply_markup; if not, wrap it:
+    let reply_markup = MAIN_KEYBOARD;
+    if (!reply_markup?.keyboard) {
+      reply_markup = { keyboard: MAIN_KEYBOARD, resize_keyboard: true, selective: true };
+    }
 
-    // Send warning message
+    // 3) Send the warning
     const msg = await sendAndTrack(
       bot,
       uid,
       warning,
-      {
-        parse_mode: "Markdown",
-        reply_markup: keyboard,
-      },
+      { parse_mode: "Markdown", reply_markup },
       messages
     );
 
-    const messageId = msg?.message_id;
-    const shouldDelete = autodeleteEnabled?.status === true;
-
-    // Auto-delete message if feature is enabled
-    if (shouldDelete && messageId) {
+    // 4) Auto-delete if enabled
+    const mid = msg?.message_id;
+    if (autodeleteEnabled?.status && mid) {
       setTimeout(async () => {
         try {
-          await bot.deleteMessage(uid, messageId);
+          await bot.deleteMessage(uid, mid);
           if (process.env.DEBUG_MESSAGES === "true") {
-            console.log(`🗑️ [punish] Deleted warning → ${uid} :: ${messageId}`);
+            console.log(`🗑️ [punish] Deleted warning → ${uid} :: ${mid}`);
           }
-        } catch (err) {
-          console.warn(`⚠️ [punish] Failed to delete message #${messageId}: ${err.message}`);
+        } catch (e) {
+          console.warn(`⚠️ [punish] Couldn’t delete #${mid}: ${e.message}`);
         }
-      }, 3000);
+      }, 3_000);
     }
   } catch (err) {
     console.error("❌ [punish error]:", err.message || err);
   }
 }
 
-/**
- * ✅ Validates and resets user session if invalid
- * @param {string} uid - User ID
- */
-function validateUserSession(uid) {
-  try {
-    if (!userSessions[uid]) {
-      userSessions[uid] = { step: 1, createdAt: Date.now() };
-    }
+// ————— Helpers —————
 
-    const session = userSessions[uid];
-    if (!isValidStep(session.step)) {
-      console.warn(`⚠️ Invalid step "${session.step}" for user ${uid}. Resetting to step 1.`);
-      session.step = 1;
-    }
-  } catch (err) {
-    console.error("❌ [validateUserSession error]:", err.message || err);
-  }
-}
-
-/**
- * ✅ Checks if a step value is valid
- * @param {number} step - Step value to validate
- * @returns {boolean} - True if valid, false otherwise
- */
-function isValidStep(step) {
-  return Number.isInteger(step) && step >= 1 && step <= 9;
-}
-
-/**
- * ✅ Provides a fallback keyboard when MAIN_KEYBOARD is unavailable
- * @returns {object} - Fallback keyboard structure
- */
-function getFallbackKeyboard() {
-  return {
-    keyboard: [[{ text: "❓ Help" }]],
-    resize_keyboard: true,
-    one_time_keyboard: false,
-    selective: true,
-  };
+/** Ensure step is from 1–9 */
+function isValidStep(s) {
+  return (
+    Number.isFinite(s) &&
+    (Math.floor(s) === s) &&
+    s >= 1 &&
+    s <= 9
+  );
 }
