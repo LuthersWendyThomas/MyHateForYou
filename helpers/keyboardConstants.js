@@ -1,4 +1,4 @@
-// 📦 helpers/keyboardConstants.js | FINAL IMMORTAL v999999999999.∞+1 — SYNC-GODMODE DIAMONDLOCK MAX-PERFECTION
+// 📦 helpers/keyboardConstants.js | FINAL IMMORTAL v999999999999.∞+ULTIMATE — SKYLOCKED SYNC-GODMODE + DIAMONDLOCK MAX-PERFECTION
 
 import { BOT } from "../config/config.js";
 
@@ -29,8 +29,8 @@ export const MAIN_KEYBOARD = createKeyboard([
  * @returns {object} Telegram keyboard (reply_markup)
  */
 export function getMainMenu(id) {
-  const uid = String(id || "").trim();
-  const adminId = String(BOT?.ADMIN_ID || "").trim();
+  const uid = safeId(id);
+  const adminId = safeId(BOT?.ADMIN_ID);
   const isAdmin = uid === adminId;
 
   try {
@@ -55,7 +55,7 @@ export function getMainMenu(id) {
 
 /**
  * ✅ Creates a Telegram keyboard with safe formatting
- * @param {string[][]} rows — Button rows
+ * @param {Array<Array<{ text: string, callback_data?: string }>>} rows — Button rows
  * @returns {object} Telegram reply_markup object
  */
 function createKeyboard(rows) {
@@ -69,19 +69,38 @@ function createKeyboard(rows) {
 
 /**
  * ✅ Keyboard normalizer — guarantees safe formatting
- * @param {string[][]} keyboard
- * @returns {string[][]}
+ * @param {Array<Array<{ text: string, callback_data?: string }>>} keyboard
+ * @returns {Array<Array<{ text: string, callback_data?: string }>>}
  */
 function normalizeKeyboard(keyboard) {
-  if (!Array.isArray(keyboard)) return [];
+  if (!Array.isArray(keyboard)) {
+    logError("⚠️ [normalizeKeyboard]", new Error("Invalid keyboard structure"));
+    return [];
+  }
+
   return keyboard.map(row => {
-    if (Array.isArray(row)) return row.map(button => String(button).trim());
-    return [String(row).trim()];
+    if (Array.isArray(row)) {
+      return row.map(button => ({
+        text: String(button?.text || "").trim(),
+        callback_data: button?.callback_data ? String(button.callback_data).trim() : undefined,
+      }));
+    }
+    return [{ text: String(row).trim() }];
   });
 }
 
 /**
- * 📝 Logs successful actions
+ * ✅ Safely sanitizes user/admin ID
+ * @param {string|number} id
+ * @returns {string|null} Sanitized ID or null
+ */
+function safeId(id) {
+  const str = String(id || "").trim();
+  return str && str !== "undefined" && str !== "null" ? str : null;
+}
+
+/**
+ * ✅ Logs successful actions
  * @param {string} action — Action description
  * @param {string} message — Additional details
  */
@@ -97,15 +116,19 @@ function logAction(action, message) {
  */
 function logError(action, error, uid = null) {
   console.error(
-    `${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (uid: ${uid})` : ""}`
+    `${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`
   );
 }
 
+/**
+ * ✅ Creates and normalizes fallback keyboard structure
+ * @returns {object} — Basic fallback keyboard
+ */
 function getFallbackKeyboard() {
   return {
-    keyboard: [[{ text: "❓ Help" }]],
+    keyboard: [[MENU_BUTTONS.HELP]],
     resize_keyboard: true,
     one_time_keyboard: false,
-    selective: true,
+    selective: true
   };
 }
