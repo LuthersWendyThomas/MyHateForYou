@@ -19,12 +19,12 @@ export function getMainMenu(id) {
     // Main user menu
     const userMenu = [
       [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
-      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS]
+      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS],
     ];
 
     // Admin-specific menu
     const adminMenu = [
-      [MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN]
+      [MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN],
     ];
 
     // Combine menus based on user role
@@ -35,11 +35,15 @@ export function getMainMenu(id) {
       `Generated main menu for user ${uid}${isAdmin ? " (admin)" : ""}`
     );
 
+    const normalizedKeyboard = normalizeKeyboard(keyboard); // Ensure consistent formatting
+    logAction("✅ [getMainMenu Debug]", JSON.stringify(normalizedKeyboard, null, 2)); // Debugging output
+
+    // Return the final keyboard
     return {
-      keyboard: normalizeKeyboard(keyboard),
+      keyboard: normalizedKeyboard,
       resize_keyboard: true,
       one_time_keyboard: false,
-      selective: true
+      selective: true,
     };
   } catch (err) {
     logError("❌ [getMainMenu error]", err, uid);
@@ -53,12 +57,14 @@ export function getMainMenu(id) {
  * @returns {object} — Basic fallback keyboard
  */
 function getFallbackKeyboard() {
-  return {
+  const fallbackKeyboard = {
     keyboard: [[MENU_BUTTONS.HELP]],
     resize_keyboard: true,
     one_time_keyboard: false,
-    selective: true
+    selective: true,
   };
+  logAction("✅ [getFallbackKeyboard]", JSON.stringify(fallbackKeyboard, null, 2)); // Debugging output
+  return fallbackKeyboard;
 }
 
 /**
@@ -74,10 +80,16 @@ function normalizeKeyboard(keyboard) {
 
   return keyboard.map(row => {
     if (Array.isArray(row)) {
-      return row.map(button => ({
-        text: String(button?.text || "").trim(),
-        callback_data: button?.callback_data ? String(button.callback_data).trim() : undefined
-      }));
+      return row.map(button => {
+        if (!button?.text) {
+          logError("⚠️ [normalizeKeyboard]", new Error("Button missing 'text' property"));
+          return { text: "❌ Invalid Button" }; // Fallback for invalid buttons
+        }
+        return {
+          text: String(button.text).trim(),
+          callback_data: button.callback_data ? String(button.callback_data).trim() : undefined,
+        };
+      });
     }
     return [{ text: String(row).trim() }];
   });
@@ -110,9 +122,7 @@ function logAction(action, message) {
  */
 function logError(action, error, uid = null) {
   console.error(
-    `${new Date().toISOString()} ${action} → ${error.message || error}${
-      uid ? ` (ID: ${uid})` : ""
-    }`
+    `${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`
   );
 }
 
@@ -128,13 +138,19 @@ export function getInlineKeyboard(inlineButtons) {
     }
 
     const inlineKeyboard = inlineButtons.map(row =>
-      row.map(button => ({
-        text: String(button.text).trim(),
-        callback_data: String(button.callback_data).trim()
-      }))
+      row.map(button => {
+        if (!button.text || !button.callback_data) {
+          logError("⚠️ [getInlineKeyboard]", new Error("Invalid button structure"));
+          return { text: "❌ Invalid Button", callback_data: "INVALID" }; // Fallback for invalid buttons
+        }
+        return {
+          text: String(button.text).trim(),
+          callback_data: String(button.callback_data).trim(),
+        };
+      })
     );
 
-    logAction("✅ [getInlineKeyboard]", "Generated inline keyboard");
+    logAction("✅ [getInlineKeyboard]", JSON.stringify(inlineKeyboard, null, 2)); // Debugging output
     return { inline_keyboard: inlineKeyboard };
   } catch (err) {
     logError("❌ [getInlineKeyboard error]", err);
