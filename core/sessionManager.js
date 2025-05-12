@@ -1,4 +1,4 @@
-// 📦 core/sessionManager.js | FINAL IMMORTAL v999999999.∞ — TITANLOCK SYNC + ZOMBIE SLAYER + 24/7 BULLETPROOF
+// 📦 core/sessionManager.js | FINAL IMMORTAL v999999999.∞+1 — TITANLOCK SYNC + ZOMBIE SLAYER + 24/7 BULLETPROOF
 
 import {
   activeTimers,
@@ -21,7 +21,10 @@ const DEFAULT_EXPIRE_THRESHOLD = 45 * 60 * 1000; // 45min → idle (home screen 
 /** ✅ Registers a user as active (pinged) */
 export const markUserActive = (id) => {
   const uid = safeId(id);
-  if (uid) lastSeenAt[uid] = Date.now();
+  if (uid) {
+    lastSeenAt[uid] = Date.now();
+    logAction("✅ [markUserActive]", `User active → ${uid}`);
+  }
 };
 
 /** ✅ Clears active delivery/session timer */
@@ -30,7 +33,7 @@ export const clearUserTimer = (id) => {
   if (uid && activeTimers[uid]) {
     clearTimeout(activeTimers[uid]);
     delete activeTimers[uid];
-    console.log(`🕒 UI timer cleared → ${uid}`);
+    logAction("🕒 [clearUserTimer]", `UI timer cleared → ${uid}`);
   }
 };
 
@@ -40,7 +43,7 @@ export const clearPaymentTimer = (id) => {
   if (uid && paymentTimers[uid]) {
     clearTimeout(paymentTimers[uid]);
     delete paymentTimers[uid];
-    console.log(`💳 Payment timer cleared → ${uid}`);
+    logAction("💳 [clearPaymentTimer]", `Payment timer cleared → ${uid}`);
   }
 };
 
@@ -69,9 +72,9 @@ export const resetSession = (id) => {
     }
 
     activeUsers.remove(uid);
-    console.log(`🧼 Session reset → ${uid}`);
+    logAction("🧼 [resetSession]", `Session reset → ${uid}`);
   } catch (err) {
-    console.error("❌ [resetSession error]:", err.message);
+    logError("❌ [resetSession error]", err, uid);
   }
 };
 
@@ -95,20 +98,22 @@ export const autoExpireSessions = (threshold = DEFAULT_EXPIRE_THRESHOLD) => {
 
   for (const { id, zombie } of expired) {
     resetSession(id);
-    console.log(`⏳ AUTO-EXPIRE (${zombie ? "ZOMBIE" : "IDLE"}) → ${id}`);
+    logAction("⏳ [autoExpireSessions]", `AUTO-EXPIRE (${zombie ? "ZOMBIE" : "IDLE"}) → ${id}`);
   }
 };
 
 /** 📊 Gets live active user count */
 export const getActiveUsersCount = () => {
-  return Object.keys(lastSeenAt).length;
+  const count = Object.keys(lastSeenAt).length;
+  logAction("📊 [getActiveUsersCount]", `Active users: ${count}`);
+  return count;
 };
 
 /** 🔥 Nukes all sessions from orbit (admin use) */
 export const wipeAllSessions = () => {
   const ids = Object.keys(userSessions);
   for (const id of ids) resetSession(id);
-  console.log(`🔥 wipeAllSessions → ${ids.length} wiped`);
+  logAction("🔥 [wipeAllSessions]", `All sessions wiped → ${ids.length}`);
 };
 
 /** 🧽 Removes invalid payment timers (step drift) */
@@ -117,7 +122,7 @@ export const cleanStalePaymentTimers = () => {
     const step = userSessions[id]?.step;
     if (step !== 8) {
       clearPaymentTimer(id);
-      console.log(`🧽 Stale payment timer cleared → ${id}`);
+      logAction("🧽 [cleanStalePaymentTimers]", `Stale payment timer cleared → ${id}`);
     }
   }
 };
@@ -126,7 +131,7 @@ export const cleanStalePaymentTimers = () => {
 export const printSessionSummary = () => {
   const now = Date.now();
   const sessions = Object.entries(userSessions);
-  console.log(`📊 Active sessions: ${sessions.length}`);
+  logAction("📊 [printSessionSummary]", `Active sessions: ${sessions.length}`);
 
   for (const [id, session] of sessions) {
     const last = lastSeenAt[id];
@@ -137,7 +142,31 @@ export const printSessionSummary = () => {
 
 // ————— HELPERS —————
 
+/**
+ * 🧠 Safely sanitizes user ID
+ * @param {string|number} id - Input ID
+ * @returns {string|null} - Sanitized ID or null
+ */
 function safeId(id) {
   const str = String(id ?? "").trim();
   return str && str !== "undefined" && str !== "null" ? str : null;
+}
+
+/**
+ * 📝 Logs successful actions
+ * @param {string} action - Action description
+ * @param {string} message - Additional details
+ */
+function logAction(action, message) {
+  console.log(`${new Date().toISOString()} ${action} → ${message}`);
+}
+
+/**
+ * ⚠️ Logs errors
+ * @param {string} action - Action description
+ * @param {Error|string} error - Error object or message
+ * @param {string} [uid] - User ID (optional)
+ */
+function logError(action, error, uid = null) {
+  console.error(`${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`);
 }
