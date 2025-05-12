@@ -54,18 +54,24 @@ export function getMainMenu(id) {
 }
 
 /**
- * ✅ Normalizes keyboard structure to ensure safe and manageable format.
- * @param {string[][]} keyboard - Rows of the keyboard
- * @returns {string[][]} - Normalized keyboard
+ * ✅ Keyboard normalizer — guarantees safe formatting
+ * @param {Array<Array<{ text: string }>>} keyboard
+ * @returns {Array<Array<{ text: string }>>}
  */
 function normalizeKeyboard(keyboard) {
   if (!Array.isArray(keyboard)) {
     logError("⚠️ [normalizeKeyboard]", new Error("Invalid keyboard structure"));
     return [];
   }
+
   return keyboard.map(row => {
-    if (Array.isArray(row)) return row.map(button => String(button).trim());
-    return [String(row).trim()];
+    if (Array.isArray(row)) {
+      return row.map(button => ({
+        text: String(button.text || "").trim(),
+        callback_data: String(button.callback_data || "").trim(),
+      }));
+    }
+    return [{ text: String(row).trim() }];
   });
 }
 
