@@ -17,13 +17,11 @@ export const MENU_BUTTONS = {
 /**
  * ✅ Fallback keyboard — used as a safe reserve (when others fail)
  */
-export const MAIN_KEYBOARD = {
-  reply_markup: createKeyboard([
-    [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
-    [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS],
-    [MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN]
-  ])
-};
+export const MAIN_KEYBOARD = createKeyboard([
+  [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
+  [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS],
+  [MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN],
+]);
 
 /**
  * ✅ Dynamically generates the main menu (admin-safe)
@@ -101,4 +99,13 @@ function logError(action, error, uid = null) {
   console.error(
     `${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (uid: ${uid})` : ""}`
   );
+}
+
+function getFallbackKeyboard() {
+  return {
+    keyboard: [[{ text: "❓ Help" }]],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+    selective: true,
+  };
 }
