@@ -1,10 +1,11 @@
-// 📦 flows/startOrder.js | IMMORTAL FINAL v999999999+1 — ULTRA-SYNC TANKLOCK MIRROR + 24/7 SAFE RESET
+// 📦 flows/startOrder.js | IMMORTAL FINAL v999999999+ULTIMATE — ULTRA-SYNC TANKLOCK MIRROR + 24/7 SAFE RESET
 
 import { userSessions, userMessages, userOrders } from "../state/userState.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
 import { clearTimers, clearUserMessages } from "../state/stateManager.js";
+import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 
-// 🌍 Region choices — must match config/regions.js + stepHandler.js
+// 🌍 Region choices — centralized for uniformity
 const REGION_LIST = [
   "🗽 East Coast",
   "🌴 West Coast",
@@ -55,7 +56,7 @@ export async function startOrder(bot, id, userMsgs = userMessages) {
       bot,
       uid,
       "❗️ Unexpected error. Please try again.",
-      [[{ text: "🔁 Try again" }]],
+      [[MENU_BUTTONS.HELP]],
       userMsgs
     );
   }
@@ -104,7 +105,8 @@ function initializeSession(id) {
  */
 function buildRegionKeyboard() {
   const keyboard = REGION_LIST.map(region => [{ text: region }]);
-  keyboard.push([{ text: "🔙 Back" }]);
+  keyboard.push([{ text: MENU_BUTTONS.HELP.text }]); // Unified button for help
+  keyboard.push([{ text: "🔙 Back" }]); // Back button for navigation
   return keyboard;
 }
 
