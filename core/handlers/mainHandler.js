@@ -1,8 +1,8 @@
-// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL v999999999.∞+ULTIMATE
-// GODMODE LOCKED • ADMIN SYNC • DISCOUNT SECURED • CALLBACK FIXED • SESSION IMMORTAL
+// 📦 core/handlers/mainHandler.js | FIXED AND FINALIZED
+// GODMODE LOCKED • ADMIN SYNC • BUTTON FUNCTIONALITY SECURED
 
 import { BOT } from "../../config/config.js";
-import { userSessions, userMessages, userOrders } from "../../state/userState.js";
+import { userSessions, userMessages } from "../../state/userState.js";
 import { safeStart } from "./finalHandler.js";
 import { handleStep } from "./stepHandler.js";
 import { startOrder } from "../../flows/startOrder.js";
@@ -11,14 +11,12 @@ import { sendStats } from "../../utils/sendStats.js";
 import { sendOrders } from "../../utils/sendOrders.js";
 import { sendProfile } from "../../utils/sendProfile.js";
 import { openAdminPanel, handleAdminAction } from "../../utils/adminPanel.js";
-import { canProceed } from "../security.js";
 import { MENU_BUTTONS, MAIN_KEYBOARD } from "../../helpers/keyboardConstants.js";
-import { getMainMenu } from "../../helpers/menu.js"; // NEW IMPORT
+import { getMainMenu } from "../../helpers/menu.js";
 import { markUserActive } from "../sessionManager.js";
 
 /**
  * 🔐 Registers the universal Telegram message handler
- * Ensures all button interactions and incoming messages are handled seamlessly
  */
 export function registerMainHandler(bot) {
   if (!bot || typeof bot.on !== "function") {
@@ -26,7 +24,7 @@ export function registerMainHandler(bot) {
     return;
   }
 
-  // 🧠 Handle button interactions via stepHandler
+  // 🧠 Handle button interactions via callback_query
   bot.on("callback_query", async (query) => {
     const chatId = query?.message?.chat?.id;
     const callbackData = query?.data;
@@ -37,116 +35,111 @@ export function registerMainHandler(bot) {
     try {
       markUserActive(uid);
 
-      // Log the callback data for debugging
+      // Log callback data for debugging
       console.log(`📥 [callback_query] UID: ${uid}, Data: ${callbackData}`);
 
-      // Route the callback data to the step handler
-      await handleStep(bot, uid, callbackData, userMessages);
+      // Route callback data to specific handlers
+      switch (callbackData) {
+        case MENU_BUTTONS.BUY.callback_data:
+          return await safeCall(() => startOrder(bot, uid, userMessages));
+        case MENU_BUTTONS.PROFILE.callback_data:
+          return await safeCall(() => sendProfile(bot, uid, userMessages));
+        case MENU_BUTTONS.ORDERS.callback_data:
+          return await safeCall(() => sendOrders(bot, uid, userMessages));
+        case MENU_BUTTONS.HELP.callback_data:
+          return await safeCall(() => sendHelp(bot, uid, userMessages));
+        case MENU_BUTTONS.STATS.callback_data:
+          if (uid === String(BOT.ADMIN_ID)) {
+            return await safeCall(() => sendStats(bot, uid, userMessages));
+          }
+          break;
+        case MENU_BUTTONS.ADMIN.callback_data:
+          if (uid === String(BOT.ADMIN_ID)) {
+            return await safeCall(() => openAdminPanel(bot, uid));
+          }
+          break;
+        default:
+          console.warn(`⚠️ Unhandled callback data: ${callbackData}`);
+          return await bot.answerCallbackQuery(query.id, {
+            text: "❌ Invalid action. Use the buttons.",
+            show_alert: true,
+          });
+      }
 
       // Acknowledge the callback query
       await bot.answerCallbackQuery(query.id).catch(() => {});
     } catch (err) {
-      console.error("❌ [callback_query error]:", err);
-      try {
-        await bot.answerCallbackQuery(query.id, {
-          text: "❌ Error processing your action. Please try again.",
-          show_alert: true,
-        });
-      } catch (callbackErr) {
-        console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
-      }
+      console.error("❌ [callback_query error]:", err.message || err);
     }
   });
 
   // 🧠 Handle incoming messages
   bot.on("message", async (msg) => {
     const chatId = msg?.chat?.id;
-    let text = msg?.text;
+    const text = normalizeText(msg?.text);
 
-    if (!chatId || typeof text !== "string") return;
+    if (!chatId || !text) return;
 
     const uid = String(chatId).trim();
-    text = normalizeText(text);
-    if (!text) return;
-
     try {
       markUserActive(uid);
 
       const session = userSessions[uid] ||= { step: 1, createdAt: Date.now() };
       session.lastText = text;
 
+      // Log incoming message for debugging
+      console.log(`📩 [message] UID: ${uid}, Text: ${text}`);
+
       const isAdmin = uid === String(BOT.ADMIN_ID);
 
-      // 🔐 Security check
-      const allowed = await canProceed(uid, bot, text);
-      if (!allowed) return;
-
-      // ♻️ /start command resets session
+      // /start command resets session
       if (text === "/start") {
         console.log(`🚀 /start from ${uid}`);
         return await safeCall(() => safeStart(bot, uid));
       }
 
-      // 🛠 Admin actions
+      // Admin actions
       if (session.adminStep) {
         return await safeCall(() => handleAdminAction(bot, msg, userSessions));
       }
 
-      // 📦 Static routes
+      // Static routes
       switch (text) {
-        case MENU_BUTTONS.BUY.text:
+        case MENU_BUTTONS.BUY.text.toLowerCase():
           return await safeCall(() => startOrder(bot, uid, userMessages));
-        case MENU_BUTTONS.PROFILE.text:
+        case MENU_BUTTONS.PROFILE.text.toLowerCase():
           return await safeCall(() => sendProfile(bot, uid, userMessages));
-        case MENU_BUTTONS.ORDERS.text:
-          return await safeCall(() => sendOrders(bot, uid, uid, userMessages));
-        case MENU_BUTTONS.HELP.text:
+        case MENU_BUTTONS.ORDERS.text.toLowerCase():
+          return await safeCall(() => sendOrders(bot, uid, userMessages));
+        case MENU_BUTTONS.HELP.text.toLowerCase():
           return await safeCall(() => sendHelp(bot, uid, userMessages));
-        case MENU_BUTTONS.STATS.text:
+        case MENU_BUTTONS.STATS.text.toLowerCase():
           if (isAdmin) return await safeCall(() => sendStats(bot, uid, userMessages));
           break;
-        case MENU_BUTTONS.ADMIN.text:
+        case MENU_BUTTONS.ADMIN.text.toLowerCase():
           if (isAdmin) return await safeCall(() => openAdminPanel(bot, uid));
           break;
       }
 
-      // 🧠 Step-based session routing
-      const step = Number(session.step);
-      if (!Number.isInteger(step) || step < 1 || step > 9) {
-        console.warn(`⚠️ Corrupt step "${session.step}" → resetting ${uid}`);
-        session.step = 1;
-      }
-
-      return await safeCall(() => handleStep(bot, uid, text, userMessages));
+      // Fallback for invalid actions
+      await bot.sendMessage(uid, "❌ Invalid action. Use the buttons below:", {
+        reply_markup: getMainMenu(uid),
+      });
     } catch (err) {
       console.error("❌ [mainHandler error]:", err.message || err);
-      try {
-        // Fallback to main menu on error
-        const mainMenu = getMainMenu(uid);
-        return await bot.sendMessage(uid, "❗️ Internal error. Please try again or use /start.", {
-          parse_mode: "Markdown",
-          reply_markup: mainMenu,
-        });
-      } catch (fallbackErr) {
-        console.warn("⚠️ [sendMessage fallback failed]:", fallbackErr.message);
-      }
     }
   });
 }
 
 /**
- * 🧼 Normalizes user input by trimming and limiting length
- * @param {string} txt - Raw user input
- * @returns {string} - Normalized text
+ * Normalize user input text
  */
 function normalizeText(txt) {
-  return txt?.toString().trim().slice(0, 4096).toLowerCase();
+  return txt?.toString().trim().toLowerCase();
 }
 
 /**
- * 🧯 Safe async execution wrapper
- * @param {function} fn - Async function to execute safely
- * @returns {Promise<any>} - Result of the async function or undefined
+ * Safe async execution wrapper
  */
 async function safeCall(fn) {
   try {
