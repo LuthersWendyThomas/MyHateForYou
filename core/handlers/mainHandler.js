@@ -1,4 +1,4 @@
-// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL v999999999.∞+4
+// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL v999999999.∞+ULTIMATE
 // GODMODE LOCKED • ADMIN SYNC • DISCOUNT SECURED • CALLBACK FIXED • SESSION IMMORTAL
 
 import { BOT } from "../../config/config.js";
@@ -28,35 +28,35 @@ export function registerMainHandler(bot) {
 
   // 🧠 Handle button interactions via stepHandler
   bot.on("callback_query", async (query) => {
-  const chatId = query?.message?.chat?.id;
-  const callbackData = query?.data;
+    const chatId = query?.message?.chat?.id;
+    const callbackData = query?.data;
 
-  if (!chatId || !callbackData) return;
+    if (!chatId || !callbackData) return;
 
-  const uid = String(chatId).trim();
-  try {
-    markUserActive(uid);
-
-    // Log the callback data for debugging
-    console.log(`📥 [callback_query] UID: ${uid}, Data: ${callbackData}`);
-
-    // Route the callback data to the step handler
-    await handleStep(bot, uid, callbackData, userMessages);
-
-    // Acknowledge the callback query
-    await bot.answerCallbackQuery(query.id).catch(() => {});
-  } catch (err) {
-    console.error("❌ [callback_query error]:", err);
+    const uid = String(chatId).trim();
     try {
-      await bot.answerCallbackQuery(query.id, {
-        text: "❌ Error processing your action. Please try again.",
-        show_alert: true,
-      });
-    } catch (callbackErr) {
-      console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
+      markUserActive(uid);
+
+      // Log the callback data for debugging
+      console.log(`📥 [callback_query] UID: ${uid}, Data: ${callbackData}`);
+
+      // Route the callback data to the step handler
+      await handleStep(bot, uid, callbackData, userMessages);
+
+      // Acknowledge the callback query
+      await bot.answerCallbackQuery(query.id).catch(() => {});
+    } catch (err) {
+      console.error("❌ [callback_query error]:", err);
+      try {
+        await bot.answerCallbackQuery(query.id, {
+          text: "❌ Error processing your action. Please try again.",
+          show_alert: true,
+        });
+      } catch (callbackErr) {
+        console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
+      }
     }
-  }
-});
+  });
 
   // 🧠 Handle incoming messages
   bot.on("message", async (msg) => {
@@ -94,18 +94,18 @@ export function registerMainHandler(bot) {
 
       // 📦 Static routes
       switch (text) {
-        case MENU_BUTTONS.BUY:
+        case MENU_BUTTONS.BUY.text:
           return await safeCall(() => startOrder(bot, uid, userMessages));
-        case MENU_BUTTONS.PROFILE:
+        case MENU_BUTTONS.PROFILE.text:
           return await safeCall(() => sendProfile(bot, uid, userMessages));
-        case MENU_BUTTONS.ORDERS:
+        case MENU_BUTTONS.ORDERS.text:
           return await safeCall(() => sendOrders(bot, uid, uid, userMessages));
-        case MENU_BUTTONS.HELP:
+        case MENU_BUTTONS.HELP.text:
           return await safeCall(() => sendHelp(bot, uid, userMessages));
-        case MENU_BUTTONS.STATS:
+        case MENU_BUTTONS.STATS.text:
           if (isAdmin) return await safeCall(() => sendStats(bot, uid, userMessages));
           break;
-        case MENU_BUTTONS.ADMIN:
+        case MENU_BUTTONS.ADMIN.text:
           if (isAdmin) return await safeCall(() => openAdminPanel(bot, uid));
           break;
       }
