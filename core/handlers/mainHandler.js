@@ -1,5 +1,5 @@
-// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL v999999999.∞
-// FULL SYNC W/ ADMINPANEL • DISCOUNT CONTROL • ERROR SAFE • SESSION LOCKED
+// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL v999999999.∞.2
+// GODMODE LOCKED • ADMIN SYNC • DISCOUNT SECURED • CALLBACK FIXED • SESSION IMMORTAL
 
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages, userOrders } from "../../state/userState.js";
@@ -24,30 +24,39 @@ export function registerMainHandler(bot) {
     return;
   }
 
-// 🧠 Handle button interactions via stepHandler
-BOT.INSTANCE.on("callback_query", async (query) => {
-  try {
-    await handleStep(BOT.INSTANCE, query.message.chat.id, query.data, userMessages);
-  } catch (err) {
-    console.error("❌ [callback_query] stepHandler error:", err);
-    try {
-      await BOT.INSTANCE.answerCallbackQuery(query.id, {
-        text: "❌ Error.",
-        show_alert: true,
-      });
-    } catch (callbackErr) {
-      console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
-    }
-  }
-});
+  // 🧠 Handle button interactions via stepHandler
+  BOT.INSTANCE.on("callback_query", async (query) => {
+    const chatId = query?.message?.chat?.id;
+    const data = query?.data;
 
+    if (!chatId || !data) return;
+
+    const uid = String(chatId).trim();
+    try {
+      markUserActive(uid);
+      await handleStep(BOT.INSTANCE, uid, data, userMessages);
+      await BOT.INSTANCE.answerCallbackQuery(query.id).catch(() => {});
+    } catch (err) {
+      console.error("❌ [callback_query] stepHandler error:", err);
+      try {
+        await BOT.INSTANCE.answerCallbackQuery(query.id, {
+          text: "❌ Klaida apdorojant veiksmą.",
+          show_alert: true,
+        });
+      } catch (callbackErr) {
+        console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
+      }
+    }
+  });
+
+  // 🧠 Handle incoming messages
   bot.on("message", async (msg) => {
-    const id = msg?.chat?.id;
+    const chatId = msg?.chat?.id;
     let text = msg?.text;
 
-    if (!id || typeof text !== "string") return;
+    if (!chatId || typeof text !== "string") return;
 
-    const uid = String(id).trim();
+    const uid = String(chatId).trim();
     text = normalizeText(text);
     if (!text) return;
 
@@ -59,22 +68,22 @@ BOT.INSTANCE.on("callback_query", async (query) => {
 
       const isAdmin = uid === String(BOT.ADMIN_ID);
 
-      // ✅ Security check
+      // 🔐 Security check
       const allowed = await canProceed(uid, bot, text);
       if (!allowed) return;
 
-      // ✅ Force /start reset
+      // ♻️ /start command resets session
       if (text === "/start") {
-        console.log(`🚀 /start command from ${uid}`);
+        console.log(`🚀 /start from ${uid}`);
         return await safeCall(() => safeStart(bot, uid));
       }
 
-      // ✅ Admin flow step handling
+      // 🛠 Admin actions
       if (session.adminStep) {
         return await safeCall(() => handleAdminAction(bot, msg, userSessions));
       }
 
-      // ✅ Static routing
+      // 📦 Static routes
       switch (text) {
         case MENU_BUTTONS.BUY:
           return await safeCall(() => startOrder(bot, uid, userMessages));
@@ -92,37 +101,37 @@ BOT.INSTANCE.on("callback_query", async (query) => {
           break;
       }
 
-      // ✅ Step-based session routing
+      // 🧠 Step-based session routing
       const step = Number(session.step);
       if (!Number.isInteger(step) || step < 1 || step > 9) {
-        console.warn(`⚠️ Corrupt step "${session.step}" → Resetting session for ${uid}`);
+        console.warn(`⚠️ Corrupt step "${session.step}" → resetting ${uid}`);
         session.step = 1;
       }
 
       return await safeCall(() => handleStep(bot, uid, text, userMessages));
     } catch (err) {
-      console.error("❌ [MainHandler crash]:", err.message || err);
+      console.error("❌ [mainHandler crash]:", err.message || err);
       try {
-        return await bot.sendMessage(uid, "❗️ Internal error.\nTry again or type /start.", {
+        return await bot.sendMessage(uid, "❗️ Vidinė klaida. Bandykite dar kartą arba naudokite /start.", {
           parse_mode: "Markdown",
-          reply_markup: MAIN_KEYBOARD
+          reply_markup: MAIN_KEYBOARD,
         });
       } catch (fallbackErr) {
-        console.warn("⚠️ [Fallback send failed]:", fallbackErr.message);
+        console.warn("⚠️ [sendMessage fallback failed]:", fallbackErr.message);
       }
     }
   });
 }
 
 /**
- * 🧼 Normalizes text input
+ * 🧼 Normalizes user input
  */
 function normalizeText(txt) {
   return txt?.toString().trim().slice(0, 4096).toLowerCase();
 }
 
 /**
- * 🔐 Safe async call
+ * 🧯 Safe async execution wrapper
  */
 async function safeCall(fn) {
   try {
