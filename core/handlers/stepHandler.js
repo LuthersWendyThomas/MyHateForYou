@@ -26,19 +26,19 @@ import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
  */
 export async function handleStep(bot, id, text, userMessages) {
   const uid = sanitizeId(id);
-  const input = (text || "").trim();
+  const input = normalizeText(text);
 
   if (!input) {
-    await punish(bot, uid, userMessages);
+    await guideUser(bot, uid, userMessages);
     return;
   }
 
-  // 🔒 Validate and synchronize user session
+  // 🔒 Validate user session
   validateUserSession(uid);
   const session = userSessions[uid];
 
   // 🧭 Universal back button
-  if (input === MENU_BUTTONS.BACK?.text) {
+  if (input === MENU_BUTTONS.BACK?.text.toLowerCase()) {
     return await handleBackButton(bot, uid, session, userMessages);
   }
 
@@ -78,7 +78,7 @@ export async function handleStep(bot, id, text, userMessages) {
         return await handlePaymentConfirmationStep(bot, uid, input, session, userMessages);
 
       default:
-        console.warn(`⚠️ Unknown step=${session.step} for uid=${uid}`);
+        console.warn(`⚠️ Unknown step="${session.step}" for uid=${uid}`);
         await resetSession(uid);
         return await safeStart(bot, uid);
     }
@@ -91,32 +91,16 @@ export async function handleStep(bot, id, text, userMessages) {
 
 // ————— HANDLER FUNCTIONS —————
 
-async function handleBackButton(bot, uid, session, userMessages) {
-  try {
-    if (session.step <= 1) {
-      await resetSession(uid);
-      return await safeStart(bot, uid);
-    }
-
-    session.step = Math.max(1, session.step - 1);
-
-    // 🧹 Clean up selections when going back early
-    if (session.step <= 1) {
-      delete session.region;
-      delete session.city;
-      delete session.promoCode;
-    }
-
-    return renderStep(bot, uid, session.step, userMessages);
-  } catch (err) {
-    console.error("❌ [Back error]:", err.message || err);
-    await safeStart(bot, uid);
-  }
+async function guideUser(bot, uid, userMessages) {
+  console.log(`🔄 Guiding user ${uid} back to the menu.`);
+  await sendAndTrack(bot, uid, "❌ Invalid input. Please use the buttons below:", {
+    reply_markup: renderStep(bot, uid, userSessions[uid]?.step || 1, userMessages),
+  });
 }
 
 async function handleRegionSelection(bot, uid, input, session, userMessages) {
   const region = REGION_MAP[input];
-  if (!region?.active) return await punish(bot, uid, userMessages);
+  if (!region?.active) return await guideUser(bot, uid, userMessages);
 
   session.region = input;
   session.step = 1.2;
@@ -126,7 +110,7 @@ async function handleRegionSelection(bot, uid, input, session, userMessages) {
 async function handleCitySelection(bot, uid, input, session, userMessages) {
   const city = input.replace(/^🚫 /, "");
   const regionCities = REGION_MAP[session.region]?.cities;
-  if (!regionCities || !regionCities.hasOwnProperty(city)) return await punish(bot, uid, userMessages);
+  if (!regionCities || !regionCities.hasOwnProperty(city)) return await guideUser(bot, uid, userMessages);
 
   session.city = city;
   session.step = 2;
@@ -134,8 +118,8 @@ async function handleCitySelection(bot, uid, input, session, userMessages) {
 }
 
 async function handleDeliveryMethod(bot, uid, input, session, userMessages) {
-  const method = deliveryMethods.find(m => m.label === input);
-  if (!method) return await punish(bot, uid, userMessages);
+  const method = deliveryMethods.find(m => m.label.toLowerCase() === input);
+  if (!method) return await guideUser(bot, uid, userMessages);
 
   session.deliveryMethod = method.key;
   session.deliveryFee = isFinite(Number(method.fee)) ? Number(method.fee) : 0;
@@ -144,15 +128,15 @@ async function handleDeliveryMethod(bot, uid, input, session, userMessages) {
 }
 
 async function handlePromoDecision(bot, uid, input, session, userMessages) {
-  if (input === MENU_BUTTONS.YES?.text) {
+  if (input === MENU_BUTTONS.YES?.text.toLowerCase()) {
     session.step = 2.2;
     return renderStep(bot, uid, session.step, userMessages);
   }
-  if (input === MENU_BUTTONS.NO?.text) {
+  if (input === MENU_BUTTONS.NO?.text.toLowerCase()) {
     session.step = 3;
     return renderStep(bot, uid, session.step, userMessages);
   }
-  return await punish(bot, uid, userMessages);
+  return await guideUser(bot, uid, userMessages);
 }
 
 async function handlePromoInput(bot, uid, input, session, userMessages) {
@@ -174,16 +158,17 @@ async function handlePromoInput(bot, uid, input, session, userMessages) {
 }
 
 async function handleCategorySelection(bot, uid, input, session, userMessages) {
-  if (!products.hasOwnProperty(input)) return await punish(bot, uid, userMessages);
+  const category = Object.keys(products).find(cat => cat.toLowerCase() === input);
+  if (!category) return await guideUser(bot, uid, userMessages);
 
-  session.category = input;
+  session.category = category;
   session.step = 4;
   return renderStep(bot, uid, session.step, userMessages);
 }
 
 async function handleProductSelection(bot, uid, input, session, userMessages) {
-  const product = products[session.category]?.find(p => p.name === input);
-  if (!product) return await punish(bot, uid, userMessages);
+  const product = products[session.category]?.find(p => p.name.toLowerCase() === input);
+  if (!product) return await guideUser(bot, uid, userMessages);
 
   session.product = product;
   session.step = 5;
@@ -194,7 +179,7 @@ async function handleQuantityPricing(bot, uid, input, session, userMessages) {
   const qty = input.match(/^[^\s(]+/)?.[0];
   const basePrice = session.product?.prices?.[qty];
 
-  if (!basePrice || !isFinite(basePrice)) return await punish(bot, uid, userMessages);
+  if (!basePrice || !isFinite(basePrice)) return await guideUser(bot, uid, userMessages);
 
   const discount = resolveDiscount(
     {
@@ -221,8 +206,8 @@ async function handleQuantityPricing(bot, uid, input, session, userMessages) {
 }
 
 async function handleWalletSelection(bot, uid, input, session, userMessages) {
-  const wallet = WALLETS[input];
-  if (!wallet) return await punish(bot, uid, userMessages);
+  const wallet = WALLETS[input.toUpperCase()];
+  if (!wallet) return await guideUser(bot, uid, userMessages);
 
   session.currency = input;
   session.wallet = wallet;
@@ -231,25 +216,27 @@ async function handleWalletSelection(bot, uid, input, session, userMessages) {
 }
 
 async function handleFinalConfirmation(bot, uid, input, session, userMessages) {
-  if (input !== MENU_BUTTONS.CONFIRM?.text) return await punish(bot, uid, userMessages);
+  if (input !== MENU_BUTTONS.CONFIRM?.text.toLowerCase()) return await guideUser(bot, uid, userMessages);
 
   return await handlePayment(bot, uid, userMessages);
 }
 
 async function handlePaymentConfirmationStep(bot, uid, input, session, userMessages) {
-  if (input === MENU_BUTTONS.CONFIRM?.text) {
+  if (input === MENU_BUTTONS.CONFIRM?.text.toLowerCase()) {
     session.step = 9;
     return await handlePaymentConfirmation(bot, uid, userMessages);
   }
 
-  if (input === MENU_BUTTONS.CANCEL?.text) {
+  if (input === MENU_BUTTONS.CANCEL?.text.toLowerCase()) {
     await sendAndTrack(bot, uid, "❌ Payment canceled. Returning to main menu...", {}, userMessages);
     await resetSession(uid);
     return setTimeout(() => safeStart(bot, uid), 300);
   }
 
-  return await punish(bot, uid, userMessages);
+  return await guideUser(bot, uid, userMessages);
 }
+
+// ————— HELPER FUNCTIONS —————
 
 /**
  * ✅ Validates and resets invalid user sessions
@@ -275,4 +262,13 @@ function validateUserSession(uid) {
 function sanitizeId(id) {
   const uid = String(id || "").trim();
   return uid && uid !== "undefined" && uid !== "null" ? uid : null;
+}
+
+/**
+ * ✅ Normalizes user input text
+ * @param {string} txt - Raw user input
+ * @returns {string} - Normalized text
+ */
+function normalizeText(txt) {
+  return txt?.toString().trim().toLowerCase();
 }
