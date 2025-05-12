@@ -36,7 +36,7 @@ export function getMainMenu(id) {
   try {
     const rows = [
       [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
-      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS]
+      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS],
     ];
 
     if (isAdmin) {
@@ -59,11 +59,13 @@ export function getMainMenu(id) {
  * @returns {object} Telegram reply_markup object
  */
 function createKeyboard(rows) {
+  const normalizedKeyboard = normalizeKeyboard(rows);
+  logAction("✅ [createKeyboard]", JSON.stringify(normalizedKeyboard, null, 2)); // Debugging output
   return {
-    keyboard: normalizeKeyboard(rows),
+    keyboard: normalizedKeyboard,
     resize_keyboard: true,
     one_time_keyboard: false,
-    selective: false
+    selective: false,
   };
 }
 
@@ -80,10 +82,16 @@ function normalizeKeyboard(keyboard) {
 
   return keyboard.map(row => {
     if (Array.isArray(row)) {
-      return row.map(button => ({
-        text: String(button?.text || "").trim(),
-        callback_data: button?.callback_data ? String(button.callback_data).trim() : undefined,
-      }));
+      return row.map(button => {
+        if (!button?.text) {
+          logError("⚠️ [normalizeKeyboard]", new Error("Button missing 'text' property"));
+          return { text: "❌ Invalid Button" }; // Fallback for invalid buttons
+        }
+        return {
+          text: String(button.text).trim(),
+          callback_data: button.callback_data ? String(button.callback_data).trim() : undefined,
+        };
+      });
     }
     return [{ text: String(row).trim() }];
   });
@@ -125,10 +133,12 @@ function logError(action, error, uid = null) {
  * @returns {object} — Basic fallback keyboard
  */
 function getFallbackKeyboard() {
-  return {
+  const fallbackKeyboard = {
     keyboard: [[MENU_BUTTONS.HELP]],
     resize_keyboard: true,
     one_time_keyboard: false,
-    selective: true
+    selective: true,
   };
+  logAction("✅ [getFallbackKeyboard]", JSON.stringify(fallbackKeyboard, null, 2)); // Debugging output
+  return fallbackKeyboard;
 }
