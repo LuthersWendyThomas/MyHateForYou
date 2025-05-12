@@ -1,9 +1,9 @@
-// 📦 helpers/keyboardConstants.js | FINAL IMMORTAL v99999999999 — SYNCED BULLETPROOF DIAMONDLOCK
+// 📦 helpers/keyboardConstants.js | FINAL IMMORTAL v999999999999.∞ — SYNC-GODMODE DIAMONDLOCK MAX-PERFECTION
 
 import { BOT } from "../config/config.js";
 
 /**
- * ✅ Centralized button labels for all flows (user/admin)
+ * ✅ Centralizuoti mygtukų pavadinimai (vartotojams ir adminams)
  */
 export const MENU_BUTTONS = {
   START: "🚀 START",
@@ -12,31 +12,31 @@ export const MENU_BUTTONS = {
   ORDERS: "📋 MY ORDERS",
   HELP: "❓ HELP",
 
-  // Admin section
+  // Admin skiltis
   STATS: "📊 STATISTICS",
   ADMIN: "🔧 ADMIN PANEL"
 };
 
 /**
- * ✅ Static fallback keyboard (safe failover)
+ * ✅ Fallback klaviatūra — naudojama kaip saugus rezervas (kai kiti nepavyksta)
  */
 export const MAIN_KEYBOARD = {
   reply_markup: {
-    keyboard: [
-      [{ text: MENU_BUTTONS.BUY }, { text: MENU_BUTTONS.HELP }],
-      [{ text: MENU_BUTTONS.PROFILE }, { text: MENU_BUTTONS.ORDERS }],
-      [{ text: MENU_BUTTONS.STATS }, { text: MENU_BUTTONS.ADMIN }]
-    ],
+    keyboard: normalizeKeyboard([
+      [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
+      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS],
+      [MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN]
+    ]),
     resize_keyboard: true,
     one_time_keyboard: false,
-    selective: true
+    selective: false
   }
 };
 
 /**
- * ✅ Runtime dynamic main menu (user/admin-safe)
- * @param {string|number} id — Telegram user ID
- * @returns {object} Telegram keyboard reply_markup
+ * ✅ Dinaminė pagrindinio meniu generacija (admin saugi)
+ * @param {string|number} id — Telegram vartotojo ID
+ * @returns {object} Telegram klaviatūra (reply_markup)
  */
 export function getMainMenu(id) {
   const uid = String(id || "").trim();
@@ -44,20 +44,33 @@ export function getMainMenu(id) {
   const isAdmin = uid === adminId;
 
   const rows = [
-    [{ text: MENU_BUTTONS.BUY }, { text: MENU_BUTTONS.HELP }],
-    [{ text: MENU_BUTTONS.PROFILE }, { text: MENU_BUTTONS.ORDERS }]
+    [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
+    [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS]
   ];
 
   if (isAdmin) {
-    rows.push([{ text: MENU_BUTTONS.STATS }, { text: MENU_BUTTONS.ADMIN }]);
+    rows.push([MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN]);
   }
 
   return {
     reply_markup: {
-      keyboard: rows,
+      keyboard: normalizeKeyboard(rows),
       resize_keyboard: true,
       one_time_keyboard: false,
-      selective: true
+      selective: false
     }
   };
+}
+
+/**
+ * ✅ Klaviatūros normalizatorius — garantuoja saugų formatą
+ * @param {string[][]} keyboard
+ * @returns {Array<Array<string>>}
+ */
+function normalizeKeyboard(keyboard) {
+  if (!Array.isArray(keyboard)) return [];
+  return keyboard.map(row => {
+    if (Array.isArray(row)) return row.map(String);
+    return [String(row)];
+  });
 }
