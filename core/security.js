@@ -1,5 +1,5 @@
-// 🛡️ core/security.js | FINAL IMMORTAL v999999999.∞+ULTIMATE
-// TITANLOCK SYNCED • BULLETPROOF • ULTRA-SAFE • AUTO-BAN • FLOOD-PROOF
+// 🛡️ core/security.js | IMMORTAL FINAL v1.0.0•GODMODE DIAMONDLOCK
+// TITANLOCK SYNCED • BULLETPROOF • ULTRA-SAFE • AUTO-MUTE/FLOOD-PROOF
 
 import { isBanned, banUser } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
@@ -7,184 +7,177 @@ import { antiSpam, antiFlood, bannedUntil } from "../state/userState.js";
 import { BOT } from "../config/config.js";
 
 // ⛔ Security thresholds
-const SPAM_INTERVAL_MS = 3300; // Minimum interval between messages to avoid spam
-const FLOOD_LIMIT = 6; // Max actions allowed within FLOOD_WINDOW_MS
-const FLOOD_WINDOW_MS = 11000; // Time window for flood detection
-const TEMP_MUTE_MS = 4 * 60 * 1000; // Temporary mute duration (4 minutes)
-const MAX_MESSAGE_LENGTH = 600; // Maximum allowed message length
-const MAX_INPUT_FREQUENCY = 4; // Max repeated inputs within recent history
-const MAX_DISTINCT_INPUTS = 20; // Max distinct inputs to track in history
+const SPAM_INTERVAL_MS      = 3_300;        // min ms between messages
+const FLOOD_LIMIT           = 6;            // max actions per window
+const FLOOD_WINDOW_MS       = 11_000;       // window for flood detection
+const TEMP_MUTE_MS          = 4 * 60_000;   // 4-minute mute
+const MAX_MESSAGE_LENGTH    = 600;          // max characters
+const MAX_INPUT_FREQUENCY   = 4;            // identical repeats before block
+const MAX_DISTINCT_INPUTS   = 20;           // history size
 
-const recentTexts = {}; // 🧠 Track recent input strings for each user
+// 🧠 Tracks recent inputs per user
+const recentTexts = new Map();
 
-/**
- * ✅ Checks if user is admin
- * @param {string|number} id - User ID
- * @returns {boolean} - True if user is admin
- */
-function isAdmin(id) {
-  return BOT.ADMIN_ID && String(id) === String(BOT.ADMIN_ID);
+/** ✅ Is this UID the bot admin? */
+function isAdmin(uid) {
+  return String(uid) === String(BOT.ADMIN_ID);
+}
+
+/** 🔒 Clean and validate incoming ID */
+function sanitizeId(id) {
+  const s = String(id ?? "").trim();
+  return s && s !== "undefined" && s !== "null" ? s : null;
+}
+
+/** 📋 Log actions uniformly */
+function logAction(action, message, uid = "") {
+  console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (UID: ${uid})` : ""}`);
+}
+
+/** 🚨 Log errors uniformly */
+function logError(action, error, uid = "") {
+  const msg = error?.message || error;
+  console.error(`${new Date().toISOString()} ${action} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
 }
 
 /**
- * ⛔ Detects spam: Too frequent input
- * @param {string|number} id - User ID
- * @returns {boolean} - True if user is spamming
+ * ⛔ Has the user sent messages too quickly?
  */
 export function isSpamming(id) {
-  if (!id || isAdmin(id)) return false;
-  const now = Date.now();
-  const last = antiSpam[id] || 0;
-  antiSpam[id] = now;
+  const uid = sanitizeId(id);
+  if (!uid || isAdmin(uid)) return false;
 
-  const spamming = now - last < SPAM_INTERVAL_MS;
-  if (spamming) logAction("⚠️ [isSpamming]", `User is spamming → ${id}`);
-  return spamming;
+  const now   = Date.now();
+  const last  = antiSpam[uid] || 0;
+  antiSpam[uid] = now;
+
+  const spam = now - last < SPAM_INTERVAL_MS;
+  if (spam) logAction("⚠️ [isSpamming]", "Rapid messages detected", uid);
+  return spam;
 }
 
 /**
- * 🌊 Handles flood detection: Too many actions in a short time
- * @param {string|number} id - User ID
- * @param {object} bot - Telegram bot instance
- * @returns {Promise<boolean>} - True if user triggered flood protection
+ * 🌊 Flood protection: too many actions in a short window?
  */
 export async function handleFlood(id, bot) {
-  if (!id || isAdmin(id)) return false;
+  const uid = sanitizeId(id);
+  if (!uid || isAdmin(uid)) return false;
 
-  const now = Date.now();
-  const state = antiFlood[id];
+  try {
+    const now   = Date.now();
+    let state   = antiFlood[uid];
 
-  if (!state) {
-    antiFlood[id] = { count: 1, start: now };
+    if (!state) {
+      antiFlood[uid] = { count: 1, start: now };
+      return false;
+    }
+
+    if (now - state.start <= FLOOD_WINDOW_MS) {
+      state.count++;
+      if (state.count > FLOOD_LIMIT) {
+        // Temp-mute user
+        bannedUntil[uid] = now + TEMP_MUTE_MS;
+        delete antiFlood[uid];
+        await notifyUserMuted(bot, uid);
+        logAction("⛔ [handleFlood]", "Flood detected → muted", uid);
+        return true;
+      }
+    } else {
+      antiFlood[uid] = { count: 1, start: now };
+    }
+    return false;
+  } catch (err) {
+    logError("❌ [handleFlood error]", err, uid);
     return false;
   }
-
-  if (now - state.start <= FLOOD_WINDOW_MS) {
-    state.count++;
-    if (state.count > FLOOD_LIMIT) {
-      bannedUntil[id] = now + TEMP_MUTE_MS;
-      delete antiFlood[id];
-
-      await notifyUserMuted(bot, id);
-      logAction("⛔ [handleFlood]", `User flooded → Muted for 4 minutes → ${id}`);
-      return true;
-    }
-  } else {
-    antiFlood[id] = { count: 1, start: now };
-  }
-
-  return false;
 }
 
 /**
- * 🔇 Checks if a user is temporarily muted
- * @param {string|number} id - User ID
- * @returns {boolean} - True if user is muted
+ * 🔇 Is the user currently muted?
  */
 export function isMuted(id) {
-  if (!id || isAdmin(id)) return false;
-  const until = bannedUntil[id];
+  const uid = sanitizeId(id);
+  if (!uid || isAdmin(uid)) return false;
+
+  const until = bannedUntil[uid];
   if (!until) return false;
 
   const muted = Date.now() < until;
-  if (!muted) delete bannedUntil[id]; // Cleanup expired mute
+  if (!muted) delete bannedUntil[uid];
+  if (muted) logAction("🔇 [isMuted]", "User is muted", uid);
   return muted;
 }
 
 /**
- * 💣 Detects dangerous message: Too long or repeated
- * @param {string|number} id - User ID
- * @param {string} rawText - Message text
- * @returns {boolean} - True if message is dangerous
+ * 💣 Has the user sent a dangerously long or repeated message?
  */
 function isMessageDangerous(id, rawText) {
-  if (!id || isAdmin(id)) return false;
+  const uid = sanitizeId(id);
+  if (!uid || isAdmin(uid)) return false;
 
-  const txt = String(rawText || "").trim();
-  if (!txt) return true; // Empty message considered dangerous
-  if (txt.length > MAX_MESSAGE_LENGTH) return true; // Exceeds max length
+  try {
+    const txt = String(rawText ?? "").trim();
+    if (!txt || txt.length > MAX_MESSAGE_LENGTH) {
+      logAction("⚠️ [isMessageDangerous]", "Empty or too long message", uid);
+      return true;
+    }
 
-  const uid = String(id);
-  const history = recentTexts[uid] ||= [];
+    let history = recentTexts.get(uid);
+    if (!history) {
+      history = [];
+      recentTexts.set(uid, history);
+    }
+    if (history.length >= MAX_DISTINCT_INPUTS) history.shift();
+    history.push(txt);
 
-  if (history.length >= MAX_DISTINCT_INPUTS) history.shift();
-  history.push(txt);
-
-  const repeats = history.filter(t => t === txt).length;
-  const dangerous = repeats >= MAX_INPUT_FREQUENCY;
-
-  if (dangerous) {
-    logAction("⚠️ [isMessageDangerous]", `Dangerous message detected → ${id}`);
+    const repeats = history.filter(t => t === txt).length;
+    if (repeats >= MAX_INPUT_FREQUENCY) {
+      logAction("⚠️ [isMessageDangerous]", "Repeated message spam", uid);
+      return true;
+    }
+    return false;
+  } catch (err) {
+    logError("❌ [isMessageDangerous error]", err, uid);
+    return true;
   }
-
-  return dangerous;
 }
 
 /**
- * ✅ MASTER CHECK — Determines if user is allowed to proceed
- * @param {string|number} id - User ID
- * @param {object} bot - Telegram bot instance
- * @param {string} [text=""] - User input text
- * @returns {Promise<boolean>} - True if user can proceed
+ * ✅ MASTER CHECK — Can this user proceed?
  */
 export async function canProceed(id, bot, text = "") {
-  try {
-    if (!id) return false;
-    if (isAdmin(id)) return true;
-    if (isMuted(id)) {
-      logAction("🔇 [canProceed]", `User is muted → ${id}`);
-      return false;
-    }
-    if (await handleFlood(id, bot)) return false;
-    if (isSpamming(id)) return false;
-    if (isMessageDangerous(id, text)) return false;
-    if (await isBanned(id)) {
-      logAction("⛔ [canProceed]", `User is banned → ${id}`);
-      return false;
-    }
+  const uid = sanitizeId(id);
+  if (!uid) return false;
+  if (isAdmin(uid)) return true;
 
+  try {
+    if (isMuted(uid))       return false;
+    if (await handleFlood(uid, bot)) return false;
+    if (isSpamming(uid))    return false;
+    if (isMessageDangerous(uid, text)) return false;
+    if (await isBanned(uid)) {
+      logAction("⛔ [canProceed]", "User is permanently banned", uid);
+      return false;
+    }
     return true;
   } catch (err) {
-    logError("❌ [canProceed error]", err, id);
+    logError("❌ [canProceed error]", err, uid);
     return false;
   }
 }
 
-// ————— HELPERS —————
-
-/**
- * 🔔 Sends a mute notification to the user
- * @param {object} bot - Telegram bot instance
- * @param {string|number} id - User ID
- */
+/** 🔔 Notify user of mute */
 async function notifyUserMuted(bot, id) {
+  const uid = sanitizeId(id);
+  if (!uid) return;
   try {
     await sendAndTrack(
       bot,
-      id,
-      "⛔ *Too many actions!*\nYou’ve been muted for *4 minutes*.",
+      uid,
+      "⛔ *Too many requests!* You’ve been muted for *4 minutes*.",
       { parse_mode: "Markdown" }
     );
   } catch (err) {
-    logError("❌ [notifyUserMuted error]", err, id);
+    logError("❌ [notifyUserMuted error]", err, uid);
   }
-}
-
-/**
- * 📝 Logs successful actions
- * @param {string} action - Action description
- * @param {string} message - Additional details
- */
-function logAction(action, message) {
-  console.log(`${new Date().toISOString()} ${action} → ${message}`);
-}
-
-/**
- * ⚠️ Logs errors
- * @param {string} action - Action description
- * @param {Error|string} error - Error object or message
- * @param {string} [id] - User ID (optional)
- */
-function logError(action, error, id = null) {
-  console.error(`${new Date().toISOString()} ${action} → ${error.message || error}${id ? ` (ID: ${id})` : ""}`);
 }
