@@ -20,11 +20,11 @@ export async function punish(bot, id, messages = userMessages) {
     validateUserSession(uid);
 
     const warning = "⚠️ *Invalid action.*\nPlease use the *buttons below*.";
-await sendAndTrack(
-  bot,
-  uid,
-  warning,
-  {
+    await sendAndTrack(
+      bot,
+      uid,
+      warning,
+      {
     parse_mode: "Markdown",
     reply_markup: MAIN_KEYBOARD || getFallbackKeyboard(),
   },
