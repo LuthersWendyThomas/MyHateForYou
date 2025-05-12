@@ -116,7 +116,7 @@ async function safeCall(fn) {
 }
 
 // 🧠 Handle button interactions via stepHandler
-import { stepHandler } from "./core/handlers/stepHandler.js";
+import { stepHandler } from "./stepHandler.js";
 
 BOT.INSTANCE.on("callback_query", async (query) => {
   try {
