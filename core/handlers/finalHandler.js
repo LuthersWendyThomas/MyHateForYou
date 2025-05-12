@@ -1,5 +1,5 @@
-// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v999999999999999.∞+ULTRA-SYNC
-// GODMODE • RESET-PROOF • DELIVERY-READY • GREETING DYNAMIC • CLEAN STATE MACHINE • 24/7 LOCKED
+// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v999999999999999.∞+SYNC+GODMODE
+// 24/7 LOCKED • GREETING+RESET IMMORTAL • MENU+DELIVERY BULLETPROOF
 
 import fs from "fs/promises";
 import path from "path";
@@ -10,7 +10,7 @@ import { userSessions, userMessages, activeUsers, paymentTimers } from "../../st
 import { simulateDelivery } from "./deliveryHandler.js";
 
 /**
- * 🚀 Safe session start (/start command)
+ * 🚀 Handles /start command — full safe reset + menu + greeting
  */
 export async function safeStart(bot, id) {
   const uid = sanitizeId(id);
@@ -18,47 +18,50 @@ export async function safeStart(bot, id) {
 
   try {
     await fullSessionReset(uid);
+
     userSessions[uid] = { step: 1, createdAt: Date.now() };
     activeUsers.add(uid);
 
-    const greetingPath = path.join(process.cwd(), "assets", "greeting.jpg");
-    let buffer = null;
+    const greetingImgPath = path.join(process.cwd(), "assets", "greeting.jpg");
+    let photoBuffer = null;
 
     try {
-      buffer = await fs.readFile(greetingPath);
+      photoBuffer = await fs.readFile(greetingImgPath);
     } catch (err) {
-      console.warn("⚠️ [safeStart] No greeting.jpg found:", err.message);
+      console.warn("⚠️ [safeStart] greeting.jpg not found:", err.message);
     }
 
-    const text = buffer?.byteLength > 10
-      ? undefined
-      : `✅ Welcome to *BalticPharmacyBot*!\n\n${fallbackText(activeUsers.size)}`;
+    const activeCount = activeUsers.count || 1;
+    const messageText = photoBuffer?.byteLength > 10 ? undefined : fallbackText(activeCount);
+    const menu = getMainMenu(uid);
 
-    return buffer
-      ? sendPhotoAndTrack(bot, uid, buffer, {
-          caption: greetingText(activeUsers.size),
+    return photoBuffer
+      ? await sendPhotoAndTrack(bot, uid, photoBuffer, {
+          caption: greetingText(activeCount),
           parse_mode: "Markdown",
-          reply_markup: getMainMenu(uid)
+          reply_markup: menu
         }, userMessages)
-      : sendAndTrack(bot, uid, text, {
+      : await sendAndTrack(bot, uid, messageText, {
           parse_mode: "Markdown",
-          reply_markup: getMainMenu(uid)
+          reply_markup: menu
         }, userMessages);
 
   } catch (err) {
     console.error("❌ [safeStart error]:", err.message || err);
-    return sendAndTrack(bot, uid, "⚠️ Failed to start session. Please try again.", {}, userMessages);
+    return sendAndTrack(bot, uid, "⚠️ Failed to start. Please try again.", {}, userMessages);
   }
 }
 
 /**
- * ✅ Finalizes order and simulates delivery
+ * ✅ Finalizes order and triggers delivery simulation
  */
 export async function finishOrder(bot, id) {
   const uid = sanitizeId(id);
+  if (!uid) return;
+
   try {
     const session = userSessions[uid];
-    if (!session?.deliveryMethod) throw new Error("❌ Missing delivery method.");
+    if (!session?.deliveryMethod) throw new Error("Missing delivery method");
 
     await simulateDelivery(bot, uid, session.deliveryMethod, userMessages);
     await resetSession(uid);
@@ -73,12 +76,12 @@ export async function finishOrder(bot, id) {
     );
   } catch (err) {
     console.error("❌ [finishOrder error]:", err.message || err);
-    return sendAndTrack(bot, uid, "❗️ Delivery error. Please try again or type /start.", {}, userMessages);
+    return sendAndTrack(bot, uid, "❗️ Delivery error. Try again or use /start.", {}, userMessages);
   }
 }
 
 /**
- * 🔁 Public session reset (post-payment, cancel)
+ * 🔄 Publicly resets session (after cancel, delivery, payment)
  */
 export async function resetSession(id) {
   const uid = sanitizeId(id);
@@ -86,7 +89,7 @@ export async function resetSession(id) {
 }
 
 /**
- * 🧯 Absolute reset: wipes user session, timers, messages, and flags
+ * 🧯 FULL session wipe — messages, timers, state, sessions, delivery
  */
 async function fullSessionReset(uid) {
   if (!uid) return;
@@ -101,21 +104,11 @@ async function fullSessionReset(uid) {
       delete paymentTimers[uid];
     }
 
-    const session = userSessions[uid];
-    if (session) {
-      [
-        "paymentInProgress", "deliveryInProgress", "cleanupScheduled", "paymentTimer",
-        "expectedAmount", "wallet", "currency", "quantity", "product", "category",
-        "promoCode", "deliveryMethod", "deliveryFee", "adminStep", "step", "createdAt", "lastText"
-      ].forEach(k => delete session[k]);
-
-      delete userSessions[uid];
-    }
-
-    activeUsers.delete(uid);
+    delete userSessions[uid];
+    activeUsers.remove(uid);
 
     if (process.env.DEBUG_MESSAGES === "true") {
-      console.log(`🧯 [fullSessionReset] Reset complete for ${uid}`);
+      console.log(`🧯 [fullSessionReset] → ${uid}`);
     }
   } catch (err) {
     console.error("❌ [fullSessionReset error]:", err.message || err);
@@ -123,7 +116,7 @@ async function fullSessionReset(uid) {
 }
 
 /**
- * 🖼️ Dynamic greeting with user count
+ * 📸 Greeting with active user count
  */
 function greetingText(count = 1) {
   return `
@@ -147,7 +140,7 @@ function greetingText(count = 1) {
 }
 
 /**
- * 🧾 Fallback greeting if image not available
+ * 🧾 Fallback text if greeting image is not found
  */
 function fallbackText(count = 1) {
   return `
@@ -162,9 +155,9 @@ function fallbackText(count = 1) {
 }
 
 /**
- * 🧼 Sanitize user ID
+ * 🧠 Safe UID cleaner
  */
 function sanitizeId(id) {
-  const uid = String(id || "").trim();
-  return uid && uid !== "undefined" && uid !== "null" ? uid : null;
+  const str = String(id || "").trim();
+  return str && str !== "undefined" && str !== "null" ? str : null;
 }
