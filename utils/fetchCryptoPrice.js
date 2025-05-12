@@ -13,7 +13,7 @@ const locks     = {};                // { [symbol]: Promise }
 const SUPPORTED = {
   BTC:   { gecko: "bitcoin",        coincap: "bitcoin"       },
   ETH:   { gecko: "ethereum",       coincap: "ethereum"      },
-  MATIC: { gecko: "matic-network",  coincap: "matic-network" },
+  MATIC: { gecko: "polygon-pos",  coincap: "polygon" },
   SOL:   { gecko: "solana",         coincap: "solana"        }
 };
 
