@@ -1,4 +1,4 @@
-// 📦 core/handlers/deliveryHandler.js | FINAL IMMORTAL v999999999999.∞+1
+// 📦 core/handlers/deliveryHandler.js | FINAL IMMORTAL v999999999999.∞+ULTIMATE
 // FULLY SYNCED • AUTO-BAN • AUTO-DELETE • CLEANUP-SAFE • DELIVERY LOCKED
 
 import { banUser } from "../../utils/bans.js";
