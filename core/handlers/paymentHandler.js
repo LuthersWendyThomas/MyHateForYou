@@ -23,7 +23,7 @@ import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 const SUPPORTED = {
   BTC:   { gecko: "bitcoin",        coincap: "bitcoin"       },
   ETH:   { gecko: "ethereum",       coincap: "ethereum"      },
-  MATIC: { gecko: "matic-network",  coincap: "matic-network" },
+  MATIC: { gecko: "polygon-pos",  coincap: "polygon" },
   SOL:   { gecko: "solana",         coincap: "solana"        }
 };
 
