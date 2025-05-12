@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | DIAMOND FINAL v999999999999999.∞+1
+// 📦 core/handlers/paymentHandler.js | DIAMOND FINAL v999999999999999.∞+ULTIMATE
 // 24/7 BULLETPROOF | BTC, ETH, MATIC, SOL | QR + PRICE SYNC + DELIVERY INTEGRATED
 
 import { generateQR } from "../../utils/generateQR.js";
