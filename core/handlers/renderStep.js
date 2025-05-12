@@ -29,14 +29,16 @@ export async function renderStep(bot, uid, step, userMessages) {
       }
 
       case 1.2: {
-        // 🏙️ City selection
-        const cities = REGION_MAP[session.region]?.cities || {};
-        const options = Object.entries(cities).map(([city, active]) =>
-          active ? { text: city } : { text: `🚫 ${city}` }
-        );
+  // 🏙️ City selection
+  const cities = REGION_MAP[session.region]?.cities || {};
+  const options = Object.entries(cities).map(([city, isActive]) => {
+    const label = isActive ? city : `🚫 ${city}`;
+    return [{ text: label }];
+  });
 
-        return sendKeyboard(bot, uid, "🏙️ *Select your city:*", [...options, { text: MENU_BUTTONS.BACK.text }], userMessages);
-      }
+  options.push([{ text: MENU_BUTTONS.BACK.text }]); // Back button
+  return sendKeyboard(bot, uid, "🏙️ *Select your city:*", options, userMessages);
+}
 
       case 2: {
         // 🚚 Delivery method
