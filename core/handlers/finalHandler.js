@@ -1,54 +1,87 @@
-// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v999999999999999.∞+SYNC+GODMODE
+// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v1.0.0•GODMODE DIAMONDLOCK
 // 24/7 LOCKED • GREETING+RESET IMMORTAL • MENU+DELIVERY BULLETPROOF
 
 import fs from "fs/promises";
 import path from "path";
-import { sendAndTrack, sendPhotoAndTrack } from "../../helpers/messageUtils.js";
+import {
+  sendAndTrack,
+  sendPhotoAndTrack,
+  sendKeyboard
+} from "../../helpers/messageUtils.js";
 import { getMainMenu } from "../../helpers/menu.js";
-import { clearTimers, clearUserMessages, resetUser } from "../../state/stateManager.js";
-import { userSessions, userMessages, activeUsers, paymentTimers } from "../../state/userState.js";
+import {
+  clearTimers,
+  clearUserMessages,
+  resetUser
+} from "../../state/stateManager.js";
+import {
+  userSessions,
+  userMessages,
+  activeUsers,
+  paymentTimers
+} from "../../state/userState.js";
 import { simulateDelivery } from "./deliveryHandler.js";
 
 /**
- * 🚀 Handles /start command — full safe reset + menu + greeting
+ * 🚀 Handles /start command — full safe reset + greeting + menu
  */
 export async function safeStart(bot, id) {
   const uid = sanitizeId(id);
-  if (!bot || !uid) return;
+  if (!bot?.sendMessage || !uid) return;
 
   try {
     await fullSessionReset(uid);
-
     userSessions[uid] = { step: 1, createdAt: Date.now() };
     activeUsers.add(uid);
 
-    const greetingImgPath = path.join(process.cwd(), "assets", "greeting.jpg");
-    let photoBuffer = null;
+    // typing indicator
+    await bot.sendChatAction(uid, "typing").catch(() => {});
 
+    const menu = getMainMenu(uid);
+    const imgPath = path.join(process.cwd(), "assets", "greeting.jpg");
+    let buf = null;
     try {
-      photoBuffer = await fs.readFile(greetingImgPath);
+      buf = await fs.readFile(imgPath);
     } catch (err) {
-      console.warn("⚠️ [safeStart] greeting.jpg not found:", err.message);
+      logError("⚠️ [safeStart] greeting.jpg not found", err, uid);
     }
 
-    const activeCount = activeUsers.count || 1;
-    const messageText = photoBuffer?.byteLength > 10 ? undefined : fallbackText(activeCount);
-    const menu = getMainMenu(uid);
+    const count = activeUsers.size ?? activeUsers.count ?? 1;
 
-    return photoBuffer
-      ? await sendPhotoAndTrack(bot, uid, photoBuffer, {
-          caption: greetingText(activeCount),
+    if (buf && buf.byteLength > 10) {
+      return await sendPhotoAndTrack(
+        bot,
+        uid,
+        buf,
+        {
+          caption: greetingText(count),
           parse_mode: "Markdown",
           reply_markup: menu
-        }, userMessages)
-      : await sendAndTrack(bot, uid, messageText, {
-          parse_mode: "Markdown",
-          reply_markup: menu
-        }, userMessages);
+        },
+        userMessages
+      );
+    }
 
+    // fallback to text + menu
+    return await sendKeyboard(
+      bot,
+      uid,
+      fallbackText(count),
+      menu,
+      userMessages,
+      { parse_mode: "Markdown" }
+    );
   } catch (err) {
-    console.error("❌ [safeStart error]:", err.message || err);
-    return sendAndTrack(bot, uid, "⚠️ Failed to start. Please try again.", {}, userMessages);
+    logError("❌ [safeStart error]", err, uid);
+    const menu = getMainMenu(uid);
+    return await sendKeyboard(
+      bot,
+      uid,
+      "⚠️ Failed to start. Please try again.",
+      menu,
+      userMessages,
+      { parse_mode: "Markdown" }
+    );
   }
 }
 
@@ -57,43 +90,57 @@ export async function safeStart(bot, id) {
  */
 export async function finishOrder(bot, id) {
   const uid = sanitizeId(id);
-  if (!uid) return;
+  if (!bot?.sendMessage || !uid) return;
 
   try {
     const session = userSessions[uid];
-    if (!session?.deliveryMethod) throw new Error("Missing delivery method");
+    if (!session?.deliveryMethod) {
+      throw new Error("Missing delivery method");
+    }
 
+    // simulate and then reset
     await simulateDelivery(bot, uid, session.deliveryMethod, userMessages);
     await resetSession(uid);
 
-    return sendAndTrack(bot, uid,
+    const menu = getMainMenu(uid);
+    await bot.sendChatAction(uid, "typing").catch(() => {});
+
+    return await sendKeyboard(
+      bot,
+      uid,
       "✅ Order confirmed!\n🚚 Delivery started...\n\nMain menu:",
-      {
-        parse_mode: "Markdown",
-        reply_markup: getMainMenu(uid)
-      },
-      userMessages
+      menu,
+      userMessages,
+      { parse_mode: "Markdown" }
     );
   } catch (err) {
-    console.error("❌ [finishOrder error]:", err.message || err);
-    return sendAndTrack(bot, uid, "❗️ Delivery error. Try again or use /start.", {}, userMessages);
+    logError("❌ [finishOrder error]", err, uid);
+    const menu = getMainMenu(uid);
+    return await sendKeyboard(
+      bot,
+      uid,
+      "❗️ Delivery error. Try again or use /start.",
+      menu,
+      userMessages,
+      { parse_mode: "Markdown" }
+    );
   }
 }
 
 /**
- * 🔄 Publicly resets session (after cancel, delivery, payment)
+ * 🔄 Public reset hook (after cancel, delivery, payment)
  */
 export async function resetSession(id) {
   const uid = sanitizeId(id);
+  if (!uid) return;
   await fullSessionReset(uid);
 }
 
 /**
- * 🧯 FULL session wipe — messages, timers, state, sessions, delivery
+ * 🧯 FULL session wipe — messages, timers, state, sessions
  */
 async function fullSessionReset(uid) {
   if (!uid) return;
-
   try {
     await clearTimers(uid);
     await clearUserMessages(uid);
@@ -105,19 +152,23 @@ async function fullSessionReset(uid) {
     }
 
     delete userSessions[uid];
-    activeUsers.remove(uid);
+    activeUsers.remove
+      ? activeUsers.remove(uid)
+      : activeUsers.delete(uid);
 
-    if (process.env.DEBUG_MESSAGES === "true") {
-      console.log(`🧯 [fullSessionReset] → ${uid}`);
-    }
+    logAction("🧯 [fullSessionReset]", "Session reset", uid);
   } catch (err) {
-    console.error("❌ [fullSessionReset error]:", err.message || err);
+    logError("❌ [fullSessionReset error]", err, uid);
   }
 }
 
-/**
- * 📸 Greeting with active user count
- */
+/** 🧠 Safe UID cleaner */
+function sanitizeId(id) {
+  const s = String(id || "").trim();
+  return s && s !== "undefined" && s !== "null" ? s : null;
+}
+
+/** 📸 Greeting text with active user count */
 function greetingText(count = 1) {
   return `
 🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
@@ -139,9 +190,7 @@ function greetingText(count = 1) {
 `.trim();
 }
 
-/**
- * 🧾 Fallback text if greeting image is not found
- */
+/** 🧾 Fallback text if greeting image is missing */
 function fallbackText(count = 1) {
   return `
 🇺🇸 *BalticPharmacyBot* — 30+ cities live  
@@ -154,10 +203,20 @@ function fallbackText(count = 1) {
 `.trim();
 }
 
-/**
- * 🧠 Safe UID cleaner
- */
-function sanitizeId(id) {
-  const str = String(id || "").trim();
-  return str && str !== "undefined" && str !== "null" ? str : null;
+/** 📋 Simple logger */
+function logAction(action, message, uid = "") {
+  console.log(
+    `${new Date().toISOString()} ${action} → ${message}${
+      uid ? ` (ID: ${uid})` : ""
+    }`
+  );
+}
+/** 🚨 Simple error logger */
+function logError(action, error, uid = "") {
+  const msg = error?.message || error;
+  console.error(
+    `${new Date().toISOString()} ${action} → ${msg}${
+      uid ? ` (ID: ${uid})` : ""
+    }`
+  );
 }
