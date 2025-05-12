@@ -1,4 +1,5 @@
-// 📦 state/userState.js | FINAL IMMORTAL BULLETPROOF LOCKED v999999999.9999
+// 📦 state/userState.js | FINAL IMMORTAL BULLETPROOF LOCKED v999999999.∞+DIAMOND
+// MAXIMUM SYNC • ZERO ERROR TOLERANCE • AUTO-EXPORT • ULTRA-OPTIMIZED
 
 import fs from "fs";
 import path from "path";
@@ -53,9 +54,13 @@ export const activeUsers = {
 };
 
 // ==============================
-// 🔧 Utility helpers — SYNC-GODMODE
+// 🔧 Utility helpers — DIAMOND SYNC
 // ==============================
 
+/**
+ * ✅ Clears a user's session and all related data
+ * @param {string|number} id - User ID
+ */
 export function clearUserSession(id) {
   const uid = safeString(id);
   if (!uid) return;
@@ -75,9 +80,13 @@ export function clearUserSession(id) {
   });
 
   activeUsers.remove(uid);
-  console.log(`🧼 Session fully cleared → ${uid}`);
+  logAction("🧼 [clearUserSession]", `Fully cleared session for → ${uid}`);
 }
 
+/**
+ * ✅ Safely starts a new session for a user
+ * @param {string|number} id - User ID
+ */
 export function safeStartSession(id) {
   const uid = safeString(id);
   if (!uid) return;
@@ -88,9 +97,13 @@ export function safeStartSession(id) {
   };
 
   activeUsers.add(uid);
-  console.log(`✅ Session started → ${uid}`);
+  logAction("✅ [safeStartSession]", `New session started → ${uid}`);
 }
 
+/**
+ * ✅ Tracks failed input attempts and auto-bans after threshold
+ * @param {string|number} id - User ID
+ */
 export function trackFailedAttempts(id) {
   const uid = safeString(id);
   if (!uid) return;
@@ -98,11 +111,15 @@ export function trackFailedAttempts(id) {
   failedAttempts[uid] = (failedAttempts[uid] || 0) + 1;
 
   if (failedAttempts[uid] >= 5) {
-    bannedUntil[uid] = Date.now() + 15 * 60 * 1000;
-    console.warn(`⛔️ ${uid} autobanned (too many failed inputs)`);
+    bannedUntil[uid] = Date.now() + 15 * 60 * 1000; // 15-minute ban
+    logWarning("⛔️ [trackFailedAttempts]", `Auto-banned user → ${uid}`);
   }
 }
 
+/**
+ * ✅ Clears all active timers for a user
+ * @param {string|number} id - User ID
+ */
 export function clearTimersForUser(id) {
   const uid = safeString(id);
   if (!uid) return;
@@ -110,13 +127,13 @@ export function clearTimersForUser(id) {
   if (activeTimers[uid]) {
     clearTimeout(activeTimers[uid]);
     delete activeTimers[uid];
-    console.log(`🕒 Active timer cleared → ${uid}`);
+    logAction("🕒 [clearTimersForUser]", `Active timer cleared → ${uid}`);
   }
 
   if (paymentTimers[uid]) {
     clearTimeout(paymentTimers[uid]);
     delete paymentTimers[uid];
-    console.log(`💳 Payment timer cleared → ${uid}`);
+    logAction("💳 [clearTimersForUser]", `Payment timer cleared → ${uid}`);
   }
 }
 
@@ -125,25 +142,28 @@ export function clearTimersForUser(id) {
 // ==============================
 
 /**
- * ✅ Validates and synchronizes user step
- * Auto-resets to 1 if invalid or undefined
+ * ✅ Validates and synchronizes a user's session step
+ * Auto-resets to step 1 if invalid or undefined
+ * @param {string|number} id - User ID
+ * @returns {number} - Current or reset step
  */
 export function verifySessionStep(id) {
   const uid = safeString(id);
-  if (!uid) return;
+  if (!uid) return 1;
 
-  const session = userSessions[uid] || {};
+  const session = userSessions[uid] ||= { step: 1, createdAt: Date.now() };
   if (!isValidStep(session.step)) {
-    console.warn(`⚠️ Invalid step "${session.step}" for user ${uid}. Resetting to step 1.`);
+    logWarning("⚠️ [verifySessionStep]", `Invalid step "${session.step}" for user → ${uid}`);
     session.step = 1;
   }
 
-  userSessions[uid] = session;
   return session.step;
 }
 
 /**
  * ✅ Checks if a step is valid
+ * @param {number} step - Workflow step
+ * @returns {boolean} - True if step is valid
  */
 export function isValidStep(step) {
   return Number.isInteger(step) && step >= 1 && step <= 9;
@@ -153,11 +173,15 @@ export function isValidStep(step) {
 // 📤 EXPORT: userStats → logs/userStats-TIMESTAMP.json
 // ==============================
 
+/**
+ * ✅ Exports all user stats to a JSON file
+ * @returns {string|null} - File path if successful, null otherwise
+ */
 export function exportUserStats() {
   try {
     const now = new Date();
-    const ts = now.toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
-    const fileName = `userStats-${ts}.json`;
+    const timestamp = now.toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+    const fileName = `userStats-${timestamp}.json`;
     const filePath = path.join("logs", fileName);
 
     const exportData = {};
@@ -179,18 +203,51 @@ export function exportUserStats() {
     if (!fs.existsSync("logs")) fs.mkdirSync("logs", { recursive: true });
     fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
 
-    console.log(`📤 [exportUserStats] Exported to: ${filePath}`);
+    logAction("📤 [exportUserStats]", `Exported user stats to → ${filePath}`);
     return filePath;
   } catch (err) {
-    console.error("❌ [exportUserStats error]:", err.message);
+    logError("❌ [exportUserStats error]", err);
     return null;
   }
 }
 
+// ==============================
+// 🧩 Helper Functions
+// ==============================
+
 /**
- * ✅ Converts any ID to a safe string
+ * ✅ Converts any ID into a safe string
+ * @param {string|number} id - Input ID
+ * @returns {string|null} - Sanitized ID or null if invalid
  */
 function safeString(id) {
   const str = String(id || "").trim();
   return str && str !== "undefined" && str !== "null" ? str : null;
+}
+
+/**
+ * 📝 Logs successful actions
+ * @param {string} action - Action description
+ * @param {string} message - Additional details
+ */
+function logAction(action, message) {
+  console.log(`${new Date().toISOString()} ${action} → ${message}`);
+}
+
+/**
+ * ⚠️ Logs warnings
+ * @param {string} action - Action description
+ * @param {string} message - Additional details
+ */
+function logWarning(action, message) {
+  console.warn(`${new Date().toISOString()} ${action} → ${message}`);
+}
+
+/**
+ * ⚠️ Logs errors
+ * @param {string} action - Action description
+ * @param {Error|string} error - Error object or message
+ */
+function logError(action, error) {
+  console.error(`${new Date().toISOString()} ${action} → ${error.message || error}`);
 }
