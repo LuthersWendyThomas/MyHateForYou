@@ -1,4 +1,4 @@
-// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL v999999999.∞.2
+// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL v999999999.∞+3
 // GODMODE LOCKED • ADMIN SYNC • DISCOUNT SECURED • CALLBACK FIXED • SESSION IMMORTAL
 
 import { BOT } from "../../config/config.js";
@@ -17,6 +17,7 @@ import { markUserActive } from "../sessionManager.js";
 
 /**
  * 🔐 Registers the universal Telegram message handler
+ * Ensures all button interactions and incoming messages are handled seamlessly
  */
 export function registerMainHandler(bot) {
   if (!bot || typeof bot.on !== "function") {
@@ -25,7 +26,7 @@ export function registerMainHandler(bot) {
   }
 
   // 🧠 Handle button interactions via stepHandler
-  BOT.INSTANCE.on("callback_query", async (query) => {
+  bot.on("callback_query", async (query) => {
     const chatId = query?.message?.chat?.id;
     const data = query?.data;
 
@@ -34,13 +35,13 @@ export function registerMainHandler(bot) {
     const uid = String(chatId).trim();
     try {
       markUserActive(uid);
-      await handleStep(BOT.INSTANCE, uid, data, userMessages);
-      await BOT.INSTANCE.answerCallbackQuery(query.id).catch(() => {});
+      await handleStep(bot, uid, data, userMessages);
+      await bot.answerCallbackQuery(query.id).catch(() => {});
     } catch (err) {
       console.error("❌ [callback_query] stepHandler error:", err);
       try {
-        await BOT.INSTANCE.answerCallbackQuery(query.id, {
-          text: "❌ Klaida apdorojant veiksmą.",
+        await bot.answerCallbackQuery(query.id, {
+          text: "❌ Error processing your action. Please try again.",
           show_alert: true,
         });
       } catch (callbackErr) {
@@ -110,9 +111,9 @@ export function registerMainHandler(bot) {
 
       return await safeCall(() => handleStep(bot, uid, text, userMessages));
     } catch (err) {
-      console.error("❌ [mainHandler crash]:", err.message || err);
+      console.error("❌ [mainHandler error]:", err.message || err);
       try {
-        return await bot.sendMessage(uid, "❗️ Vidinė klaida. Bandykite dar kartą arba naudokite /start.", {
+        return await bot.sendMessage(uid, "❗️ Internal error. Please try again or use /start.", {
           parse_mode: "Markdown",
           reply_markup: MAIN_KEYBOARD,
         });
@@ -124,7 +125,9 @@ export function registerMainHandler(bot) {
 }
 
 /**
- * 🧼 Normalizes user input
+ * 🧼 Normalizes user input by trimming and limiting length
+ * @param {string} txt - Raw user input
+ * @returns {string} - Normalized text
  */
 function normalizeText(txt) {
   return txt?.toString().trim().slice(0, 4096).toLowerCase();
@@ -132,6 +135,8 @@ function normalizeText(txt) {
 
 /**
  * 🧯 Safe async execution wrapper
+ * @param {function} fn - Async function to execute safely
+ * @returns {Promise<any>} - Result of the async function or undefined
  */
 async function safeCall(fn) {
   try {
