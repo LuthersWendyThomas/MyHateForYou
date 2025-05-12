@@ -1,4 +1,4 @@
-// 📦 index.js | BalticPharmaBot — FINAL IMMORTAL v999999999∞.1 GODMODE DEPLOY-TITAN™
+// 📦 index.js | BalticPharmaBot — FINAL IMMORTAL v999999999∞+2 GODMODE DEPLOY-TITAN™
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -11,6 +11,7 @@ import "./config/discountSync.js"; // ✅ FINAL DISCOUNT SYNC — MUST BE LAST I
 
 /**
  * 🔔 Admin crash alert
+ * Sends a notification to the admin if the bot crashes.
  */
 async function notifyCrash(type, err) {
   if (!BOT.ADMIN_ID || !BOT.INSTANCE?.sendMessage) return;
@@ -22,7 +23,7 @@ async function notifyCrash(type, err) {
   }
 }
 
-// 🔧 Init bot + handlers
+// 🔧 Initialize the bot instance and main handlers
 initBotInstance();
 registerMainHandler(BOT.INSTANCE);
 
