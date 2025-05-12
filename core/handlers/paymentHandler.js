@@ -1,5 +1,5 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL DIAMONDLOCK v1.0.0•GODMODE+SYNC
-// 24/7 PAYMENT CORE • AUTO QR • BLOCKCHAIN VERIFY • MAX-RETRY • ULTRA ERROR SHIELD
+// 📦 core/handlers/paymentHandler.js | IMMORTAL DIAMONDLOCK v1.0.1•GODMODE+SYNC
+// 24/7 PAYMENT CORE • AUTO QR • BLOCKCHAIN VERIFY • ULTRA ERROR SHIELD
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -21,10 +21,10 @@ import { BOT, ALIASES } from "../../config/config.js";
 import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 
 const SUPPORTED = {
-  BTC: { gecko: "bitcoin", coincap: "bitcoin" },
-  ETH: { gecko: "ethereum", coincap: "ethereum" },
-  MATIC: { gecko: "matic-network", coincap: "matic" },
-  SOL: { gecko: "solana", coincap: "solana" }
+  BTC:   { gecko: "bitcoin",        coincap: "bitcoin"       },
+  ETH:   { gecko: "ethereum",       coincap: "ethereum"      },
+  MATIC: { gecko: "matic-network",  coincap: "matic-network" },
+  SOL:   { gecko: "solana",         coincap: "solana"        }
 };
 
 const TIMEOUT_MS = 30 * 60 * 1000; // 30 min
@@ -37,26 +37,13 @@ function normalizeCurrency(c) {
   return ALIASES[String(c).toLowerCase()] || String(c).toUpperCase();
 }
 
-async function fetchWithRetry(fn, retries = 4, delay = 1200) {
-  let lastErr;
-  for (let i = 0; i <= retries; i++) {
-    try {
-      if (i > 0) await wait(i * delay);
-      return await fn();
-    } catch (err) {
-      lastErr = err;
-      console.warn(`⚠️ [Retry ${i+1}] ${err.message}`);
-    }
-  }
-  throw lastErr;
-}
-
 async function getSafeRate(currency) {
   const symbol = normalizeCurrency(currency);
-  const meta = SUPPORTED[symbol];
+  const meta   = SUPPORTED[symbol];
   if (!meta) throw new Error(`Unsupported currency: ${symbol}`);
 
-  const rate = await fetchWithRetry(() => fetchCryptoPrice(symbol));
+  // fetchCryptoPrice now takes (geckoId, coincapId)
+  const rate = await fetchCryptoPrice(meta.gecko, meta.coincap);
   if (!Number.isFinite(rate) || rate <= 0) {
     throw new Error(`Invalid rate for ${symbol}`);
   }
@@ -79,7 +66,7 @@ async function safeSend(fn, ...args) {
 }
 
 /**
- * 💸 Initiate payment: fetch rate, build QR, prompt user
+ * 💸 Initiate payment: fetch USD rate, build QR, prompt user
  */
 export async function handlePayment(bot, id, userMsgs) {
   const session = userSessions[id];
@@ -118,7 +105,7 @@ export async function handlePayment(bot, id, userMsgs) {
     const qrBuffer = await generateQR(symbol, amount, session.wallet);
     if (!qrBuffer) throw new Error("Failed to generate QR code");
 
-    // 4) Build payment summary
+    // 4) Build payment summary (all USD)
     const summary = `
 💸 *Payment summary:*
 • Product: *${session.product.name}*
@@ -126,7 +113,7 @@ export async function handlePayment(bot, id, userMsgs) {
 • Delivery: *${session.deliveryMethod}* (${session.deliveryFee}$)
 • City: *${session.city}*
 
-💰 ${usd.toFixed(2)}$ ≈ *${amount} ${symbol}*
+💰 *${usd.toFixed(2)}* USD ≈ *${amount} ${symbol}*
 🏦 Wallet: \`${session.wallet}\`
 
 ⏱ ETA: ~30 minutes  
@@ -155,10 +142,10 @@ export async function handlePayment(bot, id, userMsgs) {
     // 7) Ask for confirmation
     return sendKeyboard(
       bot, id,
-      "❓ *Was the payment completed?*",
+      "❓ *Has the payment completed?*",
       [
-        [{ text: MENU_BUTTONS.CONFIRM.text }],
-        [{ text: MENU_BUTTONS.CANCEL.text }]
+        [ { text: MENU_BUTTONS.CONFIRM.text } ],
+        [ { text: MENU_BUTTONS.CANCEL.text } ]
       ],
       userMsgs,
       { parse_mode: "Markdown" }
@@ -176,7 +163,7 @@ export async function handlePayment(bot, id, userMsgs) {
 }
 
 /**
- * ❌ User cancels payment → reset session
+ * ❌ User cancels payment → reset session & show greeting
  */
 export async function handlePaymentCancel(bot, id, userMsgs) {
   const session = userSessions[id];
@@ -197,7 +184,8 @@ export async function handlePaymentCancel(bot, id, userMsgs) {
     "❌ Payment canceled. Returning to main menu...",
     {}, userMsgs
   );
-  setTimeout(() => safeStart(bot, id), 500);
+  // fully reset and show greeting again
+  return safeStart(bot, id);
 }
 
 /**
@@ -236,21 +224,21 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
         bot, id,
         "❌ Payment not found. Try again:",
         [
-          [{ text: MENU_BUTTONS.CONFIRM.text }],
-          [{ text: MENU_BUTTONS.CANCEL.text }]
+          [ { text: MENU_BUTTONS.CONFIRM.text } ],
+          [ { text: MENU_BUTTONS.CANCEL.text } ]
         ],
         userMsgs,
         { parse_mode: "Markdown" }
       );
     }
 
-    // 1) Clear timers & flags
+    // Clear timers & flags
     clearTimeout(session.paymentTimer);
     delete paymentTimers[id];
     delete session.paymentInProgress;
     delete session.expectedAmount;
 
-    // 2) Record order & notify admin
+    // Record order & notify admin
     userOrders[id] = (userOrders[id] || 0) + 1;
     saveOrder(id, session.city, session.product.name, session.totalPrice)
       .catch(e => console.warn("⚠️ [saveOrder failed]", e.message));
@@ -271,7 +259,7 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
       );
     }
 
-    // 3) Begin delivery
+    // Begin delivery; session will cleanup after delivery sequence
     return simulateDelivery(bot, id, session.deliveryMethod, userMsgs);
   } catch (err) {
     console.error("❌ [handlePaymentConfirmation error]:", err.message || err);
