@@ -1,4 +1,4 @@
-// 📦 helpers/menu.js | FINAL IMMORTAL v999999999.∞+1 — SKYLOCKED ADMIN-SAFE SYNCED
+// 📦 helpers/menu.js | FINAL IMMORTAL v999999999.∞+2 — SKYLOCKED ADMIN-SAFE SYNCED
 
 import { BOT } from "../config/config.js";
 import { MENU_BUTTONS } from "./keyboardConstants.js";
@@ -8,7 +8,7 @@ import { MENU_BUTTONS } from "./keyboardConstants.js";
  * 🔐 Safe fallback variant with only `keyboard` (without reply_markup wrapper)
  * 
  * @param {string|number} id — Telegram user ID
- * @returns {object} — Telegram keyboard (without reply_markup)
+ * @returns {object} — Telegram keyboard (with proper reply_markup structure)
  */
 export function getMainMenu(id) {
   const uid = safeId(id);
@@ -27,7 +27,10 @@ export function getMainMenu(id) {
     }
 
     const keyboard = normalizeKeyboard(menu);
-    logAction("✅ [getMainMenu]", `Generated menu for user ${uid}${isAdmin ? " (admin)" : ""}`);
+    logAction(
+      "✅ [getMainMenu]",
+      `Generated menu for user ${uid}${isAdmin ? " (admin)" : ""}`
+    );
     return {
       keyboard,
       resize_keyboard: true,
@@ -52,7 +55,10 @@ export function getMainMenu(id) {
  * @returns {string[][]} - Normalized keyboard
  */
 function normalizeKeyboard(keyboard) {
-  if (!Array.isArray(keyboard)) return [];
+  if (!Array.isArray(keyboard)) {
+    logError("⚠️ [normalizeKeyboard]", new Error("Invalid keyboard structure"));
+    return [];
+  }
   return keyboard.map(row => {
     if (Array.isArray(row)) return row.map(button => String(button).trim());
     return [String(row).trim()];
@@ -86,6 +92,34 @@ function logAction(action, message) {
  */
 function logError(action, error, uid = null) {
   console.error(
-    `${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (uid: ${uid})` : ""}`
+    `${new Date().toISOString()} ${action} → ${error.message || error}${
+      uid ? ` (uid: ${uid})` : ""
+    }`
   );
+}
+
+/**
+ * ✅ Dynamically generates inline keyboard structures for specific use cases
+ * @param {Array<{ text: string, callback_data: string }[]>} inlineButtons - Inline buttons
+ * @returns {object} - Inline keyboard markup
+ */
+export function getInlineKeyboard(inlineButtons) {
+  try {
+    if (!Array.isArray(inlineButtons)) {
+      throw new Error("Invalid inline keyboard structure");
+    }
+
+    const inlineKeyboard = inlineButtons.map(row =>
+      row.map(button => ({
+        text: String(button.text).trim(),
+        callback_data: String(button.callback_data).trim()
+      }))
+    );
+
+    logAction("✅ [getInlineKeyboard]", "Generated inline keyboard");
+    return { inline_keyboard: inlineKeyboard };
+  } catch (err) {
+    logError("❌ [getInlineKeyboard error]", err);
+    return { inline_keyboard: [] }; // Fallback to an empty inline keyboard
+  }
 }
