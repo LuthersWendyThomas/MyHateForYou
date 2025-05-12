@@ -1,5 +1,5 @@
-// 📦 core/handlers/deliveryHandler.js | IMMORTAL FINAL v999999999∞+CLEANED
-// AUTO-STAGED DELIVERY • FULL CLEANUP • AUTO-BAN • AUTO-DELETE • FSM LOCKED
+// 📦 core/handlers/deliveryHandler.js | IMMORTAL FINAL v9999999999.∞+DIAMONDLOCK
+// AUTO-STAGED DELIVERY • FSM CLEANUP • AUTO-BAN • AUTO-DELETE • 24/7 BULLETPROOF
 
 import { banUser } from "../../utils/bans.js";
 import { autobanEnabled, autodeleteEnabled } from "../../config/features.js";
@@ -26,17 +26,15 @@ const DELIVERY_STEPS = {
   ]
 };
 
-/**
- * 🚚 Triggers FSM-style delivery simulation
- */
 export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) {
-  const uid = String(id);
+  const uid = String(id || "").trim();
   if (!bot || !uid) return;
 
   try {
     const session = userSessions[uid] ||= { step: 9, createdAt: Date.now() };
+
     if (session.deliveryInProgress) {
-      logDebug(`⚠️ Delivery already running → ${uid}`);
+      logDebug(`⚠️ Delivery already in progress → ${uid}`);
       return;
     }
 
@@ -45,9 +43,10 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
 
     const steps = DELIVERY_STEPS[method.toLowerCase()] || DELIVERY_STEPS.drop;
 
-    steps.forEach(([text, delay], i) => {
-      const isFinal = i === steps.length - 1;
-      (isFinal ? scheduleFinalStep : scheduleStep)(bot, uid, text, delay, userMsgs);
+    steps.forEach(([text, delay], index) => {
+      const isFinal = index === steps.length - 1;
+      const fn = isFinal ? scheduleFinalStep : scheduleStep;
+      fn(bot, uid, text, delay, userMsgs);
     });
 
     if (activeTimers[uid]) clearTimeout(activeTimers[uid]);
@@ -56,22 +55,15 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
       triggerFinalCleanup(bot, uid, userMsgs);
       delete activeTimers[uid];
     }, FINAL_CLEANUP_TIMEOUT_MS);
-
   } catch (err) {
     console.error("❌ [simulateDelivery error]:", err.message || err);
   }
 }
 
-/**
- * ⏱ Schedule intermediate step
- */
 function scheduleStep(bot, id, text, delay = 0, userMsgs = {}) {
   setTimeout(() => safeSendStep(bot, id, text, true, userMsgs), delay);
 }
 
-/**
- * ⏱ Schedule final delivery step with cleanup trigger
- */
 function scheduleFinalStep(bot, id, text, delay = 0, userMsgs = {}) {
   setTimeout(() => {
     safeSendStep(bot, id, text, false, userMsgs).then(() => {
@@ -80,9 +72,6 @@ function scheduleFinalStep(bot, id, text, delay = 0, userMsgs = {}) {
   }, delay);
 }
 
-/**
- * 💬 Sends a delivery message safely (silent or not)
- */
 async function safeSendStep(bot, id, text, silent = true, userMsgs = {}) {
   try {
     await bot.sendChatAction(id, "typing").catch(() => {});
@@ -101,11 +90,8 @@ async function safeSendStep(bot, id, text, silent = true, userMsgs = {}) {
   }
 }
 
-/**
- * 🧹 Final cleanup: deletes msgs, bans, clears session
- */
 async function triggerFinalCleanup(bot, id, userMsgs = {}) {
-  const uid = String(id);
+  const uid = String(id || "").trim();
   try {
     const session = userSessions[uid];
     if (session?.cleanupScheduled) {
@@ -116,7 +102,8 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
     userSessions[uid] = { ...(session || {}), cleanupScheduled: true };
     const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
 
-    if (autodeleteEnabled?.status && !isAdmin && Array.isArray(userMsgs[uid])) {
+    // Delete all tracked messages (if not admin)
+    if (autodeleteEnabled.status && !isAdmin && Array.isArray(userMsgs[uid])) {
       for (const msgId of userMsgs[uid]) {
         if (typeof msgId === "number") {
           try {
@@ -127,7 +114,8 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
       delete userMessages[uid];
     }
 
-    if (autobanEnabled?.status && !isAdmin) {
+    // Auto-ban if enabled and not admin
+    if (autobanEnabled.status && !isAdmin) {
       await sendAndTrack(bot, uid,
         "⏳ *Session closed.*\n⛔️ Access has been restricted for security reasons.",
         { parse_mode: "Markdown" },
@@ -144,9 +132,6 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
   }
 }
 
-/**
- * 🧽 Final session cleanup
- */
 async function cleanupDeliverySession(uid) {
   try {
     if (activeTimers[uid]) {
@@ -159,24 +144,15 @@ async function cleanupDeliverySession(uid) {
   }
 }
 
-/**
- * ✅ Should messages be auto-deleted?
- */
 function shouldAutoDelete(id) {
-  const uid = String(id);
-  return autodeleteEnabled?.status && uid !== String(BOT.ADMIN_ID);
+  const uid = String(id || "").trim();
+  return autodeleteEnabled.status && uid !== String(BOT.ADMIN_ID);
 }
 
-/**
- * 💤 Sleep utility
- */
 function wait(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
-/**
- * 📄 Debug print helper
- */
 function logDebug(...args) {
   if (process.env.DEBUG_MESSAGES === "true") {
     console.log(...args);
