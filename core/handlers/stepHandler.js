@@ -202,17 +202,18 @@ export async function handleStep(bot, id, text, userMessages) {
   const uid   = sanitizeId(id);
   const input = normalizeText(text);
 
+  // if blank → re-render
   if (!input) {
     const step = userSessions[uid]?.step || 1;
     return renderStep(bot, uid, step, userMessages);
   }
 
-  // ensure session exists
+  // ensure valid session
   if (!userSessions[uid]) userSessions[uid] = { step: 1, createdAt: Date.now() };
   if (!isValidStep(userSessions[uid].step)) userSessions[uid].step = 1;
   const session = userSessions[uid];
 
-  // BACK button
+  // BACK
   if (input === MENU_BUTTONS.BACK.text.toLowerCase()) {
     return handleBackButton(bot, uid, session, userMessages);
   }
@@ -299,7 +300,7 @@ async function handlePromoCode(bot, uid, raw, session, userMessages) {
   }
   session.promoCode = code;
   await sendAndTrack(bot, uid,
-    `🏷️ Promo applied: *${code}* (${promo.percentage}%)`,
+    `🏷️ Promo applied: *${code}* (-${promo.percentage}%)`,
     { parse_mode: "Markdown" }, userMessages);
   session.step = 3;
   return renderStep(bot, uid, 3, userMessages);
