@@ -1,5 +1,5 @@
-// 📦 core/handlers/deliveryHandler.js | FINAL IMMORTAL v999999999999.∞+ULTIMATE
-// FULLY SYNCED • AUTO-BAN • AUTO-DELETE • CLEANUP-SAFE • DELIVERY LOCKED
+// 📦 core/handlers/deliveryHandler.js | IMMORTAL FINAL v999999999∞+CLEANED
+// AUTO-STAGED DELIVERY • FULL CLEANUP • AUTO-BAN • AUTO-DELETE • FSM LOCKED
 
 import { banUser } from "../../utils/bans.js";
 import { autobanEnabled, autodeleteEnabled } from "../../config/features.js";
@@ -27,11 +27,7 @@ const DELIVERY_STEPS = {
 };
 
 /**
- * Simulates the delivery process step-by-step.
- * @param {object} bot - Telegram bot instance
- * @param {string|number} id - User ID
- * @param {string} [method="drop"] - Delivery method ("drop" or "courier")
- * @param {object} userMsgs - User message tracking object
+ * 🚚 Triggers FSM-style delivery simulation
  */
 export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) {
   const uid = String(id);
@@ -49,12 +45,11 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
 
     const steps = DELIVERY_STEPS[method.toLowerCase()] || DELIVERY_STEPS.drop;
 
-    steps.forEach(([text, delay], idx) => {
-      const isFinal = idx === steps.length - 1;
+    steps.forEach(([text, delay], i) => {
+      const isFinal = i === steps.length - 1;
       (isFinal ? scheduleFinalStep : scheduleStep)(bot, uid, text, delay, userMsgs);
     });
 
-    // Schedule final cleanup
     if (activeTimers[uid]) clearTimeout(activeTimers[uid]);
 
     activeTimers[uid] = setTimeout(() => {
@@ -63,35 +58,36 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
     }, FINAL_CLEANUP_TIMEOUT_MS);
 
   } catch (err) {
-    console.error("❌ [simulateDelivery error]:", err.message);
+    console.error("❌ [simulateDelivery error]:", err.message || err);
   }
 }
 
 /**
- * Schedules intermediate delivery steps.
+ * ⏱ Schedule intermediate step
  */
-function scheduleStep(bot, id, text, delayMs = 0, userMsgs = {}) {
-  setTimeout(() => safeSendStep(bot, id, text, true, userMsgs), delayMs);
+function scheduleStep(bot, id, text, delay = 0, userMsgs = {}) {
+  setTimeout(() => safeSendStep(bot, id, text, true, userMsgs), delay);
 }
 
 /**
- * Schedules the final delivery step with cleanup.
+ * ⏱ Schedule final delivery step with cleanup trigger
  */
-function scheduleFinalStep(bot, id, text, delayMs = 0, userMsgs = {}) {
+function scheduleFinalStep(bot, id, text, delay = 0, userMsgs = {}) {
   setTimeout(() => {
     safeSendStep(bot, id, text, false, userMsgs).then(() => {
       setTimeout(() => triggerFinalCleanup(bot, id, userMsgs), 7000);
     });
-  }, delayMs);
+  }, delay);
 }
 
 /**
- * Sends a delivery step message safely.
+ * 💬 Sends a delivery message safely (silent or not)
  */
 async function safeSendStep(bot, id, text, silent = true, userMsgs = {}) {
   try {
     await bot.sendChatAction(id, "typing").catch(() => {});
-    await wait(600);
+    await wait(500);
+
     const msg = await sendAndTrack(bot, id, text, {
       parse_mode: "Markdown",
       disable_notification: silent
@@ -101,12 +97,12 @@ async function safeSendStep(bot, id, text, silent = true, userMsgs = {}) {
       setTimeout(() => bot.deleteMessage(id, msg.message_id).catch(() => {}), 15000);
     }
   } catch (err) {
-    console.error("❌ [safeSendStep error]:", err.message);
+    console.error("❌ [safeSendStep error]:", err.message || err);
   }
 }
 
 /**
- * Triggers the final cleanup process.
+ * 🧹 Final cleanup: deletes msgs, bans, clears session
  */
 async function triggerFinalCleanup(bot, id, userMsgs = {}) {
   const uid = String(id);
@@ -120,7 +116,6 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
     userSessions[uid] = { ...(session || {}), cleanupScheduled: true };
     const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
 
-    // 🧹 Delete messages
     if (autodeleteEnabled?.status && !isAdmin && Array.isArray(userMsgs[uid])) {
       for (const msgId of userMsgs[uid]) {
         if (typeof msgId === "number") {
@@ -132,7 +127,6 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
       delete userMessages[uid];
     }
 
-    // ⛔ Auto-ban
     if (autobanEnabled?.status && !isAdmin) {
       await sendAndTrack(bot, uid,
         "⏳ *Session closed.*\n⛔️ Access has been restricted for security reasons.",
@@ -146,12 +140,12 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
     await cleanupDeliverySession(uid);
     logDebug(`🧼 Cleanup complete → ${uid}`);
   } catch (err) {
-    console.error("❌ [triggerFinalCleanup error]:", err.message);
+    console.error("❌ [triggerFinalCleanup error]:", err.message || err);
   }
 }
 
 /**
- * Cleans up the delivery session.
+ * 🧽 Final session cleanup
  */
 async function cleanupDeliverySession(uid) {
   try {
@@ -161,28 +155,27 @@ async function cleanupDeliverySession(uid) {
     }
     delete userSessions[uid];
   } catch (err) {
-    console.error("❌ [cleanupDeliverySession error]:", err.message);
+    console.error("❌ [cleanupDeliverySession error]:", err.message || err);
   }
 }
 
 /**
- * Determines if auto-delete is enabled for the user.
+ * ✅ Should messages be auto-deleted?
  */
 function shouldAutoDelete(id) {
   const uid = String(id);
-  const isAdmin = BOT.ADMIN_ID && uid === String(BOT.ADMIN_ID);
-  return autodeleteEnabled?.status && !isAdmin;
+  return autodeleteEnabled?.status && uid !== String(BOT.ADMIN_ID);
 }
 
 /**
- * Adds a delay for asynchronous operations.
+ * 💤 Sleep utility
  */
 function wait(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(res => setTimeout(res, ms));
 }
 
 /**
- * Logs debugging information if enabled.
+ * 📄 Debug print helper
  */
 function logDebug(...args) {
   if (process.env.DEBUG_MESSAGES === "true") {
