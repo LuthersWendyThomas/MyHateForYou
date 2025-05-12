@@ -35,7 +35,7 @@ export async function safeStart(bot, id) {
     try {
       buffer = await fs.readFile(greetingPath);
     } catch (err) {
-      console.warn("⚠️ [safeStart] greeting.jpg not found:", err.message);
+      console.warn("⚠️ [safeStart] greeting.jpg not found. Using fallback text:", err.message);
     }
 
     if (buffer?.byteLength > 10) {
@@ -65,7 +65,7 @@ export async function finishOrder(bot, id) {
   const uid = sanitizeId(id);
   try {
     const session = userSessions[uid];
-    if (!session || !session.deliveryMethod) throw new Error("❌ No delivery method");
+    if (!session || !session.deliveryMethod) throw new Error("❌ Delivery method not selected.");
 
     await simulateDelivery(bot, uid, session.deliveryMethod, userMessages);
     await resetSession(uid);
@@ -130,7 +130,7 @@ async function fullSessionReset(uid) {
 }
 
 /**
- * 📸 Greeting caption
+ * 📸 Greeting caption with active user count
  * @param {number} count - Active user count
  * @returns {string} - Greeting text
  */
