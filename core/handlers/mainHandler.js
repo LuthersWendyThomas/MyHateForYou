@@ -1,4 +1,4 @@
-// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL v999999999.∞+3
+// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL v999999999.∞+4
 // GODMODE LOCKED • ADMIN SYNC • DISCOUNT SECURED • CALLBACK FIXED • SESSION IMMORTAL
 
 import { BOT } from "../../config/config.js";
@@ -13,6 +13,7 @@ import { sendProfile } from "../../utils/sendProfile.js";
 import { openAdminPanel, handleAdminAction } from "../../utils/adminPanel.js";
 import { canProceed } from "../security.js";
 import { MENU_BUTTONS, MAIN_KEYBOARD } from "../../helpers/keyboardConstants.js";
+import { getMainMenu } from "../../helpers/menu.js"; // NEW IMPORT
 import { markUserActive } from "../sessionManager.js";
 
 /**
@@ -113,9 +114,11 @@ export function registerMainHandler(bot) {
     } catch (err) {
       console.error("❌ [mainHandler error]:", err.message || err);
       try {
+        // Fallback to main menu on error
+        const mainMenu = getMainMenu(uid);
         return await bot.sendMessage(uid, "❗️ Internal error. Please try again or use /start.", {
           parse_mode: "Markdown",
-          reply_markup: MAIN_KEYBOARD,
+          reply_markup: mainMenu,
         });
       } catch (fallbackErr) {
         console.warn("⚠️ [sendMessage fallback failed]:", fallbackErr.message);
