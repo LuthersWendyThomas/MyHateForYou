@@ -1,4 +1,4 @@
-// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999999999.∞.4
+// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999999999.∞.7
 // 24/7 BULLETPROOF • COMMENT RESTORED • SYNCED • UNTRIMMED • GODMODE∞
 
 import { deliveryMethods } from "../../config/features.js";
@@ -31,7 +31,7 @@ export async function handleStep(bot, id, text, userMessages) {
 
       s.step = Math.max(1, s.step - 1);
 
-      // 🧹 Reset key states if backing out of early step
+      // 🧹 Clean up selections when going back early
       if (s.step <= 1) {
         delete s.region;
         delete s.city;
@@ -40,13 +40,12 @@ export async function handleStep(bot, id, text, userMessages) {
 
       return renderStep(bot, uid, s.step, userMessages);
     } catch (err) {
-      console.error("❌ [Back error]:", err.message);
+      console.error("❌ [Back error]:", err.message || err);
       return await safeStart(bot, uid);
     }
   }
 
   try {
-    // 🔁 Step-by-step FSM logic
     switch (s.step) {
       case 1: {
         // 🌍 Region selection
@@ -61,7 +60,8 @@ export async function handleStep(bot, id, text, userMessages) {
       case 1.2: {
         // 🏙️ City selection
         const city = input.replace(/^🚫 /, "");
-        if (!REGION_MAP[s.region]?.cities?.[city]) return await punish(bot, uid, userMessages);
+        const regionCities = REGION_MAP[s.region]?.cities;
+        if (!regionCities || !regionCities.hasOwnProperty(city)) return await punish(bot, uid, userMessages);
 
         s.city = city;
         s.step = 2;
@@ -69,12 +69,12 @@ export async function handleStep(bot, id, text, userMessages) {
       }
 
       case 2: {
-        // 🚚 Delivery method selection
+        // 🚚 Delivery method
         const method = deliveryMethods.find(m => m.label === input);
         if (!method) return await punish(bot, uid, userMessages);
 
         s.deliveryMethod = method.key;
-        s.deliveryFee = Number(method.fee) || 0;
+        s.deliveryFee = isFinite(Number(method.fee)) ? Number(method.fee) : 0;
         s.step = 2.1;
         return renderStep(bot, uid, s.step, userMessages);
       }
@@ -89,7 +89,6 @@ export async function handleStep(bot, id, text, userMessages) {
           s.step = 3;
           return renderStep(bot, uid, s.step, userMessages);
         }
-
         return await punish(bot, uid, userMessages);
       }
 
@@ -106,7 +105,6 @@ export async function handleStep(bot, id, text, userMessages) {
 
         s.promoCode = code;
         const discountPercent = Number(promo.percentage) || 0;
-
         await sendAndTrack(bot, uid, `🏷️ Promo applied: *${code}* = ${discountPercent}%`, { parse_mode: "Markdown" }, userMessages);
 
         s.step = 3;
@@ -114,8 +112,8 @@ export async function handleStep(bot, id, text, userMessages) {
       }
 
       case 3: {
-        // 📦 Product category selection
-        if (!products[input]) return await punish(bot, uid, userMessages);
+        // 📦 Product category
+        if (!products.hasOwnProperty(input)) return await punish(bot, uid, userMessages);
 
         s.category = input;
         s.step = 4;
@@ -133,11 +131,11 @@ export async function handleStep(bot, id, text, userMessages) {
       }
 
       case 5: {
-        // 🔢 Quantity selection and dynamic price calculation
+        // 🔢 Quantity & pricing
         const qty = input.match(/^[^\s(]+/)?.[0];
         const basePrice = s.product?.prices?.[qty];
 
-        if (!basePrice || isNaN(basePrice)) return await punish(bot, uid, userMessages);
+        if (!basePrice || !isFinite(basePrice)) return await punish(bot, uid, userMessages);
 
         const discount = resolveDiscount({
           userId: uid,
@@ -161,7 +159,7 @@ export async function handleStep(bot, id, text, userMessages) {
       }
 
       case 6: {
-        // 💰 Wallet/currency choice
+        // 💰 Wallet/currency
         const wallet = WALLETS[input];
         if (!wallet) return await punish(bot, uid, userMessages);
 
@@ -172,14 +170,14 @@ export async function handleStep(bot, id, text, userMessages) {
       }
 
       case 7: {
-        // ✅ Final confirmation before payment
+        // ✅ Final CONFIRM
         if (input !== "✅ CONFIRM") return await punish(bot, uid, userMessages);
 
         return await handlePayment(bot, uid, userMessages);
       }
 
       case 8: {
-        // 💸 Waiting for blockchain confirmation
+        // 💸 Blockchain confirmation
         if (input === "✅ CONFIRM") {
           s.step = 9;
           return await handlePaymentConfirmation(bot, uid, userMessages);
@@ -195,8 +193,8 @@ export async function handleStep(bot, id, text, userMessages) {
       }
 
       default: {
-        // 🧨 Safety fallback
-        console.warn(`⚠️ Unknown step=${s.step} for ${uid}`);
+        // 🧨 Fallback
+        console.warn(`⚠️ Unknown step=${s.step} for uid=${uid}`);
         await resetSession(uid);
         return await safeStart(bot, uid);
       }
