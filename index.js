@@ -1,4 +1,4 @@
-// 📦 index.js | BalticPharmaBot — FINAL IMMORTAL v1.0.0 LOCKED DEPLOY-TITAN™
+// 📦 index.js | BalticPharmaBot — FINAL IMMORTAL v999999999∞.1 GODMODE DEPLOY-TITAN™
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -7,33 +7,47 @@ import { readFile } from "fs/promises";
 import { initBotInstance, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions } from "./core/sessionManager.js";
+import "./config/discountSync.js"; // ✅ FINAL DISCOUNT SYNC — MUST BE LAST IMPORT
+
+/**
+ * 🔔 Admin crash alert
+ */
+async function notifyCrash(type, err) {
+  if (!BOT.ADMIN_ID || !BOT.INSTANCE?.sendMessage) return;
+  const msg = `❗️ *Bot crashed during ${type}!*\n\n💥 Error: \`${err?.message || err}\`\n🕒 ${new Date().toLocaleString("en-GB")}`;
+  try {
+    await BOT.INSTANCE.sendMessage(BOT.ADMIN_ID, msg, { parse_mode: "Markdown" });
+  } catch {
+    console.warn("⚠️ Failed to notify admin.");
+  }
+}
 
 // 🔧 Init bot + handlers
 initBotInstance();
 registerMainHandler(BOT.INSTANCE);
 
-// 🔁 Periodic zombie session killer
+// 🔁 Periodic zombie session killer (every 10 minutes)
 setInterval(() => {
   try {
     autoExpireSessions();
   } catch (err) {
     console.error("❌ [autoExpireSessions error]:", err.message);
   }
-}, 10 * 60 * 1000); // every 10 min
+}, 10 * 60 * 1000);
 
 // 🚀 Startup log + notify admin
 (async () => {
   try {
-    if (!BOT.INSTANCE?.getMe) throw new Error("BOT.INSTANCE is unavailable.");
+    if (!BOT.INSTANCE?.getMe) throw new Error("BOT.INSTANCE unavailable or not initialized.");
 
     const me = await BOT.INSTANCE.getMe();
     const version = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"))?.version || "1.0.0";
     const now = new Date().toLocaleString("en-GB");
 
     console.log(`
-╔═════════════════════════════════════════════╗
-║ ✅ BALTICPHARMACYBOT IS RUNNING — IMMORTAL ║
-╚═════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════╗
+║ ✅ BALTICPHARMACYBOT IS RUNNING — FINAL IMMORTAL GODMODE ║
+╚═════════════════════════════════════════════════════════╝
 🆙 Version: v${version}
 🕒 Started: ${now}
 👤 Logged in as: @${me.username} (${me.first_name})
@@ -82,21 +96,4 @@ process.on("unhandledRejection", async (reason) => {
   });
 });
 
-console.log("✅ BALTICPHARMACYBOT — LIVE • LOCKED • BULLETPROOF");
-
-/**
- * 🔔 Admin crash alert
- */
-async function notifyCrash(type, err) {
-  if (!BOT.ADMIN_ID || !BOT.INSTANCE?.sendMessage) return;
-
-  const msg = `❗️ *Bot crashed during ${type}!*\n\n💥 Error: \`${err?.message || err}\`\n🕒 ${new Date().toLocaleString("en-GB")}`;
-  try {
-    await BOT.INSTANCE.sendMessage(BOT.ADMIN_ID, msg, { parse_mode: "Markdown" });
-  } catch {
-    console.warn("⚠️ Failed to notify admin.");
-  }
-}
-
-// 🔄 Final discount sync (MUST BE LAST)
-import "./config/discountSync.js"; // ✅ BULLETPROOF FINAL PLACEMENT
+console.log("✅ BALTICPHARMACYBOT — LIVE • FINAL • LOCKED • BULLETPROOF");
