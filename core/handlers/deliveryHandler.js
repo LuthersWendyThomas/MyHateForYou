@@ -40,7 +40,7 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
   try {
     const session = userSessions[uid] ||= { step: 9, createdAt: Date.now() };
     if (session.deliveryInProgress) {
-      debug(`⚠️ Delivery already running → ${uid}`);
+      logDebug(`⚠️ Delivery already running → ${uid}`);
       return;
     }
 
@@ -54,6 +54,7 @@ export async function simulateDelivery(bot, id, method = "drop", userMsgs = {}) 
       (isFinal ? scheduleFinalStep : scheduleStep)(bot, uid, text, delay, userMsgs);
     });
 
+    // Schedule final cleanup
     if (activeTimers[uid]) clearTimeout(activeTimers[uid]);
 
     activeTimers[uid] = setTimeout(() => {
@@ -112,7 +113,7 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
   try {
     const session = userSessions[uid];
     if (session?.cleanupScheduled) {
-      debug(`⚠️ Cleanup already triggered → ${uid}`);
+      logDebug(`⚠️ Cleanup already triggered → ${uid}`);
       return;
     }
 
@@ -143,7 +144,7 @@ async function triggerFinalCleanup(bot, id, userMsgs = {}) {
     }
 
     await cleanupDeliverySession(uid);
-    debug(`🧼 Cleanup complete → ${uid}`);
+    logDebug(`🧼 Cleanup complete → ${uid}`);
   } catch (err) {
     console.error("❌ [triggerFinalCleanup error]:", err.message);
   }
@@ -183,7 +184,7 @@ function wait(ms) {
 /**
  * Logs debugging information if enabled.
  */
-function debug(...args) {
+function logDebug(...args) {
   if (process.env.DEBUG_MESSAGES === "true") {
     console.log(...args);
   }
