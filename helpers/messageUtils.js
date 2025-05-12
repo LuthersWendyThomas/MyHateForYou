@@ -1,11 +1,11 @@
-// 📦 helpers/messageUtils.js | FINAL IMMORTAL v99999999999.∞+1 — TITANLOCK GODMODE SYNC
+// 📦 helpers/messageUtils.js | FINAL IMMORTAL v99999999999.∞+2 — TITANLOCK GODMODE SYNC
 
 import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
 import { banUser } from "../utils/bans.js";
 import { BOT } from "../config/config.js";
 
-const CLEANUP_TIMEOUT_MS = 27 * 60 * 1000; // Default timeout for cleanup
+const CLEANUP_TIMEOUT_MS = 27 * 60 * 1000; // Default cleanup timeout
 const MAX_MESSAGE_LENGTH = 4096; // Telegram message size limit
 
 /**
@@ -64,21 +64,22 @@ export async function sendPlain(bot, id, text, messages = userMessages) {
 /**
  * 💎 GODMODE sendKeyboard — guarantees all buttons are displayed
  */
-export async function sendKeyboard(bot, id, text, keyboard, messages = userMessages) {
+export async function sendKeyboard(bot, id, text, keyboard, messages = userMessages, options = {}) {
   if (!bot || !id || !text || !keyboard) {
     logError("❌ [sendKeyboard]", "Invalid bot, user ID, text, or keyboard input", id);
     return null;
   }
 
   try {
+    const normalizedKeyboard = normalizeKeyboard(keyboard);
     const replyMarkup = {
-      keyboard: normalizeKeyboard(keyboard),
+      keyboard: normalizedKeyboard,
       resize_keyboard: true,
       one_time_keyboard: false,
       selective: false
     };
 
-    return await sendAndTrack(bot, id, text, { reply_markup: replyMarkup }, messages);
+    return await sendAndTrack(bot, id, text, { reply_markup: replyMarkup, ...options }, messages);
   } catch (err) {
     logError("❌ [sendKeyboard error]", err, id);
     return await safeSend(bot, id, text).catch(() => null);
