@@ -1,73 +1,96 @@
+// utils/fetchCryptoPrice.js | IMMORTAL FINAL v1.0.0•GODMODE DIAMONDLOCK
+// RATE-LIMITED • CONCURRENCY LOCK • CACHE (5 min) • USD-ONLY • BULLETPROOF
+
 import fetch from "node-fetch";
 import { rateLimiter } from "./rateLimiter.js";
 import { ALIASES } from "../config/config.js";
 
-const CACHE_TTL = 5 * 60 * 1000;
-const cache = {};
-const locks = {};
+const CACHE_TTL = 5 * 60_000;        // 5 minutes
+const cache     = {};                // { [key]: { rate, ts } }
+const locks     = {};                // { [symbol]: Promise }
 
+/** Supported symbols and their API IDs */
 const SUPPORTED = {
-  BTC:   { gecko: "bitcoin",        coincap: "bitcoin" },
-  ETH:   { gecko: "ethereum",       coincap: "ethereum" },
-  MATIC: { gecko: "matic-network",  coincap: "matic" },
-  SOL:   { gecko: "solana",         coincap: "solana" }
+  BTC:   { gecko: "bitcoin",        coincap: "bitcoin"       },
+  ETH:   { gecko: "ethereum",       coincap: "ethereum"      },
+  MATIC: { gecko: "matic-network",  coincap: "matic-network" },
+  SOL:   { gecko: "solana",         coincap: "solana"        }
 };
 
 /**
- * 🔁 Main price fetch entry point
+ * 🔁 Main entry: fetch USD price for a currency symbol (with alias support).
+ * Returns null on unsupported or fatal errors.
+ *
+ * @param {string} currency – e.g. "btc", "Matic", "eth"
+ * @returns {Promise<number|null>} USD price
  */
 export async function fetchCryptoPrice(currency) {
   if (!currency) return null;
 
-  const normalized = ALIASES[String(currency).trim().toLowerCase()] || String(currency).trim().toUpperCase();
-  const ids = SUPPORTED[normalized];
+  // normalize input via ALIASES then uppercase
+  const norm = ALIASES[String(currency).toLowerCase()] ||
+               String(currency).trim().toUpperCase();
+  const ids  = SUPPORTED[norm];
   if (!ids) {
     console.warn(`⚠️ Unsupported currency: "${currency}"`);
     return null;
   }
 
-  await rateLimiter(normalized);
+  // apply rate limiting per symbol
+  await rateLimiter(norm);
 
-  if (locks[normalized]) return await locks[normalized];
-  const promise = _fetchCryptoPriceInternal(normalized, ids);
-  locks[normalized] = promise;
+  // concurrency lock: reuse in-flight promise
+  if (locks[norm]) {
+    return locks[norm];
+  }
+  const promise = _fetchCryptoPriceInternal(norm, ids);
+  locks[norm] = promise;
 
   try {
     return await promise;
   } catch (err) {
-    console.error(`❌ [fetchCryptoPrice fatal → ${normalized}]:`, err.message);
+    console.error(`❌ [fetchCryptoPrice fatal → ${norm}]:`, err.message);
     return null;
   } finally {
-    delete locks[normalized];
+    delete locks[norm];
   }
 }
 
-async function _fetchCryptoPriceInternal(key, ids) {
+/** Internal: check cache, then sequentially try Gecko then CoinCap */
+async function _fetchCryptoPriceInternal(symbol, { gecko, coincap }) {
   const now = Date.now();
-  const cached = cache[key];
-
-  if (cached && now - cached.timestamp < CACHE_TTL) {
-    debug(`♻️ [CACHE HIT] ${key} → ${cached.rate}€`);
-    return cached.rate;
+  const entry = cache[symbol];
+  if (entry && now - entry.ts < CACHE_TTL) {
+    debug(`♻️ [CACHE HIT] ${symbol} → $${entry.rate}`);
+    return entry.rate;
   }
 
+  // 1) Try CoinGecko
   try {
-    const geckoRate = await fetchWithRetry(() => fetchFromCoinGecko(ids.gecko), `CoinGecko → ${key}`);
-    return saveToCache(key, geckoRate);
+    const rate = await fetchWithRetry(
+      () => fetchFromGecko(gecko),
+      `CoinGecko → ${symbol}`
+    );
+    return save(symbol, rate);
   } catch (err) {
-    console.warn(`⚠️ [Gecko failed → ${key}]: ${err.message}`);
+    console.warn(`⚠️ [Gecko failed → ${symbol}]:`, err.message);
   }
 
+  // 2) Fallback to CoinCap
   try {
-    const capRate = await fetchWithRetry(() => fetchFromCoinCap(ids.coincap), `CoinCap → ${key}`);
-    return saveToCache(key, capRate);
+    const rate = await fetchWithRetry(
+      () => fetchFromCoincap(coincap),
+      `CoinCap → ${symbol}`
+    );
+    return save(symbol, rate);
   } catch (err) {
-    console.warn(`⚠️ [CoinCap failed → ${key}]: ${err.message}`);
+    console.warn(`⚠️ [CoinCap failed → ${symbol}]:`, err.message);
   }
 
-  throw new Error(`❌ All price sources failed for "${key}"`);
+  throw new Error(`❌ All price sources failed for "${symbol}"`);
 }
 
+/** Retry wrapper with exponential backoff */
 async function fetchWithRetry(fn, label, retries = 3, baseDelay = 1200) {
   let lastErr;
   for (let i = 0; i < retries; i++) {
@@ -76,70 +99,60 @@ async function fetchWithRetry(fn, label, retries = 3, baseDelay = 1200) {
       return await fn();
     } catch (err) {
       lastErr = err;
-      console.warn(`⚠️ [Retry ${i + 1}/${retries} → ${label}]:`, err.message);
+      console.warn(`⚠️ [Retry ${i+1}/${retries} → ${label}]:`, err.message);
     }
   }
   throw lastErr;
 }
 
-async function fetchFromCoinGecko(id) {
-  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`;
-
+/** Fetch price from CoinGecko (USD) */
+async function fetchFromGecko(id) {
+  const url = `https://api.coingecko.com/api/v3/simple/price`
+    + `?ids=${encodeURIComponent(id)}&vs_currencies=usd`;
   const res = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "Mozilla/5.0 (Node.js agent)"
-    }
+    headers: { "User-Agent": "Node.js" }
   });
-
   if (res.status === 429) throw new Error("429 Rate Limit (Gecko)");
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
+  if (!res.ok) throw new Error(`Gecko HTTP ${res.status}`);
   const json = await res.json();
-  debug(`📡 [Gecko → ${id}] →`, json);
+  const usd  = json[id]?.usd;
+  if (!Number.isFinite(usd) || usd <= 0) {
+    throw new Error(`Invalid Gecko response for "${id}"`);
+  }
+  return +usd.toFixed(2);
+}
 
-  const price = parseFloat(json?.[id]?.eur);
-  if (!Number.isFinite(price) || price <= 0) throw new Error("Invalid Gecko price");
-
+/** Fetch price from CoinCap (USD) */
+async function fetchFromCoincap(id) {
+  // direct lookup
+  let res = await fetch(`https://api.coincap.io/v2/assets/${encodeURIComponent(id)}`, {
+    headers: { "User-Agent": "Node.js" }
+  });
+  let data;
+  if (res.ok) {
+    data = await res.json();
+  } else {
+    // fallback search
+    res = await fetch(`https://api.coincap.io/v2/assets?search=${encodeURIComponent(id)}`, {
+      headers: { "User-Agent": "Node.js" }
+    });
+    if (!res.ok) throw new Error(`CoinCap HTTP ${res.status}`);
+    const list = (await res.json()).data || [];
+    if (!list.length) throw new Error(`No CoinCap asset for "${id}"`);
+    data = { data: list[0] };
+  }
+  const price = Number(data.data.priceUsd);
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error(`Invalid CoinCap response for "${id}"`);
+  }
   return +price.toFixed(2);
 }
 
-async function fetchFromCoinCap(id) {
-  const url = `https://api.coincap.io/v2/assets/${id}`;
-
-  const res = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "Mozilla/5.0 (Node.js agent)"
-    }
-  });
-
-  if (res.status === 429) throw new Error("429 Rate Limit (CoinCap)");
-  if (res.status === 404) throw new Error(`ID not found: ${id}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-  const json = await res.json();
-  debug(`📡 [CoinCap → ${id}] →`, json);
-
-  const usd = parseFloat(json?.data?.priceUsd);
-  if (!Number.isFinite(usd) || usd <= 0) throw new Error("Invalid CoinCap price");
-
-  const EUR_CONVERSION = 1.07;
-  return +(usd / EUR_CONVERSION).toFixed(2);
-}
-
-function saveToCache(key, rate) {
-  cache[key] = { rate, timestamp: Date.now() };
-  debug(`💾 [CACHE SET] ${key} → ${rate}€`);
+/** Save rate to cache */
+function save(symbol, rate) {
+  cache[symbol] = { rate, ts: Date.now() };
+  debug(`💾 [CACHE SET] ${symbol} → $${rate}`);
   return rate;
 }
-
-function wait(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function debug(...args) {
-  if (process.env.DEBUG_MESSAGES === "true") {
-    console.log(...args);
-  }
-}
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+function debug(...args) { if (process.env.DEBUG_MESSAGES === "true") console.log(...args); }
