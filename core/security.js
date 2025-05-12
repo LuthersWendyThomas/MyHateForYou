@@ -1,49 +1,51 @@
-// 🛡️ core/security.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
+// 🛡️ core/security.js | IMMORTAL FINAL v1.0.3•GODMODE DIAMONDLOCK
 // TITANLOCK SYNCED • BULLETPROOF • ULTRA-SAFE • AUTO-MUTE/FLOOD-PROOF
 
-import { isBanned, banUser }                     from "../utils/bans.js";
-import { sendAndTrack }                          from "../helpers/messageUtils.js";
+import { isBanned } from "../utils/bans.js";
+import { sendAndTrack } from "../helpers/messageUtils.js";
 import { antiSpam, antiFlood, bannedUntil, userSessions } from "../state/userState.js";
-import { MENU_BUTTONS }                          from "../helpers/keyboardConstants.js";
-import { BOT }                                   from "../config/config.js";
+import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
+import { BOT } from "../config/config.js";
 
-// ⛔ Security thresholds
-const SPAM_INTERVAL_MS      = 3_300;        // min ms between messages
-const FLOOD_LIMIT           = 6;            // max actions per window
-const FLOOD_WINDOW_MS       = 11_000;       // window for flood detection
-const TEMP_MUTE_MS          = 4 * 60_000;   // 4-minute mute
-const MAX_MESSAGE_LENGTH    = 600;          // max characters
-const MAX_INPUT_FREQUENCY   = 4;            // identical repeats before block
-const MAX_DISTINCT_INPUTS   = 20;           // history size
+// ⛔ Security thresholds (relaxed +40%)
+const SPAM_INTERVAL_MS      = Math.ceil(3_300 * 1.4);     // ~4620ms between messages
+const FLOOD_LIMIT           = 6;                         // max actions per window
+const FLOOD_WINDOW_MS       = Math.ceil(11_000 * 1.4);    // ~15400ms flood window
+const TEMP_MUTE_MS          = 4 * 60_000;                // 4-minute mute
+const MAX_MESSAGE_LENGTH    = 600;                       // max characters
+const MAX_INPUT_FREQUENCY   = 6;                         // identical repeats before block
+const MAX_DISTINCT_INPUTS   = 20;                        // history size
 
 // 🧠 Tracks recent inputs per user
 const recentTexts = new Map();
 
-/** ✅ Is this UID the bot admin? */
-function isAdmin(uid) {
-  return String(uid) === String(BOT.ADMIN_ID);
-}
+// ✅ Precomputed list of all button texts (lowercased)
+const BUTTON_TEXTS = Object.values(MENU_BUTTONS)
+  .map(btn => String(btn.text || "").trim().toLowerCase())
+  .filter(Boolean);
 
-/** 🔒 Clean and validate incoming ID */
+// ————— Helpers —————
+
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-/** 📋 Log actions uniformly */
 function logAction(action, message, uid = "") {
   console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (UID: ${uid})` : ""}`);
 }
 
-/** 🚨 Log errors uniformly */
 function logError(action, error, uid = "") {
   const msg = error?.message || error;
   console.error(`${new Date().toISOString()} ${action} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
 }
 
-/**
- * ⛔ Has the user sent messages too quickly?
- */
+function isAdmin(uid) {
+  return String(uid) === String(BOT.ADMIN_ID);
+}
+
+// ————— Spam / Flood / Danger checks —————
+
 export function isSpamming(id) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
@@ -57,9 +59,6 @@ export function isSpamming(id) {
   return spam;
 }
 
-/**
- * 🌊 Flood protection: too many actions in a short window?
- */
 export async function handleFlood(id, bot) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
@@ -76,7 +75,6 @@ export async function handleFlood(id, bot) {
     if (now - state.start <= FLOOD_WINDOW_MS) {
       state.count++;
       if (state.count > FLOOD_LIMIT) {
-        // Temp-mute user
         bannedUntil[uid] = now + TEMP_MUTE_MS;
         delete antiFlood[uid];
         await notifyUserMuted(bot, uid);
@@ -93,9 +91,6 @@ export async function handleFlood(id, bot) {
   }
 }
 
-/**
- * 🔇 Is the user currently muted?
- */
 export function isMuted(id) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
@@ -109,9 +104,6 @@ export function isMuted(id) {
   return muted;
 }
 
-/**
- * 💣 Has the user sent a dangerously long or repeated message?
- */
 function isMessageDangerous(id, rawText) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
@@ -123,13 +115,10 @@ function isMessageDangerous(id, rawText) {
       return true;
     }
 
-    let history = recentTexts.get(uid);
-    if (!history) {
-      history = [];
-      recentTexts.set(uid, history);
-    }
+    let history = recentTexts.get(uid) || [];
     if (history.length >= MAX_DISTINCT_INPUTS) history.shift();
     history.push(txt);
+    recentTexts.set(uid, history);
 
     const repeats = history.filter(t => t === txt).length;
     if (repeats >= MAX_INPUT_FREQUENCY) {
@@ -143,17 +132,22 @@ function isMessageDangerous(id, rawText) {
   }
 }
 
-/**
- * ✅ MASTER CHECK — Can this user proceed?
- */
+// ————— Master gatekeeper —————
+
 export async function canProceed(id, bot, text = "") {
   const uid = sanitizeId(id);
   if (!uid) return false;
   if (isAdmin(uid)) return true;
 
-  // ─── Allow rapid Confirm/Cancel during payment steps ───
   const session = userSessions[uid];
   const txt     = String(text ?? "").trim().toLowerCase();
+
+  // 1) If this is *any* button text → always allow immediately
+  if (BUTTON_TEXTS.includes(txt)) {
+    return true;
+  }
+
+  // 2) Allow Confirm/Cancel even if rapid
   if (session?.step >= 8) {
     if (
       txt === MENU_BUTTONS.CONFIRM.text.toLowerCase() ||
@@ -179,7 +173,6 @@ export async function canProceed(id, bot, text = "") {
   }
 }
 
-/** 🔔 Notify user of mute */
 async function notifyUserMuted(bot, id) {
   const uid = sanitizeId(id);
   if (!uid) return;
