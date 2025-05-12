@@ -1,4 +1,4 @@
-// 📦 helpers/menu.js | FINAL IMMORTAL v999999999.∞+3 — SKYLOCKED ADMIN-SAFE SYNCED + BULLETPROOF BUTTONS
+// 📦 helpers/menu.js | FINAL IMMORTAL v9999999999.∞+FIX — SKYLOCKED ADMIN-SAFE SYNCED + BULLETPROOF BUTTONS
 
 import { BOT } from "../config/config.js";
 import { MENU_BUTTONS } from "./keyboardConstants.js";
@@ -18,13 +18,13 @@ export function getMainMenu(id) {
   try {
     // Main user menu
     const userMenu = [
-      [{ text: "🛒 BUY" }, { text: "❓ HELP" }],
-      [{ text: "👤 PROFILE" }, { text: "📦 ORDERS" }]
+      [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
+      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS]
     ];
 
     // Admin-specific menu
     const adminMenu = [
-      [{ text: "📊 STATS" }, { text: "🛠 ADMIN" }]
+      [MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN]
     ];
 
     // Combine menus based on user role
@@ -36,7 +36,7 @@ export function getMainMenu(id) {
     );
 
     return {
-      keyboard,
+      keyboard: normalizeKeyboard(keyboard),
       resize_keyboard: true,
       one_time_keyboard: false,
       selective: true
@@ -44,19 +44,27 @@ export function getMainMenu(id) {
   } catch (err) {
     logError("❌ [getMainMenu error]", err, uid);
     // Fallback to a basic menu structure
-    return {
-      keyboard: [[{ text: "❓ HELP" }]],
-      resize_keyboard: true,
-      one_time_keyboard: false,
-      selective: true
-    };
+    return getFallbackKeyboard();
   }
 }
 
 /**
+ * ✅ Creates and normalizes fallback keyboard structure
+ * @returns {object} — Basic fallback keyboard
+ */
+function getFallbackKeyboard() {
+  return {
+    keyboard: [[MENU_BUTTONS.HELP]],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+    selective: true
+  };
+}
+
+/**
  * ✅ Keyboard normalizer — guarantees safe formatting
- * @param {Array<Array<{ text: string }>>} keyboard
- * @returns {Array<Array<{ text: string }>>}
+ * @param {Array<Array<{ text: string, callback_data?: string }>>} keyboard
+ * @returns {Array<Array<{ text: string, callback_data?: string }>>}
  */
 function normalizeKeyboard(keyboard) {
   if (!Array.isArray(keyboard)) {
@@ -67,8 +75,8 @@ function normalizeKeyboard(keyboard) {
   return keyboard.map(row => {
     if (Array.isArray(row)) {
       return row.map(button => ({
-        text: String(button.text || "").trim(),
-        callback_data: String(button.callback_data || "").trim(),
+        text: String(button?.text || "").trim(),
+        callback_data: button?.callback_data ? String(button.callback_data).trim() : undefined
       }));
     }
     return [{ text: String(row).trim() }];
@@ -146,7 +154,9 @@ export function validateMenuButtons(keyboard) {
   }
 
   const allButtons = keyboard.keyboard.flat();
-  const valid = allButtons.every(button => typeof button === "string" && button.trim().length > 0);
+  const valid = allButtons.every(button =>
+    typeof button.text === "string" && button.text.trim().length > 0
+  );
 
   if (!valid) {
     logError("❌ [validateMenuButtons]", new Error("Invalid buttons found in menu"));
