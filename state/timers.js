@@ -1,10 +1,13 @@
-// 📦 state/timers.js | FINAL IMMORTAL v999999999.9999 — BULLETPROOF SYNC CORE
+// 📦 state/timers.js | FINAL IMMORTAL DIAMONDLOCK v999999999.∞ — BULLETPROOF SYNC CORE
+// MAXIMUM OPTIMIZATION • ZERO ERROR TOLERANCE • AUTO-CLEANUP • MULTI-TIMER SUPPORT
 
 export const activeTimers = {};     // { userId: Timeout } – delivery, cleanup, etc.
 export const paymentTimers = {};    // { userId: Timeout } – payment step (8)
 
 /**
- * ✅ Assigns active UI/delivery timer with auto-clear
+ * ✅ Assigns or updates an active delivery/UI timer with auto-clear
+ * @param {string|number} id - User ID
+ * @param {Timeout} timerId - Timer reference
  */
 export function setActiveTimer(id, timerId) {
   const uid = safeId(id);
@@ -20,14 +23,16 @@ export function setActiveTimer(id, timerId) {
     }
     activeTimers[uid] = timerId;
 
-    logAction("🕒 [setActiveTimer]", `Timer set`, uid);
+    logAction("🕒 [setActiveTimer]", `Active timer set`, uid);
   } catch (err) {
     logError("❌ [setActiveTimer error]", err, uid);
   }
 }
 
 /**
- * ✅ Assigns payment confirmation timer
+ * ✅ Assigns or updates a payment confirmation timer
+ * @param {string|number} id - User ID
+ * @param {Timeout} timerId - Timer reference
  */
 export function setPaymentTimer(id, timerId) {
   const uid = safeId(id);
@@ -50,7 +55,7 @@ export function setPaymentTimer(id, timerId) {
 }
 
 /**
- * ✅ Clears *ALL* system timers (for restart/reset)
+ * ✅ Clears all system timers across all users
  */
 export function clearAllTimers() {
   try {
@@ -62,14 +67,15 @@ export function clearAllTimers() {
       clearTimer(timer, uid, "payment");
     }
 
-    logAction("🧨 [clearAllTimers]", `All timers cleared (UI + Payment)`);
+    logAction("🧨 [clearAllTimers]", `All timers cleared (Active + Payment)`);
   } catch (err) {
     logError("❌ [clearAllTimers error]", err);
   }
 }
 
 /**
- * ✅ Clears all timers for a specific user
+ * ✅ Clears all timers (active and payment) for a specific user
+ * @param {string|number} id - User ID
  */
 export function clearTimersForUser(id) {
   const uid = safeId(id);
@@ -87,9 +93,27 @@ export function clearTimersForUser(id) {
       clearTimer(paymentTimers[uid], uid, "payment");
     }
 
-    logAction("🕒 [clearTimersForUser]", `All timers cleared`, uid);
+    logAction("🕒 [clearTimersForUser]", `All timers cleared for user`, uid);
   } catch (err) {
     logError("❌ [clearTimersForUser error]", err, uid);
+  }
+}
+
+/**
+ * 🧪 Debugging tool: Prints a summary of all active timers
+ */
+export function printTimersSummary() {
+  const activeCount = Object.keys(activeTimers).length;
+  const paymentCount = Object.keys(paymentTimers).length;
+
+  logAction("📊 [printTimersSummary]", `Active timers: ${activeCount}, Payment timers: ${paymentCount}`);
+
+  for (const [uid, timer] of Object.entries(activeTimers)) {
+    console.log(`🕒 Active Timer → User: ${uid}, Timer: ${timer}`);
+  }
+
+  for (const [uid, timer] of Object.entries(paymentTimers)) {
+    console.log(`💳 Payment Timer → User: ${uid}, Timer: ${timer}`);
   }
 }
 
@@ -97,13 +121,17 @@ export function clearTimersForUser(id) {
 
 /**
  * ✅ Checks if a timer is valid
+ * @param {Timeout} timer - Timer reference
+ * @returns {boolean} - True if timer is valid
  */
 function isValidTimer(timer) {
   return timer && typeof timer._onTimeout === "function";
 }
 
 /**
- * ✅ Sanitizes user ID
+ * ✅ Safely sanitizes a user ID
+ * @param {string|number} id - Input ID
+ * @returns {string|null} - Sanitized ID or null
  */
 function safeId(id) {
   const str = String(id || "").trim();
@@ -112,6 +140,9 @@ function safeId(id) {
 
 /**
  * ✅ Clears a specific timer
+ * @param {Timeout} timer - Timer reference
+ * @param {string} uid - User ID
+ * @param {string} type - Timer type ("active" or "payment")
  */
 function clearTimer(timer, uid, type) {
   if (isValidTimer(timer)) {
@@ -124,14 +155,20 @@ function clearTimer(timer, uid, type) {
 
 /**
  * 📝 Logs successful actions
+ * @param {string} action - Action description
+ * @param {string} message - Additional details
+ * @param {string} [uid] - User ID (optional)
  */
 function logAction(action, message, uid = null) {
-  console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? `: ${uid}` : ""}`);
+  console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (ID: ${uid})` : ""}`);
 }
 
 /**
  * ⚠️ Logs errors
+ * @param {string} action - Action description
+ * @param {Error|string} error - Error object or message
+ * @param {string} [uid] - User ID (optional)
  */
 function logError(action, error, uid = null) {
-  console.error(`${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (uid: ${uid})` : ""}`);
+  console.error(`${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`);
 }
