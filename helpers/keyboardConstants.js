@@ -12,6 +12,11 @@ export const MENU_BUTTONS = {
   HELP: { text: "❓ Help", callback_data: "MENU_HELP" },
   STATS: { text: "📊 Stats", callback_data: "MENU_STATS" },
   ADMIN: { text: "🛠 Admin", callback_data: "MENU_ADMIN" },
+  BACK: { text: "🔙 Back" }, // ← PRIDĖK ŠITĄ EILUTĘ
+  CONFIRM: { text: "✅ Confirm" },
+  CANCEL: { text: "❌ Cancel" },
+  YES: { text: "✅ Yes" },
+  NO: { text: "❌ No" }
 };
 
 /**
