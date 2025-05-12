@@ -1,6 +1,4 @@
-// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v999999999∞+GODMODE
-// SYNCED • SECURED • TEXTLESS FSM • BULLETPROOF CALLBACKS • ADMIN LOCKED • 24/7 FSM GATEWAY
-
+// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v999999999.∞.ULTIMATE.GODMODE+SYNC+DIAMONDLOCK
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages } from "../../state/userState.js";
 import { safeStart } from "./finalHandler.js";
@@ -11,43 +9,39 @@ import { sendStats } from "../../utils/sendStats.js";
 import { sendOrders } from "../../utils/sendOrders.js";
 import { sendProfile } from "../../utils/sendProfile.js";
 import { openAdminPanel, handleAdminAction } from "../../utils/adminPanel.js";
-import { MENU_BUTTONS, MAIN_KEYBOARD } from "../../helpers/keyboardConstants.js";
+import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 import { getMainMenu } from "../../helpers/menu.js";
 import { markUserActive } from "../sessionManager.js";
 import { canProceed } from "../security.js";
 
-/**
- * 🔐 Registers Telegram message & callback handlers
- */
+// ✅ Register all Telegram handlers
 export function registerMainHandler(bot) {
   if (!bot?.on) {
     console.error("❌ [mainHandler] Invalid bot instance");
     return;
   }
 
-  // 🎯 Handle CALLBACK QUERIES (button clicks)
+  // 💥 CALLBACK HANDLER (button clicks)
   bot.on("callback_query", async (query) => {
-    const chatId = query?.message?.chat?.id;
-    const callbackData = query?.data;
-    if (!chatId || !callbackData) return;
+    const uid = String(query?.message?.chat?.id || "").trim();
+    const data = query?.data;
+    if (!uid || !data) return;
 
-    const uid = String(chatId).trim();
     try {
       markUserActive(uid);
       if (!(await canProceed(uid, bot))) return;
 
-      console.log(`📥 [callback_query] ${uid}: ${callbackData}`);
+      console.log(`📥 [callback_query] ${uid}: ${data}`);
 
-      // Admin-only routes
-      if (callbackData === MENU_BUTTONS.STATS.callback_data && isAdmin(uid)) {
+      if (data === MENU_BUTTONS.STATS.callback_data && isAdmin(uid)) {
         return await safeCall(() => sendStats(bot, uid, userMessages), uid);
       }
-      if (callbackData === MENU_BUTTONS.ADMIN.callback_data && isAdmin(uid)) {
+
+      if (data === MENU_BUTTONS.ADMIN.callback_data && isAdmin(uid)) {
         return await safeCall(() => openAdminPanel(bot, uid), uid);
       }
 
-      // Public routes
-      switch (callbackData) {
+      switch (data) {
         case MENU_BUTTONS.BUY.callback_data:
           return await safeCall(() => startOrder(bot, uid, userMessages), uid);
         case MENU_BUTTONS.PROFILE.callback_data:
@@ -57,10 +51,10 @@ export function registerMainHandler(bot) {
         case MENU_BUTTONS.HELP.callback_data:
           return await safeCall(() => sendHelp(bot, uid, userMessages), uid);
         default:
-          console.warn(`⚠️ Unknown callback: ${callbackData}`);
+          console.warn(`⚠️ Unknown callback: ${data}`);
           return await bot.answerCallbackQuery(query.id, {
             text: "❌ Invalid button.",
-            show_alert: true
+            show_alert: true,
           });
       }
     } catch (err) {
@@ -70,13 +64,13 @@ export function registerMainHandler(bot) {
     }
   });
 
-  // 💬 Handle MESSAGES (user input)
+  // 💬 TEXT HANDLER (user input)
   bot.on("message", async (msg) => {
-    const chatId = msg?.chat?.id;
+    const uid = String(msg?.chat?.id || "").trim();
     const text = normalizeText(msg?.text);
-    if (!chatId || !text) return;
 
-    const uid = String(chatId).trim();
+    if (!uid || !text) return;
+
     try {
       markUserActive(uid);
       if (!(await canProceed(uid, bot, text))) return;
@@ -95,27 +89,27 @@ export function registerMainHandler(bot) {
         return await safeCall(() => handleAdminAction(bot, msg, userSessions), uid);
       }
 
-      // Match static menu buttons
-      if (isTextButtonMatch(text, MENU_BUTTONS.BUY)) {
+      // Static button matchers
+      if (isMatch(text, MENU_BUTTONS.BUY)) {
         return await safeCall(() => startOrder(bot, uid, userMessages), uid);
       }
-      if (isTextButtonMatch(text, MENU_BUTTONS.PROFILE)) {
+      if (isMatch(text, MENU_BUTTONS.PROFILE)) {
         return await safeCall(() => sendProfile(bot, uid, userMessages), uid);
       }
-      if (isTextButtonMatch(text, MENU_BUTTONS.ORDERS)) {
+      if (isMatch(text, MENU_BUTTONS.ORDERS)) {
         return await safeCall(() => sendOrders(bot, uid, userMessages), uid);
       }
-      if (isTextButtonMatch(text, MENU_BUTTONS.HELP)) {
+      if (isMatch(text, MENU_BUTTONS.HELP)) {
         return await safeCall(() => sendHelp(bot, uid, userMessages), uid);
       }
-      if (isTextButtonMatch(text, MENU_BUTTONS.STATS) && isAdmin(uid)) {
+      if (isMatch(text, MENU_BUTTONS.STATS) && isAdmin(uid)) {
         return await safeCall(() => sendStats(bot, uid, userMessages), uid);
       }
-      if (isTextButtonMatch(text, MENU_BUTTONS.ADMIN) && isAdmin(uid)) {
+      if (isMatch(text, MENU_BUTTONS.ADMIN) && isAdmin(uid)) {
         return await safeCall(() => openAdminPanel(bot, uid), uid);
       }
 
-      // Dynamic FSM flow
+      // Default → FSM flow
       return await safeCall(() => handleStep(bot, uid, text, userMessages), uid);
     } catch (err) {
       console.error("❌ [message error]:", err.message || err);
@@ -123,30 +117,20 @@ export function registerMainHandler(bot) {
   });
 }
 
-/**
- * 🧼 Normalize user input text
- */
+// ————— HELPERS —————
+
 function normalizeText(txt) {
   return txt?.toString().trim().toLowerCase();
 }
 
-/**
- * 🧠 Compare normalized text to button
- */
-function isTextButtonMatch(text, button) {
+function isMatch(text, button) {
   return normalizeText(button?.text) === text;
 }
 
-/**
- * 🛡️ Is user an admin?
- */
 function isAdmin(id) {
   return String(id) === String(BOT.ADMIN_ID);
 }
 
-/**
- * ✅ Wrap async call with error logging
- */
 async function safeCall(fn, uid = "unknown") {
   try {
     return await fn();
