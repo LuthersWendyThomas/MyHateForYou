@@ -93,9 +93,8 @@ export async function handleStep(bot, id, text, userMessages) {
 
 async function guideUser(bot, uid, userMessages) {
   console.log(`🔄 Guiding user ${uid} back to the menu.`);
-  await sendAndTrack(bot, uid, "❌ Invalid input. Please use the buttons below:", {
-    reply_markup: renderStep(bot, uid, userSessions[uid]?.step || 1, userMessages),
-  });
+  const step = userSessions[uid]?.step || 1;
+  return await renderStep(bot, uid, step, userMessages);
 }
 
 async function handleRegionSelection(bot, uid, input, session, userMessages) {
@@ -118,7 +117,7 @@ async function handleCitySelection(bot, uid, input, session, userMessages) {
 }
 
 async function handleDeliveryMethod(bot, uid, input, session, userMessages) {
-  const method = deliveryMethods.find(m => m.label.toLowerCase() === input);
+  const method = deliveryMethods.find((m) => m.label.toLowerCase() === input);
   if (!method) return await guideUser(bot, uid, userMessages);
 
   session.deliveryMethod = method.key;
@@ -144,21 +143,33 @@ async function handlePromoInput(bot, uid, input, session, userMessages) {
   const promo = DISCOUNTS.codes?.[code];
 
   if (!promo?.active) {
-    await sendAndTrack(bot, uid, `❌ Invalid/inactive promo: \`${code}\``, { parse_mode: "Markdown" }, userMessages);
+    await sendAndTrack(
+      bot,
+      uid,
+      `❌ Invalid/inactive promo: \`${code}\``,
+      { parse_mode: "Markdown" },
+      userMessages
+    );
     session.step = 2.1;
     return renderStep(bot, uid, session.step, userMessages);
   }
 
   session.promoCode = code;
   const discountPercent = Number(promo.percentage) || 0;
-  await sendAndTrack(bot, uid, `🏷️ Promo applied: *${code}* = ${discountPercent}%`, { parse_mode: "Markdown" }, userMessages);
+  await sendAndTrack(
+    bot,
+    uid,
+    `🏷️ Promo applied: *${code}* = ${discountPercent}%`,
+    { parse_mode: "Markdown" },
+    userMessages
+  );
 
   session.step = 3;
   return renderStep(bot, uid, session.step, userMessages);
 }
 
 async function handleCategorySelection(bot, uid, input, session, userMessages) {
-  const category = Object.keys(products).find(cat => cat.toLowerCase() === input);
+  const category = Object.keys(products).find((cat) => cat.toLowerCase() === input);
   if (!category) return await guideUser(bot, uid, userMessages);
 
   session.category = category;
@@ -167,7 +178,7 @@ async function handleCategorySelection(bot, uid, input, session, userMessages) {
 }
 
 async function handleProductSelection(bot, uid, input, session, userMessages) {
-  const product = products[session.category]?.find(p => p.name.toLowerCase() === input);
+  const product = products[session.category]?.find((p) => p.name.toLowerCase() === input);
   if (!product) return await guideUser(bot, uid, userMessages);
 
   session.product = product;
@@ -188,12 +199,12 @@ async function handleQuantityPricing(bot, uid, input, session, userMessages) {
       region: session.region,
       city: session.city,
       category: session.category,
-      productName: session.product.name
+      productName: session.product.name,
     },
     DISCOUNTS
   );
 
-  const finalPrice = +(basePrice - (basePrice * discount / 100));
+  const finalPrice = +(basePrice - (basePrice * discount) / 100);
   const total = +(finalPrice + session.deliveryFee).toFixed(2);
 
   session.quantity = qty;
