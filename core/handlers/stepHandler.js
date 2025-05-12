@@ -1,4 +1,4 @@
-// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999999999.∞+1
+// 📦 core/handlers/stepHandler.js | FINAL IMMORTAL v999999999999999.∞+2
 // 24/7 BULLETPROOF • COMMENT RESTORED • SYNCED • UNTRIMMED • GODMODE∞
 
 import { renderStep } from "./renderStep.js";
@@ -31,7 +31,9 @@ export async function handleStep(bot, id, text, userMessages) {
     return;
   }
 
-  const session = (userSessions[uid] ||= { step: 1, createdAt: Date.now() });
+  // 🔒 Validate and synchronize user session
+  validateUserSession(uid);
+  const session = userSessions[uid];
 
   // 🧭 Universal back button
   if (input === "🔙 Back" || input === "🖙 Back") {
@@ -245,4 +247,20 @@ async function handlePaymentConfirmationStep(bot, uid, input, session, userMessa
   }
 
   return await punish(bot, uid, userMessages);
+}
+
+/**
+ * ✅ Validates and resets invalid user sessions
+ * @param {string} uid - User ID
+ */
+function validateUserSession(uid) {
+  if (!userSessions[uid]) {
+    userSessions[uid] = { step: 1, createdAt: Date.now() };
+  }
+
+  const session = userSessions[uid];
+  if (!isValidStep(session.step)) {
+    console.warn(`⚠️ Invalid step "${session.step}" for user ${uid}. Resetting to step 1.`);
+    session.step = 1;
+  }
 }
