@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | DIAMOND FINAL v999999999999999.∞
+// 📦 core/handlers/paymentHandler.js | DIAMOND FINAL v999999999999999.∞+1
 // 24/7 BULLETPROOF | BTC, ETH, MATIC, SOL | QR + PRICE SYNC + DELIVERY INTEGRATED
 
 import { generateQR } from "../../utils/generateQR.js";
@@ -18,10 +18,16 @@ const SUPPORTED = {
   SOL:   { gecko: "solana",         coincap: "solana" }
 };
 
+/**
+ * Delays execution for a specified time.
+ */
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Retries a function with exponential backoff.
+ */
 async function fetchWithRetry(fn, retries = 4, delay = 1200) {
   for (let i = 0; i <= retries; i++) {
     try {
@@ -34,10 +40,16 @@ async function fetchWithRetry(fn, retries = 4, delay = 1200) {
   }
 }
 
+/**
+ * Normalizes the currency input to a standard format.
+ */
 function normalizeCurrency(input) {
   return ALIASES[String(input).toLowerCase()] || String(input).toUpperCase();
 }
 
+/**
+ * Fetches a safe crypto rate with validations.
+ */
 async function getSafeRate(currency) {
   const symbol = normalizeCurrency(currency);
   const coin = SUPPORTED[symbol];
@@ -48,6 +60,9 @@ async function getSafeRate(currency) {
   return { rate, symbol };
 }
 
+/**
+ * Ensures safe message sending with retries.
+ */
 async function sendSafe(fn, ...args) {
   for (let i = 0; i < 3; i++) {
     try {
@@ -66,6 +81,9 @@ async function sendSafe(fn, ...args) {
   return null;
 }
 
+/**
+ * Handles payment setup and QR generation.
+ */
 export async function handlePayment(bot, id, userMessages) {
   const s = userSessions[id];
   if (!s || s.step !== 7 || s.paymentInProgress) {
@@ -135,6 +153,9 @@ export async function handlePayment(bot, id, userMessages) {
   }
 }
 
+/**
+ * Handles payment cancellation.
+ */
 export async function handlePaymentCancel(bot, id, userMessages) {
   const s = userSessions[id];
   if (!s || s.step !== 8 || !s.paymentInProgress) {
@@ -149,6 +170,9 @@ export async function handlePaymentCancel(bot, id, userMessages) {
   return setTimeout(() => safeStart(bot, id), 500);
 }
 
+/**
+ * Handles payment confirmation after blockchain check.
+ */
 export async function handlePaymentConfirmation(bot, id, userMessages) {
   const s = userSessions[id];
   if (!(s && s.step === 9 && s.wallet && s.currency && s.expectedAmount)) {
