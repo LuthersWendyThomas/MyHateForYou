@@ -1,10 +1,15 @@
+// 🛡️ utils/cryptoChecker.js | IMMORTAL FINAL v1.0.0•GODMODE DIAMONDLOCK
+// 24/7 PAYMENT VERIFICATION • BTC/ETH/MATIC/SOL • LOG + ADMIN NOTIFY
+
 import fetch from "node-fetch";
-import fs from "fs";
-import path from "path";
+import fs    from "fs";
+import path  from "path";
 import { API, BOT, ALIASES } from "../config/config.js";
 
-const logPath = path.join(process.cwd(), "logs", "cryptoChecks.log");
+const logDir  = path.join(process.cwd(), "logs");
+const logPath = path.join(logDir, "cryptoChecks.log");
 
+// Supported symbols
 const SUPPORTED = {
   BTC: true,
   ETH: true,
@@ -12,148 +17,163 @@ const SUPPORTED = {
   SOL: true
 };
 
+/**
+ * Verifies on-chain payment ≥ expectedAmount.
+ * Logs every check and notifies admin on success.
+ *
+ * @param {string} wallet
+ * @param {string} currency  – e.g. "BTC","ETH","MATIC","SOL"
+ * @param {number} expectedAmount
+ * @param {object} bot       – telegram-bot instance (optional)
+ * @returns {Promise<boolean>}
+ */
 export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
-  const input = String(currency || "").trim().toLowerCase();
-  const cur = ALIASES[input] || input.toUpperCase();
-  const amount = parseFloat(expectedAmount);
+  const curInput = String(currency||"").trim().toLowerCase();
+  const cur       = ALIASES[curInput] || curInput.toUpperCase();
+  const amount    = parseFloat(expectedAmount);
 
+  // validate params
   if (
-    !wallet || typeof wallet !== "string" || wallet.length < 8 ||
-    !SUPPORTED[cur] || !Number.isFinite(amount) || amount <= 0
+    !wallet ||
+    typeof wallet !== "string" ||
+    wallet.length < 8 ||
+    !SUPPORTED[cur] ||
+    !Number.isFinite(amount) ||
+    amount <= 0
   ) {
-    log(wallet, cur, amount, "❌ INVALID PARAMS");
+    _log(wallet, cur, amount, "❌ INVALID PARAMS");
     return false;
   }
 
   try {
-    let result = false;
-
+    let paid = false;
     switch (cur) {
       case "BTC":
-        result = await checkBTC(wallet, amount);
+        paid = await _checkBTC(wallet, amount);
         break;
       case "ETH":
-        result = await checkEVM(wallet, amount, API.ETHEREUM_RPC, "ETH");
-        break;
       case "MATIC":
-        result = await checkEVM(wallet, amount, API.MATIC_RPC, "MATIC");
+        paid = await _checkEVM(
+          wallet,
+          amount,
+          cur === "ETH" ? API.ETHEREUM_RPC : API.MATIC_RPC,
+          cur
+        );
         break;
       case "SOL":
-        result = await checkSOL(wallet, amount);
+        paid = await _checkSOL(wallet, amount);
         break;
-      default:
-        log(wallet, cur, amount, "❌ UNSUPPORTED");
-        return false;
     }
 
-    log(wallet, cur, amount, result ? "✅ PAID" : "❌ NOT PAID");
+    _log(wallet, cur, amount, paid ? "✅ PAID" : "❌ NOT PAID");
 
-    if (result && bot?.sendMessage && BOT.ADMIN_ID) {
+    // alert admin on success
+    if (paid && bot?.sendMessage && BOT.ADMIN_ID) {
       const time = new Date().toLocaleString("en-GB");
       bot.sendMessage(
         BOT.ADMIN_ID,
         `✅ *Payment confirmed*\n\n• Currency: *${cur}*\n• Amount: *${amount}*\n• Wallet: \`${wallet}\`\n• Time: ${time}`,
         { parse_mode: "Markdown" }
-      ).catch(err => console.warn("⚠️ [Bot notify error]", err.message));
+      ).catch(e => console.warn("⚠️ [Admin notify error]", e.message));
     }
 
-    return result;
+    return paid;
   } catch (err) {
     console.error(`❌ [checkPayment fatal → ${cur}]:`, err.message);
-    log(wallet, cur, amount, "❌ ERROR");
+    _log(wallet, cur, amount, "❌ ERROR");
     return false;
   }
 }
 
-async function checkBTC(address, expected) {
+// —————————————————————————————————————————————
+
+async function _checkBTC(address, expected) {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout    = setTimeout(() => controller.abort(), 5000);
 
     const res = await fetch(`${API.BTC_RPC}${address}`, { signal: controller.signal });
     clearTimeout(timeout);
 
-    const satoshis = parseInt(await res.text(), 10);
-    if (!Number.isFinite(satoshis)) throw new Error("Invalid satoshi balance");
+    const sats = parseInt(await res.text(), 10);
+    if (!Number.isFinite(sats)) throw new Error("Invalid satoshi balance");
 
-    const btc = satoshis / 1e8;
-    return btc >= expected;
+    return sats / 1e8 >= expected;
   } catch (err) {
     console.error("❌ [BTC error]:", err.message);
     return false;
   }
 }
 
-async function checkEVM(address, expected, rpcUrl, label) {
+async function _checkEVM(address, expected, rpcUrl, label) {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout    = setTimeout(() => controller.abort(), 5000);
 
     const res = await fetch(rpcUrl, {
-      method: "POST",
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
+      signal:  controller.signal,
       body: JSON.stringify({
         jsonrpc: "2.0",
-        id: 1,
-        method: "eth_getBalance",
-        params: [address, "latest"]
+        id:      1,
+        method:  "eth_getBalance",
+        params:  [address, "latest"]
       })
     });
     clearTimeout(timeout);
 
-    const json = await res.json();
-    const hex = json?.result;
-    if (!hex || typeof hex !== "string") throw new Error(`Invalid ${label} hex`);
+    const json  = await res.json();
+    const hex   = json?.result;
+    if (typeof hex !== "string") throw new Error(`Invalid ${label} hex`);
 
-    const wei = parseInt(hex, 16);
-    const ethVal = wei / 1e18;
-    return ethVal >= expected;
+    const wei   = parseInt(hex, 16);
+    const value = wei / (1e18);
+    return value >= expected;
   } catch (err) {
     console.error(`❌ [${label} error]:`, err.message);
     return false;
   }
 }
 
-async function checkSOL(address, expected) {
+async function _checkSOL(address, expected) {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout    = setTimeout(() => controller.abort(), 5000);
 
     const res = await fetch(API.SOLANA_RPC, {
-      method: "POST",
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
+      signal:  controller.signal,
       body: JSON.stringify({
         jsonrpc: "2.0",
-        id: 1,
-        method: "getBalance",
-        params: [address]
+        id:      1,
+        method:  "getBalance",
+        params:  [address]
       })
     });
     clearTimeout(timeout);
 
-    const json = await res.json();
+    const json     = await res.json();
     const lamports = json?.result?.value;
-    if (!Number.isFinite(lamports)) throw new Error("Invalid SOL lamports");
+    if (!Number.isFinite(lamports)) throw new Error("Invalid lamports");
 
-    const sol = lamports / 1e9;
-    return sol >= expected;
+    return lamports / 1e9 >= expected;
   } catch (err) {
     console.error("❌ [SOL error]:", err.message);
     return false;
   }
 }
 
-function log(wallet, currency, amount, status) {
-  try {
-    const dir = path.dirname(logPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+// —————————————————————————————————————————————
 
-    const time = new Date().toISOString();
-    const entry = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
-    fs.appendFileSync(logPath, entry, "utf8");
+function _log(wallet, currency, amount, status) {
+  try {
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+    const time  = new Date().toISOString();
+    const line  = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
+    fs.appendFileSync(logPath, line, "utf8");
   } catch (err) {
-    console.warn("⚠️ [log error]:", err.message);
+    console.warn("⚠️ [cryptoChecks.log error]:", err.message);
   }
 }
