@@ -1,11 +1,11 @@
-// 📦 helpers/messageUtils.js | FINAL IMMORTAL v99999999999.∞+2 — TITANLOCK GODMODE SYNC
+// 📦 helpers/messageUtils.js | FINAL IMMORTAL v99999999999.∞+3 — TITANLOCK GODMODE SYNCED + ULTRA BULLETPROOF
 
 import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
 import { banUser } from "../utils/bans.js";
 import { BOT } from "../config/config.js";
 
-const CLEANUP_TIMEOUT_MS = 27 * 60 * 1000; // Default cleanup timeout
+const CLEANUP_TIMEOUT_MS = 27 * 60 * 1000; // Default cleanup timeout (27 minutes)
 const MAX_MESSAGE_LENGTH = 4096; // Telegram message size limit
 
 /**
