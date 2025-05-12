@@ -145,7 +145,8 @@ export function verifySessionStep(id) {
 // ✅ Valid steps definition
 // ==============================
 export function isValidStep(step) {
-  return Number.isInteger(step) && step >= 1 && step <= 9;
+  // allow 1, 1.2, 2, 2.1, 2.2, … up through 9
+  return Number.isFinite(step) && step >= 1 && step <= 9;
 }
 
 // ==============================
