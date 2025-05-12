@@ -24,7 +24,7 @@ export async function sendAndTrack(bot, id, text, options = {}, messages = userM
     const msg = await safeSend(bot, id, chunk, {
       parse_mode: "Markdown",
       disable_web_page_preview: true,
-      ...options
+      ...options,
     });
 
     if (msg?.message_id) {
@@ -72,11 +72,13 @@ export async function sendKeyboard(bot, id, text, keyboard, messages = userMessa
 
   try {
     const normalizedKeyboard = normalizeKeyboard(keyboard);
+    logAction("✅ [sendKeyboard Debug]", JSON.stringify(normalizedKeyboard, null, 2)); // Debugging output
+
     const replyMarkup = {
       keyboard: normalizedKeyboard,
       resize_keyboard: true,
       one_time_keyboard: false,
-      selective: false
+      selective: false,
     };
 
     return await sendAndTrack(bot, id, text, { reply_markup: replyMarkup, ...options }, messages);
@@ -96,13 +98,15 @@ export async function sendPhotoAndTrack(bot, id, photo, options = {}, messages =
   }
 
   try {
-    const msg = await bot.sendPhoto(id, photo, {
-      parse_mode: "Markdown",
-      ...options
-    }).catch(e => {
-      logError("⚠️ [sendPhoto error]", e, id);
-      return null;
-    });
+    const msg = await bot
+      .sendPhoto(id, photo, {
+        parse_mode: "Markdown",
+        ...options,
+      })
+      .catch((e) => {
+        logError("⚠️ [sendPhoto error]", e, id);
+        return null;
+      });
 
     if (msg?.message_id) {
       trackMessage(id, msg.message_id, messages);
@@ -136,7 +140,7 @@ export async function safeAlert(bot, id, text) {
   try {
     return await bot.sendMessage(id, text, {
       parse_mode: "Markdown",
-      disable_web_page_preview: true
+      disable_web_page_preview: true,
     });
   } catch (err) {
     logError("⚠️ [safeAlert failed]", err, id);
@@ -187,7 +191,7 @@ function scheduleCleanup(bot, id, messages = userMessages) {
     try {
       const msgIds = Array.isArray(messages[uid]) ? messages[uid] : [];
       for (const msgId of msgIds) {
-        await bot.deleteMessage(uid, msgId).catch(e => {
+        await bot.deleteMessage(uid, msgId).catch((e) => {
           logError(`⚠️ [Delete failed #${msgId}]`, e, uid);
         });
       }
@@ -227,9 +231,21 @@ function splitMessage(text) {
  * 🧩 Normalize keyboard structure (prevents bugs)
  */
 function normalizeKeyboard(keyboard) {
-  if (!Array.isArray(keyboard)) return [];
-  return keyboard.map(row => {
-    if (Array.isArray(row)) return row.map(button => String(button).trim());
+  if (!Array.isArray(keyboard)) {
+    logError("⚠️ [normalizeKeyboard]", new Error("Invalid keyboard structure"));
+    return [];
+  }
+
+  return keyboard.map((row) => {
+    if (Array.isArray(row)) {
+      return row.map((button) => {
+        if (!button?.text) {
+          logError("⚠️ [normalizeKeyboard]", new Error("Button missing 'text' property"));
+          return { text: "❌ Invalid Button" }; // Fallback for invalid buttons
+        }
+        return String(button.text).trim();
+      });
+    }
     return [String(row).trim()];
   });
 }
