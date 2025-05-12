@@ -12,7 +12,7 @@ export const MENU_BUTTONS = {
   HELP: { text: "❓ Help", callback_data: "MENU_HELP" },
   STATS: { text: "📊 Stats", callback_data: "MENU_STATS" },
   ADMIN: { text: "🛠 Admin", callback_data: "MENU_ADMIN" },
-  BACK: { text: "🔙 Back" }, // ← PRIDĖK ŠITĄ EILUTĘ
+  BACK: { text: "🔙 Back" },
   CONFIRM: { text: "✅ Confirm" },
   CANCEL: { text: "❌ Cancel" },
   YES: { text: "✅ Yes" },
@@ -25,7 +25,7 @@ export const MENU_BUTTONS = {
 export const MAIN_KEYBOARD = createKeyboard([
   [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
   [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS],
-  [MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN],
+  [MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN]
 ]);
 
 /**
@@ -41,7 +41,7 @@ export function getMainMenu(id) {
   try {
     const rows = [
       [MENU_BUTTONS.BUY, MENU_BUTTONS.HELP],
-      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS],
+      [MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS]
     ];
 
     if (isAdmin) {
@@ -49,11 +49,10 @@ export function getMainMenu(id) {
     }
 
     const keyboard = createKeyboard(rows);
-    logAction("✅ [getMainMenu]", `Generated keyboard for user ${uid}${isAdmin ? " (admin)" : ""}`);
+    logAction("✅ [getMainMenu]", `Generated keyboard → ${uid}${isAdmin ? " (admin)" : ""}`);
     return { reply_markup: keyboard };
   } catch (err) {
     logError("❌ [getMainMenu error]", err, uid);
-    // Fallback to MAIN_KEYBOARD
     return MAIN_KEYBOARD;
   }
 }
@@ -63,49 +62,53 @@ export function getMainMenu(id) {
  * @param {Array<Array<{ text: string, callback_data?: string }>>} rows — Button rows
  * @returns {object} Telegram reply_markup object
  */
-function createKeyboard(rows) {
+export function createKeyboard(rows) {
   const normalizedKeyboard = normalizeKeyboard(rows);
-  logAction("✅ [createKeyboard]", JSON.stringify(normalizedKeyboard, null, 2)); // Debugging output
   return {
     keyboard: normalizedKeyboard,
     resize_keyboard: true,
     one_time_keyboard: false,
-    selective: false,
+    selective: false
   };
 }
 
 /**
  * ✅ Keyboard normalizer — guarantees safe formatting
  * @param {Array<Array<{ text: string, callback_data?: string }>>} keyboard
- * @returns {Array<Array<{ text: string, callback_data?: string }>>}
+ * @returns {Array<Array<{ text: string }>>}
  */
-function normalizeKeyboard(keyboard) {
+export function normalizeKeyboard(keyboard) {
   if (!Array.isArray(keyboard)) {
     logError("⚠️ [normalizeKeyboard]", new Error("Invalid keyboard structure"));
-    return [];
+    return [[{ text: "❌ Invalid Keyboard" }]];
   }
 
   return keyboard.map(row => {
-    if (Array.isArray(row)) {
-      return row.map(button => {
-        if (!button?.text) {
-          logError("⚠️ [normalizeKeyboard]", new Error("Button missing 'text' property"));
-          return { text: "❌ Invalid Button" }; // Fallback for invalid buttons
-        }
-        return {
-          text: String(button.text).trim(),
-          callback_data: button.callback_data ? String(button.callback_data).trim() : undefined,
-        };
-      });
-    }
-    return [{ text: String(row).trim() }];
+    if (!Array.isArray(row)) return [{ text: String(row || "").trim() }];
+    return row.map(btn => {
+      if (!btn?.text) {
+        logError("⚠️ [normalizeKeyboard]", new Error("Missing 'text' on button"));
+        return { text: "❌ Invalid Button" };
+      }
+      return { text: String(btn.text).trim() };
+    });
   });
 }
 
 /**
- * ✅ Safely sanitizes user/admin ID
- * @param {string|number} id
- * @returns {string|null} Sanitized ID or null
+ * ✅ Returns fallback keyboard
+ */
+export function getFallbackKeyboard() {
+  return {
+    keyboard: [[{ text: MENU_BUTTONS.HELP.text }]],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+    selective: true
+  };
+}
+
+/**
+ * ✅ ID sanitizer
  */
 function safeId(id) {
   const str = String(id || "").trim();
@@ -113,37 +116,15 @@ function safeId(id) {
 }
 
 /**
- * ✅ Logs successful actions
- * @param {string} action — Action description
- * @param {string} message — Additional details
+ * 📝 Logger (success)
  */
 function logAction(action, message) {
   console.log(`${new Date().toISOString()} ${action} → ${message}`);
 }
 
 /**
- * ⚠️ Logs errors
- * @param {string} action — Action description
- * @param {Error} error — Error object
- * @param {string} [uid] — User ID (if applicable)
+ * ⚠️ Logger (error)
  */
 function logError(action, error, uid = null) {
-  console.error(
-    `${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`
-  );
-}
-
-/**
- * ✅ Creates and normalizes fallback keyboard structure
- * @returns {object} — Basic fallback keyboard
- */
-function getFallbackKeyboard() {
-  const fallbackKeyboard = {
-    keyboard: [[MENU_BUTTONS.HELP]],
-    resize_keyboard: true,
-    one_time_keyboard: false,
-    selective: true,
-  };
-  logAction("✅ [getFallbackKeyboard]", JSON.stringify(fallbackKeyboard, null, 2)); // Debugging output
-  return fallbackKeyboard;
+  console.error(`${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`);
 }
