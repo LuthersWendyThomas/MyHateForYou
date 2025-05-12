@@ -215,9 +215,7 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
     );
 
     const symbol = normalizeCurrency(session.currency);
-    const paid = await fetchWithRetry(() =>
-      checkPayment(session.wallet, symbol, session.expectedAmount, bot)
-    );
+    const paid = await checkPayment(session.wallet, symbol, session.expectedAmount);
 
     if (!paid) {
       return sendKeyboard(
@@ -238,7 +236,7 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
     delete session.paymentInProgress;
     delete session.expectedAmount;
 
-    // Record order & notify admin
+    // Record order & save
     userOrders[id] = (userOrders[id] || 0) + 1;
     saveOrder(id, session.city, session.product.name, session.totalPrice)
       .catch(e => console.warn("⚠️ [saveOrder failed]", e.message));
@@ -249,17 +247,7 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
       {}, userMsgs
     );
 
-    if (BOT.ADMIN_ID) {
-      await safeSend(() =>
-        bot.sendMessage(
-          BOT.ADMIN_ID,
-          `✅ Payment received → \`${session.wallet}\``,
-          { parse_mode: "Markdown" }
-        )
-      );
-    }
-
-    // Begin delivery; session will cleanup after delivery sequence
+    // Begin delivery; session will clean up after sequence
     return simulateDelivery(bot, id, session.deliveryMethod, userMsgs);
   } catch (err) {
     console.error("❌ [handlePaymentConfirmation error]:", err.message || err);
