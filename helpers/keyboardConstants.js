@@ -6,15 +6,12 @@ import { BOT } from "../config/config.js";
  * ✅ Centralized button labels (for users and admins)
  */
 export const MENU_BUTTONS = {
-  START: "🚀 START",
-  BUY: "🛒 BUY",
-  PROFILE: "👤 PROFILE",
-  ORDERS: "📋 MY ORDERS",
-  HELP: "❓ HELP",
-
-  // Admin section
-  STATS: "📊 STATISTICS",
-  ADMIN: "🔧 ADMIN PANEL"
+  BUY: { text: "🛒 Buy", callback_data: "MENU_BUY" },
+  PROFILE: { text: "👤 Profile", callback_data: "MENU_PROFILE" },
+  ORDERS: { text: "📦 Orders", callback_data: "MENU_ORDERS" },
+  HELP: { text: "❓ Help", callback_data: "MENU_HELP" },
+  STATS: { text: "📊 Stats", callback_data: "MENU_STATS" },
+  ADMIN: { text: "🛠 Admin", callback_data: "MENU_ADMIN" },
 };
 
 /**
