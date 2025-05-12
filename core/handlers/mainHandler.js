@@ -28,28 +28,35 @@ export function registerMainHandler(bot) {
 
   // 🧠 Handle button interactions via stepHandler
   bot.on("callback_query", async (query) => {
-    const chatId = query?.message?.chat?.id;
-    const data = query?.data;
+  const chatId = query?.message?.chat?.id;
+  const callbackData = query?.data;
 
-    if (!chatId || !data) return;
+  if (!chatId || !callbackData) return;
 
-    const uid = String(chatId).trim();
+  const uid = String(chatId).trim();
+  try {
+    markUserActive(uid);
+
+    // Log the callback data for debugging
+    console.log(`📥 [callback_query] UID: ${uid}, Data: ${callbackData}`);
+
+    // Route the callback data to the step handler
+    await handleStep(bot, uid, callbackData, userMessages);
+
+    // Acknowledge the callback query
+    await bot.answerCallbackQuery(query.id).catch(() => {});
+  } catch (err) {
+    console.error("❌ [callback_query error]:", err);
     try {
-      markUserActive(uid);
-      await handleStep(bot, uid, data, userMessages);
-      await bot.answerCallbackQuery(query.id).catch(() => {});
-    } catch (err) {
-      console.error("❌ [callback_query] stepHandler error:", err);
-      try {
-        await bot.answerCallbackQuery(query.id, {
-          text: "❌ Error processing your action. Please try again.",
-          show_alert: true,
-        });
-      } catch (callbackErr) {
-        console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
-      }
+      await bot.answerCallbackQuery(query.id, {
+        text: "❌ Error processing your action. Please try again.",
+        show_alert: true,
+      });
+    } catch (callbackErr) {
+      console.warn("⚠️ Failed to answer callback query:", callbackErr.message);
     }
-  });
+  }
+});
 
   // 🧠 Handle incoming messages
   bot.on("message", async (msg) => {
