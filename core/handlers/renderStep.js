@@ -19,6 +19,7 @@ import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
  */
 export async function renderStep(bot, uid, step, userMessages) {
   const session = userSessions[uid];
+  validateSession(session);
 
   try {
     switch (step) {
