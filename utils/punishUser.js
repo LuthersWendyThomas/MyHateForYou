@@ -20,17 +20,16 @@ export async function punish(bot, id, messages = userMessages) {
     validateUserSession(uid);
 
     const warning = "⚠️ *Invalid action.*\nPlease use the *buttons below*.";
-    const msg = await sendAndTrack(
-      bot,
-      uid,
-      warning,
-      {
-        parse_mode: "Markdown",
-        disable_notification: true,
-        reply_markup: MAIN_KEYBOARD,
-      },
-      messages
-    );
+await sendAndTrack(
+  bot,
+  uid,
+  warning,
+  {
+    parse_mode: "Markdown",
+    reply_markup: MAIN_KEYBOARD || getFallbackKeyboard(),
+  },
+  messages
+);
 
     const messageId = msg?.message_id;
     const shouldDelete = autodeleteEnabled?.status === true;
