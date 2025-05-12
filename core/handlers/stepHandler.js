@@ -212,8 +212,8 @@ export async function handleStep(bot, id, text, userMessages) {
 
   // BACK pressed?
   if (input === MENU_BUTTONS.BACK.text.toLowerCase()) {
-    // at step 1 → full reset + greeting
-    if (session.step === 1) {
+    // at step 1.2 → full reset + greeting
+    if (session.step === 1.2) {
       await resetSession(uid);
       return safeStart(bot, uid);
     }
@@ -223,16 +223,16 @@ export async function handleStep(bot, id, text, userMessages) {
 
   try {
     switch (session.step) {
-      case 1:   return handleRegion(         bot, uid, input, session, userMessages);
-      case 1.2: return handleCity(           bot, uid, input, session, userMessages);
-      case 2:   return handleDelivery(       bot, uid, input, session, userMessages);
-      case 2.1: return handlePromoDecision(  bot, uid, input, session, userMessages);
-      case 2.2: return handlePromoCode(      bot, uid, text,   session, userMessages);
-      case 3:   return handleCategory(       bot, uid, input, session, userMessages);
-      case 4:   return handleProduct(        bot, uid, input, session, userMessages);
-      case 5:   return handleQuantity(       bot, uid, input, session, userMessages);
-      case 6:   return handleCurrency(       bot, uid, input, session, userMessages);
-      case 7:   return handleOrderConfirm(   bot, uid, input, session, userMessages);
+      case 1:   return handleRegion(        bot, uid, input, session, userMessages);
+      case 1.2: return handleCity(          bot, uid, input, session, userMessages);
+      case 2:   return handleDelivery(      bot, uid, input, session, userMessages);
+      case 2.1: return handlePromoDecision( bot, uid, input, session, userMessages);
+      case 2.2: return handlePromoCode(     bot, uid, text,   session, userMessages);
+      case 3:   return handleCategory(      bot, uid, input, session, userMessages);
+      case 4:   return handleProduct(       bot, uid, input, session, userMessages);
+      case 5:   return handleQuantity(      bot, uid, input, session, userMessages);
+      case 6:   return handleCurrency(      bot, uid, input, session, userMessages);
+      case 7:   return handleOrderConfirm(  bot, uid, input, session, userMessages);
       case 8:   return handleConfirmOrCancel(bot, uid, input, session, userMessages);
       default:
         await resetSession(uid);
@@ -265,11 +265,17 @@ async function handleRegion(bot, uid, input, session, userMessages) {
 }
 
 async function handleCity(bot, uid, input, session, userMessages) {
-  // strip leading non-alphanumerics
-  const cleaned   = input.replace(/^[^a-z0-9]+/i, "").trim().toLowerCase();
+  // strip any leading emoji/special chars from user input
+  const cleaned = input.replace(/^[^a-z0-9]+/i, "").trim().toLowerCase();
   const citiesMap = REGION_MAP[session.region]?.cities || {};
-  const cityKey   = Object.keys(citiesMap)
-    .find(c => c.toLowerCase() === cleaned);
+  // match by stripped city name
+  const cityKey = Object.keys(citiesMap).find(cityName => {
+    const base = cityName
+      .replace(/^[^a-z0-9]+/i, "")
+      .trim()
+      .toLowerCase();
+    return base === cleaned;
+  });
   if (!cityKey) {
     return renderStep(bot, uid, 1.2, userMessages);
   }
@@ -351,7 +357,7 @@ async function handleQuantity(bot, uid, input, session, userMessages) {
 
 async function handleCurrency(bot, uid, input, session, userMessages) {
   const wallet = WALLETS[input.toUpperCase()];
-  if (!wallet) return renderStep(bot, uid, 6, userMessages);  
+  if (!wallet) return renderStep(bot, uid, 6, userMessages);
   session.currency = input.toUpperCase();
   session.wallet   = wallet;
   session.step     = 7;
@@ -378,9 +384,15 @@ async function handleConfirmOrCancel(bot, uid, input, session, userMessages) {
   return renderStep(bot, uid, session.step, userMessages);
 }
 
-function handleBackButton(bot, uid, session, userMessages) {
-  const map = { 1.2:1, 2:1.2, 2.1:2, 2.2:2.1, 3:2.1, 4:3, 5:4, 6:5, 7:6, 8:7 };
-  session.step = map[session.step] || 1;
+async function handleBackButton(bot, uid, session, userMessages) {
+  // jei grįžtam iš city selection – full reset
+  if (session.step === 1.2) {
+    await resetSession(uid);
+    return safeStart(bot, uid);
+  }
+  // kituose žingsniuose – FSM atgal
+  const prevMap = { 2:1.2, "2.1":2, "2.2":2.1, 3:2.1, 4:3, 5:4, 6:5, 7:6, 8:7 };
+  session.step = prevMap[session.step] || 1;
   return renderStep(bot, uid, session.step, userMessages);
 }
 
