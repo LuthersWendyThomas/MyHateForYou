@@ -1,5 +1,5 @@
 // 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.0.1•GODMODE+TITANLOCK+SYNC
-// 24/7 BULLETPROOF • ADMIN NOTIFIER • AUTO-RESILIENT • MAX DIAGNOSTICS
+// 24/7 BULLETPROOF • AUTO-RESILIENT • MAX DIAGNOSTICS
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -11,18 +11,10 @@ import { autoExpireSessions, cleanStalePaymentTimers } from "./core/sessionManag
 import "./config/discountSync.js"; // ⛓️ Always last: pulls latest live discount state
 
 /**
- * 🔔 Crash + rejection notifier
+ * 🔔 Crash + rejection notifier (no admin notifications)
  */
 async function notifyCrash(source, err) {
-  const now = new Date().toLocaleString("en-GB");
-  const msg = `❗️ *Bot crashed during ${source}!*\n\n💥 Error: \`${err?.message || err}\`\n🕒 ${now}`;
-  try {
-    if (BOT.ADMIN_ID && BOT.INSTANCE?.sendMessage) {
-      await BOT.INSTANCE.sendMessage(BOT.ADMIN_ID, msg, { parse_mode: "Markdown" });
-    }
-  } catch {
-    console.warn("⚠️ Failed to notify admin about crash.");
-  }
+  console.error(`💥 [CRASH during ${source}]:`, err);
 }
 
 // 🔧 Init & main logic boot
@@ -49,7 +41,7 @@ async function notifyCrash(source, err) {
       }
     }, 5 * 60 * 1000);
 
-    // 🚀 Startup check + logging + admin ping
+    // 🚀 Startup check + logging
     const me = await BOT.INSTANCE.getMe();
     const pkg = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"));
     const version = pkg.version || "1.0.0";
@@ -64,13 +56,7 @@ async function notifyCrash(source, err) {
 👤 Logged in as: @${me.username} (${me.first_name})
 `.trim());
 
-    if (BOT.ADMIN_ID && !isNaN(BOT.ADMIN_ID)) {
-      await BOT.INSTANCE.sendMessage(
-        BOT.ADMIN_ID,
-        `✅ *BalticPharmacyBot v${version}* successfully launched!\n🕒 *${now}*`,
-        { parse_mode: "Markdown" }
-      );
-    }
+    // Admin startup ping disabled
 
   } catch (err) {
     console.error("💥 [BOOT ERROR]:", err);
