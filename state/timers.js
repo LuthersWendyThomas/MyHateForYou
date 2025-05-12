@@ -1,174 +1,165 @@
-// 📦 state/timers.js | FINAL IMMORTAL DIAMONDLOCK v999999999.∞ — BULLETPROOF SYNC CORE
+// 📦 state/timers.js | FINAL IMMORTAL v1.0.0•GODMODE DIAMONDLOCK
 // MAXIMUM OPTIMIZATION • ZERO ERROR TOLERANCE • AUTO-CLEANUP • MULTI-TIMER SUPPORT
 
-export const activeTimers = {};     // { userId: Timeout } – delivery, cleanup, etc.
-export const paymentTimers = {};    // { userId: Timeout } – payment step (8)
+import { activeTimers, paymentTimers } from "./userState.js";
 
 /**
- * ✅ Assigns or updates an active delivery/UI timer with auto-clear
- * @param {string|number} id - User ID
- * @param {Timeout} timerId - Timer reference
+ * ✅ Sets or replaces an active timer for a user, auto-clearing any previous one
+ * @param {string|number} id      - User ID
+ * @param {NodeJS.Timeout|number} timerId - Timer reference returned by setTimeout
  */
 export function setActiveTimer(id, timerId) {
-  const uid = safeId(id);
-  if (!uid || !isValidTimer(timerId)) {
-    logError("🕒 [setActiveTimer error]", `Invalid ID or Timer`, uid);
+  const uid = sanitizeId(id);
+  if (!uid) {
+    logError("🕒 [setActiveTimer]", "Invalid user ID", id);
     return;
   }
-
-  try {
-    if (activeTimers[uid]) {
-      clearTimeout(activeTimers[uid]);
-      logAction("🕒 [setActiveTimer]", `Previous timer cleared`, uid);
-    }
-    activeTimers[uid] = timerId;
-
-    logAction("🕒 [setActiveTimer]", `Active timer set`, uid);
-  } catch (err) {
-    logError("❌ [setActiveTimer error]", err, uid);
+  if (!isValidTimer(timerId)) {
+    logError("🕒 [setActiveTimer]", "Invalid timer reference", uid);
+    return;
   }
+  // clear any existing active timer
+  if (activeTimers[uid]) {
+    clearTimer(activeTimers[uid], uid, "active");
+  }
+  activeTimers[uid] = timerId;
+  logAction("🕒 [setActiveTimer]", "Active timer set", uid);
 }
 
 /**
- * ✅ Assigns or updates a payment confirmation timer
- * @param {string|number} id - User ID
- * @param {Timeout} timerId - Timer reference
+ * ✅ Sets or replaces a payment timer for a user, auto-clearing any previous one
+ * @param {string|number} id
+ * @param {NodeJS.Timeout|number} timerId
  */
 export function setPaymentTimer(id, timerId) {
-  const uid = safeId(id);
-  if (!uid || !isValidTimer(timerId)) {
-    logError("💳 [setPaymentTimer error]", `Invalid ID or Timer`, uid);
+  const uid = sanitizeId(id);
+  if (!uid) {
+    logError("💳 [setPaymentTimer]", "Invalid user ID", id);
     return;
   }
-
-  try {
-    if (paymentTimers[uid]) {
-      clearTimeout(paymentTimers[uid]);
-      logAction("💳 [setPaymentTimer]", `Previous payment timer cleared`, uid);
-    }
-    paymentTimers[uid] = timerId;
-
-    logAction("💳 [setPaymentTimer]", `Payment timer set`, uid);
-  } catch (err) {
-    logError("❌ [setPaymentTimer error]", err, uid);
+  if (!isValidTimer(timerId)) {
+    logError("💳 [setPaymentTimer]", "Invalid timer reference", uid);
+    return;
   }
+  if (paymentTimers[uid]) {
+    clearTimer(paymentTimers[uid], uid, "payment");
+  }
+  paymentTimers[uid] = timerId;
+  logAction("💳 [setPaymentTimer]", "Payment timer set", uid);
 }
 
 /**
- * ✅ Clears all system timers across all users
+ * ✅ Clears all timers for all users (both active and payment)
  */
 export function clearAllTimers() {
   try {
     for (const [uid, timer] of Object.entries(activeTimers)) {
       clearTimer(timer, uid, "active");
     }
-
     for (const [uid, timer] of Object.entries(paymentTimers)) {
       clearTimer(timer, uid, "payment");
     }
-
-    logAction("🧨 [clearAllTimers]", `All timers cleared (Active + Payment)`);
+    logAction("🧨 [clearAllTimers]", "All timers cleared");
   } catch (err) {
     logError("❌ [clearAllTimers error]", err);
   }
 }
 
 /**
- * ✅ Clears all timers (active and payment) for a specific user
- * @param {string|number} id - User ID
+ * ✅ Clears both active and payment timers for a specific user
+ * @param {string|number} id
  */
 export function clearTimersForUser(id) {
-  const uid = safeId(id);
+  const uid = sanitizeId(id);
   if (!uid) {
-    logError("❌ [clearTimersForUser error]", `Invalid User ID`, id);
+    logError("❌ [clearTimersForUser]", "Invalid user ID", id);
     return;
   }
-
   try {
     if (activeTimers[uid]) {
       clearTimer(activeTimers[uid], uid, "active");
     }
-
     if (paymentTimers[uid]) {
       clearTimer(paymentTimers[uid], uid, "payment");
     }
-
-    logAction("🕒 [clearTimersForUser]", `All timers cleared for user`, uid);
+    logAction("🕒 [clearTimersForUser]", "User timers cleared", uid);
   } catch (err) {
     logError("❌ [clearTimersForUser error]", err, uid);
   }
 }
 
 /**
- * 🧪 Debugging tool: Prints a summary of all active timers
+ * 🧪 Prints a summary of all active and payment timers to console
  */
 export function printTimersSummary() {
-  const activeCount = Object.keys(activeTimers).length;
+  const activeCount  = Object.keys(activeTimers).length;
   const paymentCount = Object.keys(paymentTimers).length;
-
-  logAction("📊 [printTimersSummary]", `Active timers: ${activeCount}, Payment timers: ${paymentCount}`);
-
+  logAction(
+    "📊 [printTimersSummary]",
+    `Active timers: ${activeCount}, Payment timers: ${paymentCount}`
+  );
   for (const [uid, timer] of Object.entries(activeTimers)) {
-    console.log(`🕒 Active Timer → User: ${uid}, Timer: ${timer}`);
+    console.log(`🕒 Active Timer → UID=${uid}, Timer=${timer}`);
   }
-
   for (const [uid, timer] of Object.entries(paymentTimers)) {
-    console.log(`💳 Payment Timer → User: ${uid}, Timer: ${timer}`);
+    console.log(`💳 Payment Timer → UID=${uid}, Timer=${timer}`);
   }
 }
 
 // ————— HELPERS —————
 
 /**
- * ✅ Checks if a timer is valid
- * @param {Timeout} timer - Timer reference
- * @returns {boolean} - True if timer is valid
+ * ✅ Validates that the timer reference is something clearTimeout can handle
  */
 function isValidTimer(timer) {
-  return timer && typeof timer._onTimeout === "function";
+  return (
+    timer != null &&
+    (typeof timer === "number" ||
+      (typeof timer === "object" && typeof timer.ref === "function"))
+  );
 }
 
 /**
- * ✅ Safely sanitizes a user ID
- * @param {string|number} id - Input ID
- * @returns {string|null} - Sanitized ID or null
+ * 🔒 Sanitizes incoming IDs to non-empty strings
  */
-function safeId(id) {
-  const str = String(id || "").trim();
-  return str && str !== "undefined" && str !== "null" ? str : null;
+function sanitizeId(id) {
+  const s = String(id ?? "").trim();
+  return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
 /**
- * ✅ Clears a specific timer
- * @param {Timeout} timer - Timer reference
- * @param {string} uid - User ID
- * @param {string} type - Timer type ("active" or "payment")
+ * ✅ Clears a single timer and removes it from its store
  */
 function clearTimer(timer, uid, type) {
-  if (isValidTimer(timer)) {
-    clearTimeout(timer);
-    if (type === "active") delete activeTimers[uid];
-    if (type === "payment") delete paymentTimers[uid];
-    logAction(`🕒 [clearTimer]`, `${type} timer cleared`, uid);
+  if (!isValidTimer(timer)) {
+    logError("❌ [clearTimer]", `Invalid ${type} timer`, uid);
+    return;
   }
+  clearTimeout(timer);
+  if (type === "active") delete activeTimers[uid];
+  if (type === "payment") delete paymentTimers[uid];
+  logAction("🕒 [clearTimer]", `${type} timer cleared`, uid);
 }
 
 /**
- * 📝 Logs successful actions
- * @param {string} action - Action description
- * @param {string} message - Additional details
- * @param {string} [uid] - User ID (optional)
+ * 📋 Logs successful actions
  */
-function logAction(action, message, uid = null) {
-  console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (ID: ${uid})` : ""}`);
+function logAction(action, message, uid = "") {
+  console.log(
+    `${new Date().toISOString()} ${action} → ${message}${
+      uid ? ` (UID: ${uid})` : ""
+    }`
+  );
 }
 
 /**
  * ⚠️ Logs errors
- * @param {string} action - Action description
- * @param {Error|string} error - Error object or message
- * @param {string} [uid] - User ID (optional)
  */
-function logError(action, error, uid = null) {
-  console.error(`${new Date().toISOString()} ${action} → ${error.message || error}${uid ? ` (ID: ${uid})` : ""}`);
+function logError(action, error, uid = "") {
+  const msg = error?.message || error;
+  console.error(
+    `${new Date().toISOString()} ${action} → ${msg}${
+      uid ? ` (UID: ${uid})` : ""
+    }`
+  );
 }
