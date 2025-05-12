@@ -1,10 +1,10 @@
-// 🛡️ utils/cryptoChecker.js | IMMORTAL FINAL v1.0.0•GODMODE DIAMONDLOCK
-// 24/7 PAYMENT VERIFICATION • BTC/ETH/MATIC/SOL • LOG + ADMIN NOTIFY
+// 🛡️ utils/cryptoChecker.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
+// 24/7 PAYMENT VERIFICATION • BTC/ETH/MATIC/SOL • LOG ONLY
 
 import fetch from "node-fetch";
 import fs    from "fs";
 import path  from "path";
-import { API, BOT, ALIASES } from "../config/config.js";
+import { API, ALIASES } from "../config/config.js";
 
 const logDir  = path.join(process.cwd(), "logs");
 const logPath = path.join(logDir, "cryptoChecks.log");
@@ -19,18 +19,17 @@ const SUPPORTED = {
 
 /**
  * Verifies on-chain payment ≥ expectedAmount.
- * Logs every check and notifies admin on success.
+ * Logs every check.
  *
  * @param {string} wallet
  * @param {string} currency  – e.g. "BTC","ETH","MATIC","SOL"
  * @param {number} expectedAmount
- * @param {object} bot       – telegram-bot instance (optional)
  * @returns {Promise<boolean>}
  */
-export async function checkPayment(wallet, currency, expectedAmount, bot = null) {
-  const curInput = String(currency||"").trim().toLowerCase();
-  const cur       = ALIASES[curInput] || curInput.toUpperCase();
-  const amount    = parseFloat(expectedAmount);
+export async function checkPayment(wallet, currency, expectedAmount) {
+  const curInput = String(currency || "").trim().toLowerCase();
+  const cur      = ALIASES[curInput] || curInput.toUpperCase();
+  const amount   = parseFloat(expectedAmount);
 
   // validate params
   if (
@@ -66,18 +65,8 @@ export async function checkPayment(wallet, currency, expectedAmount, bot = null)
     }
 
     _log(wallet, cur, amount, paid ? "✅ PAID" : "❌ NOT PAID");
-
-    // alert admin on success
-    if (paid && bot?.sendMessage && BOT.ADMIN_ID) {
-      const time = new Date().toLocaleString("en-GB");
-      bot.sendMessage(
-        BOT.ADMIN_ID,
-        `✅ *Payment confirmed*\n\n• Currency: *${cur}*\n• Amount: *${amount}*\n• Wallet: \`${wallet}\`\n• Time: ${time}`,
-        { parse_mode: "Markdown" }
-      ).catch(e => console.warn("⚠️ [Admin notify error]", e.message));
-    }
-
     return paid;
+
   } catch (err) {
     console.error(`❌ [checkPayment fatal → ${cur}]:`, err.message);
     _log(wallet, cur, amount, "❌ ERROR");
@@ -123,13 +112,13 @@ async function _checkEVM(address, expected, rpcUrl, label) {
     });
     clearTimeout(timeout);
 
-    const json  = await res.json();
-    const hex   = json?.result;
+    const json = await res.json();
+    const hex  = json?.result;
     if (typeof hex !== "string") throw new Error(`Invalid ${label} hex`);
 
-    const wei   = parseInt(hex, 16);
-    const value = wei / (1e18);
-    return value >= expected;
+    const wei = parseInt(hex, 16);
+    const val = wei / 1e18;
+    return val >= expected;
   } catch (err) {
     console.error(`❌ [${label} error]:`, err.message);
     return false;
@@ -170,9 +159,9 @@ async function _checkSOL(address, expected) {
 function _log(wallet, currency, amount, status) {
   try {
     if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-    const time  = new Date().toISOString();
-    const line  = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
-    fs.appendFileSync(logPath, line, "utf8");
+    const time = new Date().toISOString();
+    const entry = `${time} | ${currency} | ${amount} | ${wallet} | ${status}\n`;
+    fs.appendFileSync(logPath, entry, "utf8");
   } catch (err) {
     console.warn("⚠️ [cryptoChecks.log error]:", err.message);
   }
