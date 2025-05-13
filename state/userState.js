@@ -1,33 +1,33 @@
-// 📦 state/userState.js | FINAL IMMORTAL v1.0.1•GODMODE DIAMONDLOCK
-// MAXIMUM SYNC • ZERO ERROR TOLERANCE • AUTO-EXPORT • ULTRA-OPTIMIZED
+// 📦 state/userState.js | IMMORTAL FINAL v1.0.9•999999X•SYNC•GODMODE
+// MAX-SYNC • NO ERROR TOLERANCE • FULL EXPORT • FSM-READY • 24/7 BULLETPROOF
 
 import fs   from "fs";
 import path from "path";
 
-// ==============================
-// 🚦 Session stores
-// ==============================
+// ————————————————
+// 🧠 Core session stores
+// ————————————————
 export const userSessions = {};    // { [userId]: { step, createdAt, ... } }
 export const userOrders   = {};    // { [userId]: totalOrders }
-export const userMessages = {};    // { [userId]: [messageId, ...] }
+export const userMessages = {};    // { [userId]: [msgId, ...] }
 
-// ==============================
-// ⏱️ Timer stores
-// ==============================
+// ————————————————
+// ⏱ Timer containers
+// ————————————————
 export const activeTimers  = {};   // { [userId]: Timeout } – delivery/cleanup
 export const paymentTimers = {};   // { [userId]: Timeout } – payment expiry
 
-// ==============================
-// 🔐 Security stores
-// ==============================
+// ————————————————
+// 🛡️ Security trackers
+// ————————————————
 export const failedAttempts = {};  // { [userId]: count }
-export const bannedUntil    = {};  // { [userId]: timestampMs }
-export const antiSpam       = {};  // { [userId]: lastMessageTs }
+export const bannedUntil    = {};  // { [userId]: timestamp }
+export const antiSpam       = {};  // { [userId]: lastMsgTs }
 export const antiFlood      = {};  // { [userId]: { count, startTs } }
 
-// ==============================
-// 👥 Active users registry
-// ==============================
+// ————————————————
+// 👥 Live user registry
+// ————————————————
 export const activeUsers = {
   list: new Set(),
   get count() {
@@ -49,28 +49,9 @@ export const activeUsers = {
   }
 };
 
-// ==============================
-// 🧼 Clears all timers for a user
-// ==============================
-export function clearTimersForUser(id) {
-  const uid = sanitizeId(id);
-  if (!uid) return;
-
-  if (activeTimers[uid]) {
-    clearTimeout(activeTimers[uid]);
-    delete activeTimers[uid];
-    logAction("🕒 [clearTimersForUser]", "Cleared active timer", uid);
-  }
-  if (paymentTimers[uid]) {
-    clearTimeout(paymentTimers[uid]);
-    delete paymentTimers[uid];
-    logAction("💳 [clearTimersForUser]", "Cleared payment timer", uid);
-  }
-}
-
-// ==============================
-// 🧽 Fully clear a user's session (preserve order history)
-// ==============================
+// ———————————————————————————
+// 🔄 Full reset of user session (preserves order history)
+// ———————————————————————————
 export function clearUserSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
@@ -78,27 +59,46 @@ export function clearUserSession(id) {
   clearTimersForUser(uid);
 
   [ userSessions, userMessages, failedAttempts, bannedUntil, antiSpam, antiFlood ]
-    .forEach(store => { if (store[uid] !== undefined) delete store[uid]; });
+    .forEach(store => { if (uid in store) delete store[uid]; });
 
   activeUsers.remove(uid);
   logAction("🧼 [clearUserSession]", "Session cleared", uid);
 }
 
-// ==============================
-// 🔄 Start a new session for a user
-// ==============================
+// ———————————————————————————
+// 🧼 Kill all timers for this user
+// ———————————————————————————
+export function clearTimersForUser(id) {
+  const uid = sanitizeId(id);
+  if (!uid) return;
+
+  if (activeTimers[uid]) {
+    clearTimeout(activeTimers[uid]);
+    delete activeTimers[uid];
+    logAction("🕒 [clearTimersForUser]", "Cleared active", uid);
+  }
+  if (paymentTimers[uid]) {
+    clearTimeout(paymentTimers[uid]);
+    delete paymentTimers[uid];
+    logAction("💳 [clearTimersForUser]", "Cleared payment", uid);
+  }
+}
+
+// ———————————————————————————
+// ✅ Start fresh user session
+// ———————————————————————————
 export function safeStartSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
 
   userSessions[uid] = { step: 1, createdAt: Date.now() };
   activeUsers.add(uid);
-  logAction("✅ [safeStartSession]", "New session started", uid);
+  logAction("✅ [safeStartSession]", "Started session", uid);
 }
 
-// ==============================
-// 🚨 Track failed attempts & auto-ban
-// ==============================
+// ———————————————————————————
+// ⚠️ Track failures + auto-ban logic
+// ———————————————————————————
 export function trackFailedAttempts(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
@@ -107,80 +107,77 @@ export function trackFailedAttempts(id) {
   logAction("⚠️ [trackFailedAttempts]", `Count=${failedAttempts[uid]}`, uid);
 
   if (failedAttempts[uid] >= 5) {
-    bannedUntil[uid] = Date.now() + 15 * 60_000; // 15-minute ban
-    logAction("⛔ [trackFailedAttempts]", "Auto-banned for too many failures", uid);
+    bannedUntil[uid] = Date.now() + 15 * 60_000; // 15 min
+    logAction("⛔ [trackFailedAttempts]", "Auto-banned", uid);
   }
 }
 
-// ==============================
-// ⏱️ Verify & sync session step
-// ==============================
+// ———————————————————————————
+// 🔄 Step validation & sync
+// ———————————————————————————
 export function verifySessionStep(id) {
   const uid = sanitizeId(id);
   if (!uid) return 1;
 
   const session = userSessions[uid] ||= { step: 1, createdAt: Date.now() };
   if (!isValidStep(session.step)) {
-    logAction("⚠️ [verifySessionStep]", `Resetting invalid step=${session.step}`, uid);
+    logAction("⚠️ [verifySessionStep]", `Reset step=${session.step}`, uid);
     session.step = 1;
   }
   return session.step;
 }
 
-// ==============================
-// ✅ Valid steps definition
-// ==============================
 export function isValidStep(step) {
-  // valid steps: 1,1.2,2,2.1,2.2,...,9
-  return (typeof step === "number") && step >= 1 && step <= 9;
+  return typeof step === "number" && step >= 1 && step <= 9;
 }
 
-// ==============================
-// 📤 Export current user stats to JSON
-// ==============================
+// ———————————————————————————
+// 📤 Export full snapshot of user stats
+// ———————————————————————————
 export function exportUserStats() {
   try {
-    const now      = new Date();
-    const ts       = now.toISOString().replace(/[-:.TZ]/g, "").slice(0,14);
-    const dir      = path.join("logs");
-    const filename = `userStats-${ts}.json`;
-    const filepath = path.join(dir, filename);
+    const now = new Date();
+    const ts  = now.toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+    const dir = "logs";
+    const fp  = path.join(dir, `userStats-${ts}.json`);
 
     const data = {};
-    for (const id of Object.keys(userSessions)) {
-      const uid = sanitizeId(id);
-      if (!uid) continue;
-      data[uid] = {
-        step:        userSessions[uid]?.step ?? null,
-        city:        userSessions[uid]?.city ?? null,
-        product:     userSessions[uid]?.product?.name ?? null,
-        orders:      userOrders[uid] ?? 0,
-        bannedUntil: bannedUntil[uid] ?? null,
-        msgCount:    Array.isArray(userMessages[uid]) ? userMessages[uid].length : 0
+    for (const uid of Object.keys(userSessions)) {
+      const id = sanitizeId(uid);
+      if (!id) continue;
+
+      const session = userSessions[id] || {};
+      data[id] = {
+        step:        session.step ?? null,
+        city:        session.city ?? null,
+        product:     session.product?.name ?? null,
+        orders:      userOrders[id] ?? 0,
+        bannedUntil: bannedUntil[id] ?? null,
+        msgCount:    Array.isArray(userMessages[id]) ? userMessages[id].length : 0
       };
     }
 
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
-
-    logAction("📤 [exportUserStats]", `Exported to ${filepath}`);
-    return filepath;
+    fs.writeFileSync(fp, JSON.stringify(data, null, 2));
+    logAction("📤 [exportUserStats]", `Exported → ${fp}`);
+    return fp;
   } catch (err) {
-    logError("❌ [exportUserStats error]", err);
+    logError("❌ [exportUserStats]", err);
     return null;
   }
 }
 
-// ==============================
-// 🧩 Helpers
-// ==============================
+// ———————————————————————————
+// 🧩 Internal helpers
+// ———————————————————————————
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
-function logAction(action, message, uid = "") {
-  console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (UID: ${uid})` : ""}`);
+function logAction(label, msg, uid = "") {
+  console.log(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
 }
-function logError(action, error, uid = "") {
-  console.error(`${new Date().toISOString()} ${action} → ${error?.message || error}${uid ? ` (UID: ${uid})` : ""}`);
+function logError(label, err, uid = "") {
+  const msg = err?.message || err;
+  console.error(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
 }
