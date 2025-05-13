@@ -1,4 +1,4 @@
-// 📦 core/handlers/finalHandler.js | FINAL IMMORTAL v999999999.∞+DIAMONDLOCK+SYNCFIX
+// 📦 core/handlers/finalHandler.js | FINAL IMMORTAL v999999999.∞+DIAMONDLOCK+SYNCFIX+SAFERESET
 // MAIN MENU GREETING • SESSION RESET • DELIVERY FINISHER • 24/7 STABILITY
 
 import fs from "fs/promises";
@@ -23,6 +23,7 @@ export async function safeStart(bot, id) {
 
   try {
     await fullSessionReset(uid);
+
     userSessions[uid] = { step: 1, createdAt: Date.now() };
     activeUsers.add(uid);
 
@@ -123,7 +124,11 @@ export async function finishOrder(bot, id) {
 export async function resetSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
+
   await fullSessionReset(uid);
+
+  // ✅ GARANTUOTAS ATKŪRIMAS – nauja sesija
+  userSessions[uid] = { step: 1, createdAt: Date.now() };
 }
 
 async function fullSessionReset(uid) {
