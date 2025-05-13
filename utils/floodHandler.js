@@ -21,28 +21,28 @@ import { deliveryMethods } from "../config/features.js";
 export function isSpamming(id, ctx = {}) {
   try {
     const isButton = Boolean(ctx?.callback_query || ctx?.message?.reply_markup);
-    const text = ctx?.message?.text?.trim().toLowerCase();
+    const text     = ctx?.message?.text?.trim().toLowerCase();
+    const uid      = String(id).trim();
 
-    if (
-      isButton ||
-      text === "/start" ||
-      isMenuInput(text, ctx) ||
-      isRegion(text) ||
-      isCity(ctx, text)
-    ) {
-      return false;
+    // ✅ Leisti viską jei /start, button, inline, reply_markup
+    if (isButton || text === "/start") return false;
+
+    // ✅ Leisti jeigu user yra aktyviame FSM flow'e (turi session.step > 0)
+    const session = userSessions?.[uid];
+    if (session?.step && Number(session.step) >= 1) return false;
+
+    // ⚠️ Tik šiuo atveju taikyti anti-spam intervalą
+    const now  = Date.now();
+    const last = antiSpam[uid] || 0;
+    antiSpam[uid] = now;
+
+    const tooFast = now - last < 1000;
+    if (tooFast) {
+      if (process.env.DEBUG_MESSAGES === "true") {
+        console.warn(`⚠️ [isSpamming] → Rapid messages detected (UID: ${uid})`);
+      }
     }
-
-    const now = Date.now();
-    const last = antiSpam[id] || 0;
-    antiSpam[id] = now;
-
-    if (now - last < 1000) {
-      console.warn(`⚠️ [isSpamming] → Rapid messages detected (UID: ${id})`);
-      return true;
-    }
-
-    return false;
+    return tooFast;
   } catch (err) {
     console.error("❌ [isSpamming error]:", err.message);
     return false;
