@@ -1,5 +1,5 @@
-// 🛡️ utils/generateQR.js | IMMORTAL FINAL v1.9.9•DIAMONDLOCK+OPTISPEED
-// QR & Payment Message Generation • 30% REDUCED SIZE • FAST DELIVERY • 100% SAFE
+// 🛡️ utils/generateQR.js | IMMORTAL FINAL v2.0.0•DIAMONDLOCK+VISUALFIX
+// QR & Payment Message Generation • Perfect Scan Size • Framed Centered • ZERO FAILS
 
 import QRCode from "qrcode";
 import { WALLETS, ALIASES } from "../config/config.js";
@@ -36,9 +36,8 @@ export async function generateQR(currency, amount, overrideAddress = null) {
     const buffer = await Promise.race([
       QRCode.toBuffer(uri, {
         type: "png",
-        width: 100, // 🧠 ~30% mažesnis (buvo 140)
-        margin: 0,  // sumažintas baltos erdvės kiekis
-        scale: 1.6, // mažesnė apimtis, bet puikus matomumas
+        width: 300,            // ✅ IDEAL SIZE for readability
+        margin: 3,             // ✅ White border for scan safety
         errorCorrectionLevel: "H",
         color: { dark: "#000000", light: "#FFFFFF" }
       }),
