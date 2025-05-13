@@ -1,6 +1,5 @@
-
-// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v9999999999.∞•ULTIMATE•DIAMONDLOCK•GODMODE
-// FULL FSM INTEGRATION • FLOOD SHIELD 999X • BULLETPROOF MENU SYNC • CALLBACK + TEXT SAFE
+// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v9999999999.∞•GODMODE+DIAMONDLOCK
+// FULL FSM INTEGRATION • FLOOD SHIELD • CALLBACK + TEXT SAFE • ZERO LAG UX
 
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages } from "../../state/userState.js";
@@ -19,15 +18,13 @@ import { markUserActive } from "../sessionManager.js";
 import { canProceed } from "../security.js";
 import { isSpamming, handleFlood } from "../../utils/floodHandler.js";
 
-/**
- * 🚪 Registers core entry points for text and callback updates
- */
 export function registerMainHandler(bot) {
   if (!bot?.on) {
     console.error("❌ [mainHandler] Invalid bot instance");
     return;
   }
 
+  // ✅ CALLBACK HANDLER
   bot.on("callback_query", async (query) => {
     const uid  = sanitizeId(query?.message?.chat?.id);
     const data = query?.data;
@@ -72,6 +69,7 @@ export function registerMainHandler(bot) {
     }
   });
 
+  // ✅ MESSAGE HANDLER
   bot.on("message", async (msg) => {
     const uid  = sanitizeId(msg?.chat?.id);
     const raw  = msg?.text;
