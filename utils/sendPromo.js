@@ -1,4 +1,5 @@
-// 📦 utils/sendPromo.js | FINAL IMMORTAL v999999999 — PROMO WRAPPER + SYNCED BULLETPROOF CLEAN
+// 📦 utils/sendPromo.js | FINAL IMMORTAL v999999999.∞+GODMODE SYNC
+// PROMO WRAPPER • BULLETPROOF • MARKDOWN SAFE • AUTO-CLEANUP
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { userMessages } from "../state/userState.js";
@@ -10,12 +11,13 @@ import { userMessages } from "../state/userState.js";
  * @param {string|number} id — user ID
  * @param {string} code — optional promo code (e.g. "XMAS20")
  * @param {object} userMsgs — optional userMessages object
+ * @returns {Promise<object|null>} — sent message object or null
  */
 export async function sendPromo(bot, id, code = "", userMsgs = userMessages) {
-  try {
-    const uid = String(id || "").trim();
-    if (!bot || !uid) return;
+  const uid = String(id || "").trim();
+  if (!bot || !uid) return null;
 
+  try {
     const hasCode = code?.trim()?.length > 0;
     const promoCode = hasCode ? code.toUpperCase().replace(/[^A-Z0-9]/g, "") : null;
 
@@ -41,7 +43,9 @@ ${codeLine}
   } catch (err) {
     console.error("❌ [sendPromo error]:", err.message || err);
     try {
-      return await bot.sendMessage(id, "⚠️ Failed to deliver promo message.");
-    } catch {}
+      return await bot.sendMessage(uid, "⚠️ Failed to deliver promo message.");
+    } catch {
+      return null;
+    }
   }
 }
