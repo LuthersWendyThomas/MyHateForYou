@@ -150,6 +150,12 @@ function cleanupSession(uid) {
     clearTimeout(activeTimers[uid]);
     delete activeTimers[uid];
   }
+
+  const session = userSessions[uid];
+  if (session) {
+    session.deliveryInProgress = false; // optional safety
+  }
+
   delete userSessions[uid];
 }
 
