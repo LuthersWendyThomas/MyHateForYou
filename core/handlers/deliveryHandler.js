@@ -1,4 +1,4 @@
-// 📦 core/handlers/deliveryHandler.js | IMMORTAL FINAL v1.0.9•999999X•DIAMONDLOCK•BULLETPROOF
+// 📦 core/handlers/deliveryHandler.js | IMMORTAL FINAL v1.1.0•DIAMONDLOCK•GODMODE•SYNCED
 // AUTO-STAGED DELIVERY • FSM CLEANUP • AUTO-BAN • AUTO-DELETE • 24/7 IMMORTAL ENGINE
 
 import { banUser } from "../../utils/bans.js";
@@ -29,7 +29,7 @@ const DELIVERY_STEPS = {
 };
 
 /**
- * 🚚 Start delivery sequence
+ * 🚚 Start delivery sequence (auto-staged)
  */
 export function simulateDelivery(bot, id, method = "drop") {
   const uid = sanitizeId(id);
@@ -125,13 +125,15 @@ async function triggerCleanup(bot, uid) {
   }
 
   if (autobanEnabled.status && !isAdminUser) {
-    await sendAndTrack(
-      bot,
-      uid,
-      "⏳ *Session closed.*\n⛔️ Access restricted for security reasons.",
-      { parse_mode: "Markdown" },
-      userMessages
-    );
+    try {
+      await sendAndTrack(
+        bot,
+        uid,
+        "⏳ *Session closed.*\n⛔️ Access restricted for security reasons.",
+        { parse_mode: "Markdown" },
+        userMessages
+      );
+    } catch {}
     await banUser(uid);
     console.warn(`⛔️ Auto-banned user ${uid}`);
   }
