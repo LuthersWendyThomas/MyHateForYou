@@ -1,4 +1,4 @@
-// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.9999∞+DIAMONDLOCK
+// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.9999∞.1
 // MAX SYNC + DISCOUNT CONTROL + TOGGLE SYSTEM + BROADCAST + STATS + BULLETPROOF UPGRADE
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
@@ -52,7 +52,7 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
   try {
     if (s.adminStep === "ban_user") {
       await banUser(text); delete s.adminStep;
-      return sendAndTrack(bot, id, `❌ User banned: \\`${text}\\``, { parse_mode: "Markdown" }, {});
+      return sendAndTrack(bot, id, `❌ User banned: \`${text}\``, { parse_mode: "Markdown" }, {});
     }
 
     if (s.adminStep === "temp_ban") {
@@ -61,12 +61,12 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
       if (!targetId || isNaN(mins) || mins < 1)
         return sendAndTrack(bot, id, "⚠️ Format: `123456789 10`", { parse_mode: "Markdown" }, {});
       await banUserTemporary(targetId, mins); delete s.adminStep;
-      return sendAndTrack(bot, id, `⏳ Temp ban → \\`${targetId}\\` for *${mins} min*`, { parse_mode: "Markdown" }, {});
+      return sendAndTrack(bot, id, `⏳ Temp ban → \`${targetId}\` for *${mins} min*`, { parse_mode: "Markdown" }, {});
     }
 
     if (s.adminStep === "unban_user") {
       await unbanUser(text); delete s.adminStep;
-      return sendAndTrack(bot, id, `✅ User unbanned: \\`${text}\\``, { parse_mode: "Markdown" }, {});
+      return sendAndTrack(bot, id, `✅ User unbanned: \`${text}\``, { parse_mode: "Markdown" }, {});
     }
 
     if (s.adminStep === "discount_manage") {
@@ -77,7 +77,7 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
         return sendAndTrack(bot, id, `❌ Invalid type. Use: *${DISCOUNT_TYPES.join(", ")}*`, { parse_mode: "Markdown" }, {});
       setDiscount(type, keyRaw || null, active, pct); delete s.adminStep;
       return sendAndTrack(bot, id,
-        `✅ *${type}* discount updated → \\`${keyRaw || "(global)"}\\` = *${pct}%* (${active ? "ON" : "OFF"})`,
+        `✅ *${type}* discount updated → \`${keyRaw || "(global)"}\` = *${pct}%* (${active ? "ON" : "OFF"})`,
         { parse_mode: "Markdown" }, {});
     }
 
@@ -99,11 +99,11 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
           if (product) product.active = status;
         }
       } else {
-        return sendAndTrack(bot, id, `❌ Unknown item: \\`${target}\\``, { parse_mode: "Markdown" }, {});
+        return sendAndTrack(bot, id, `❌ Unknown item: \`${target}\``, { parse_mode: "Markdown" }, {});
       }
 
       delete s.adminStep;
-      return sendAndTrack(bot, id, `🟢 Toggle updated: \\`${target}\\` → ${status ? "ON ✅" : "OFF ❌"}`, { parse_mode: "Markdown" }, {});
+      return sendAndTrack(bot, id, `🟢 Toggle updated: \`${target}\` → ${status ? "ON ✅" : "OFF ❌"}`, { parse_mode: "Markdown" }, {});
     }
 
     if (s.adminStep === "broadcast") {
@@ -144,13 +144,13 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
 
       case "📋 Banned list": {
         const list = listBannedUsers();
-        const out = list.length ? list.map(id => `- \\`${id}\\``).join("\n") : "_(No permanent bans)_";
+        const out = list.length ? list.map(id => `- \`${id}\``).join("\n") : "_(No permanent bans)_";
         return sendAndTrack(bot, id, `📋 *Banned users:*\n${out}`, { parse_mode: "Markdown" }, {});
       }
 
       case "⏱️ Temp bans": {
         const temp = listTemporaryBans();
-        const out = temp.length ? temp.map(b => `- \\`${b.userId}\\` until ${b.until}`).join("\n") : "_(No temp bans)_";
+        const out = temp.length ? temp.map(b => `- \`${b.userId}\` until ${b.until}`).join("\n") : "_(No temp bans)_";
         return sendAndTrack(bot, id, `⏱️ *Temporary bans:*\n${out}`, { parse_mode: "Markdown" }, {});
       }
 
@@ -163,14 +163,14 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
         ].join("\n");
         s.adminStep = "discount_manage";
         return sendAndTrack(bot, id,
-          `🏷️ *Discounts:*\n\n${info}\n\n✍️ *Format:* \\`type key active percent\\`\nExample: \\`user 123456789 1 20\\`\nTypes: *${DISCOUNT_TYPES.join(" | ")}*`,
+          `🏷️ *Discounts:*\n\n${info}\n\n✍️ *Format:* \`type key active percent\`\nExample: \`user 123456789 1 20\`\nTypes: *${DISCOUNT_TYPES.join(" | ")}*`,
           { parse_mode: "Markdown" }, {});
       }
 
       case "🟢 Toggle Items":
         s.adminStep = "toggle_manage";
         return sendAndTrack(bot, id,
-          `🟢 *Toggle ON/OFF*\n\nRegions: ${allRegions.length}\nCities: ${allCities.length}\nCategories: ${allCategories.length}\nProducts: ${allProductNames.length}\n\n✍️ Format: \\`name 1|0\\``, { parse_mode: "Markdown" }, {});
+          `🟢 *Toggle ON/OFF*\n\nRegions: ${allRegions.length}\nCities: ${allCities.length}\nCategories: ${allCategories.length}\nProducts: ${allProductNames.length}\n\n✍️ Format: \`name 1|0\``, { parse_mode: "Markdown" }, {});
 
       case "📣 Broadcast":
         s.adminStep = "broadcast";
