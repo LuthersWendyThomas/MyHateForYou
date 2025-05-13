@@ -1,19 +1,19 @@
-// utils/fetchCryptoPrice.js | IMMORTAL FINAL v3.0.0•GODMODE DIAMONDLOCK
+// utils/fetchCryptoPrice.js | IMMORTAL FINAL v3.0.1•GODMODE DIAMONDLOCK
 // RATE-LIMITED • CONCURRENCY LOCK • CACHE (5 min) • USD-ONLY • BULLETPROOF
 
 import fetch from 'node-fetch';
 import { rateLimiter } from './rateLimiter.js';
-import { ALIASES }       from '../config/config.js';
+import { ALIASES }     from '../config/config.js';
 
-const CACHE_TTL      = 5 * 60 * 1000;  // 5 minutes
-const REQUEST_TIMEOUT = 10 * 1000;     // 10 seconds
+const CACHE_TTL       = 5 * 60 * 1000;  // 5 minutes
+const REQUEST_TIMEOUT = 10 * 1000;      // 10 seconds
 
-// In-memory cache & locks
+// in-memory cache & locks
 const cache = new Map();  // Map<symbol, { rate: number, ts: number }>
 const locks = new Map();  // Map<symbol, Promise<number>>
 
 /**
- * Hard-coded network configs: each symbol has two providers.
+ * Hard-coded network configs: each symbol has CoinGecko & CoinCap endpoints.
  * Add new symbols here and you’re done.
  */
 export const NETWORKS = {
@@ -31,8 +31,9 @@ export const NETWORKS = {
   },
   ETH: {
     coinGecko: {
+      // FIXED: use Ethereum slug, not polygon
       buildUrl: () =>
-        'https://api.coingecko.com/api/v3/simple/price?ids=polygon&vs_currencies=usd',
+        'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd',
       extract: data => Number(data.ethereum?.usd)
     },
     coinCap: {
@@ -43,6 +44,7 @@ export const NETWORKS = {
   },
   MATIC: {
     coinGecko: {
+      // native MATIC on Polygon chain
       buildUrl: () =>
         'https://api.coingecko.com/api/v3/simple/price?ids=polygon&vs_currencies=usd',
       extract: data => Number(data.polygon?.usd)
@@ -65,7 +67,7 @@ export const NETWORKS = {
       extract: data => Number(data.data?.priceUsd)
     }
   }
-  // …extend with more symbols
+  // …extend with more symbols as needed
 };
 
 class RateLimitError extends Error {
@@ -76,14 +78,13 @@ class RateLimitError extends Error {
 }
 
 /**
- * Main entrypoint: fetch USD price for a symbol (with alias support).
- * @param {string} rawSymbol – e.g. "btc", "Matic", "eth"
- * @returns {Promise<number|null>} – rounded to 2 decimals, or null on error
+ * Fetch USD price for a symbol (alias-aware).
+ * Returns rounded number or null on fatal error.
  */
 export async function fetchCryptoPrice(rawSymbol) {
   if (!rawSymbol) return null;
 
-  // 1) Normalize via aliases & uppercase
+  // normalize & lookup
   const sym = normalizeSymbol(rawSymbol);
   const cfg = NETWORKS[sym];
   if (!cfg) {
@@ -91,10 +92,10 @@ export async function fetchCryptoPrice(rawSymbol) {
     return null;
   }
 
-  // 2) Rate-limit
+  // rate-limit per symbol
   await rateLimiter(sym);
 
-  // 3) Concurrency lock: dedupe in-flight
+  // concurrency lock
   if (locks.has(sym)) {
     return locks.get(sym);
   }
@@ -107,7 +108,7 @@ export async function fetchCryptoPrice(rawSymbol) {
   }
 }
 
-/** Internal: check cache, then race through providers in order */
+/** cache check → try CoinGecko then CoinCap → cache result */
 async function fetchAndCache(sym, { coinGecko, coinCap }) {
   const now = Date.now();
   const hit = cache.get(sym);
@@ -119,7 +120,6 @@ async function fetchAndCache(sym, { coinGecko, coinCap }) {
   for (const provider of [coinGecko, coinCap]) {
     try {
       const rate = await fetchWithRetry(() => doFetch(provider));
-      // valid positive number?
       if (rate > 0) {
         cache.set(sym, { rate, ts: Date.now() });
         return rate;
@@ -133,10 +133,10 @@ async function fetchAndCache(sym, { coinGecko, coinCap }) {
   throw new Error(`❌ All providers failed for "${sym}": ${lastErr?.message}`);
 }
 
-/** Perform one HTTP fetch + JSON parse + extract + validations */
+/** single HTTP fetch + JSON parse + extract + validate */
 async function doFetch({ buildUrl, extract }) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  const timeoutId  = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   let res;
   try {
@@ -167,7 +167,7 @@ async function doFetch({ buildUrl, extract }) {
   return +val.toFixed(2);
 }
 
-/** Retry wrapper: exponential backoff + jitter, handles RateLimitError */
+/** exponential backoff + jitter; handles RateLimitError */
 async function fetchWithRetry(fn, retries = 3, baseDelay = 500) {
   let err;
   for (let i = 0; i < retries; i++) {
