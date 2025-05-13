@@ -1,5 +1,5 @@
-// 🛡️ utils/cryptoQR.js | IMMORTAL FINAL v1.2.1•DIAMONDLOCK+9999999x SYNC
-// QR & Payment Message Generation • BULLETPROOF • TIMEOUT PROTECTED • ZERO DELAY
+// 🛡️ utils/generateQR.js | IMMORTAL FINAL v1.9.9•DIAMONDLOCK+OPTISPEED
+// QR & Payment Message Generation • 30% REDUCED SIZE • FAST DELIVERY • 100% SAFE
 
 import QRCode from "qrcode";
 import { WALLETS, ALIASES } from "../config/config.js";
@@ -36,14 +36,14 @@ export async function generateQR(currency, amount, overrideAddress = null) {
     const buffer = await Promise.race([
       QRCode.toBuffer(uri, {
         type: "png",
-        width: 140,
-        margin: 1,
-        scale: 2,
+        width: 100, // 🧠 ~30% mažesnis (buvo 140)
+        margin: 0,  // sumažintas baltos erdvės kiekis
+        scale: 1.6, // mažesnė apimtis, bet puikus matomumas
         errorCorrectionLevel: "H",
         color: { dark: "#000000", light: "#FFFFFF" }
       }),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("QR generation timeout")), 5000)
+        setTimeout(() => reject(new Error("QR generation timeout")), 4000)
       )
     ]);
 
