@@ -372,16 +372,25 @@ async function handleOrderConfirm(bot, uid, input, session, userMessages) {
   return handlePayment(bot, uid, userMessages);
 }
 
+// 🔧 IMMORTAL PATCHED CONFIRM/CANCEL FLOW (SYNCED)
 async function handleConfirmOrCancel(bot, uid, input, session, userMessages) {
   if (input === MENU_BUTTONS.CONFIRM.text.toLowerCase()) {
     session.step = 9;
     return handlePaymentConfirmation(bot, uid, userMessages);
   }
+
   if (input === MENU_BUTTONS.CANCEL.text.toLowerCase()) {
-    await sendAndTrack(bot, uid, "❌ Payment canceled. Returning to main menu...", {}, userMessages);
+    await sendAndTrack(
+      bot,
+      uid,
+      "❌ Payment canceled. Returning to main menu...",
+      { parse_mode: "Markdown" }, // <-- SKIRTUMAS ŠITAS: Markdown palaikymas
+      userMessages
+    );
     await resetSession(uid);
     return safeStart(bot, uid);
   }
+
   return renderStep(bot, uid, session.step, userMessages);
 }
 
