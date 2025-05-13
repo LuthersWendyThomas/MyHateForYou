@@ -1,11 +1,10 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v3.1.1•DIAMONDLOCK+SYNC
-// CACHE + RATE-LIMIT LOCK + PROVIDER FALLBACK + SYNC-OPTIMIZED
-
+// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v3.1.9•DIAMONDLOCK+ULTRAFAST
 import fetch from 'node-fetch';
 import { rateLimiter } from './rateLimiter.js';
 import { ALIASES }     from '../config/config.js';
 
 const CACHE_TTL       = 5 * 60 * 1000;
+const MICRO_FALLBACK  = 30 * 1000;
 const REQUEST_TIMEOUT = 10000;
 
 const cache = new Map(); // <symbol, { rate, ts }>
@@ -112,6 +111,13 @@ async function fetchAndCache(sym, providers) {
     }
   }
 
+  // ⛑ Fallback: jei turim neseną cache – grąžink ją, kad QR nekabėtų
+  const fallback = cache.get(sym);
+  if (fallback && now - fallback.ts < MICRO_FALLBACK) {
+    console.warn(`⏪ Using recent fallback for ${sym}`);
+    return fallback.rate;
+  }
+
   throw new Error(`❌ All providers failed for "${sym}": ${err?.message}`);
 }
 
@@ -149,7 +155,7 @@ async function tryUrls(provider, name) {
   throw new Error(`❌ All URLs failed for provider ${name}`);
 }
 
-async function retry(fn, retries = 3, base = 500) {
+async function retry(fn, retries = 3, base = 300) {
   let err;
   for (let i = 0; i < retries; i++) {
     try {
@@ -158,7 +164,7 @@ async function retry(fn, retries = 3, base = 500) {
       err = e;
       const delay = e instanceof RateLimitError
         ? e.retryAfterMs
-        : base * 2 ** i + Math.random() * 200;
+        : base * 2 ** i + Math.random() * 150;
       await new Promise(res => setTimeout(res, delay));
     }
   }
