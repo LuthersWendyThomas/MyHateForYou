@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1.0.3•SYNC•GODMODE
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1.0.9•999999X•DIAMONDLOCK•SYNC•GODMODE
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice, NETWORKS } from "../../utils/fetchCryptoPrice.js";
@@ -29,9 +29,6 @@ function normalizeCurrency(raw) {
   return (ALIASES[key] || key).toUpperCase();
 }
 
-/**
- * Safe price fetch based on new fetchCryptoPrice structure
- */
 async function getSafeRate(currency) {
   const symbol = normalizeCurrency(currency);
   if (!NETWORKS[symbol]) throw new Error(`Unsupported currency: ${symbol}`);
@@ -40,28 +37,23 @@ async function getSafeRate(currency) {
   return { rate, symbol };
 }
 
-/**
- * Retry-safe wrapper for bot.sendX actions
- */
 async function safeSend(fn, ...args) {
   for (let i = 0; i < 3; i++) {
     try {
       return await fn(...args);
     } catch (err) {
       if (String(err.message).includes("429")) {
-        const backoff = 1200 + i * 800;
+        const backoff = 1000 + i * 800;
         console.warn(`⏳ Rate limit (${i + 1}) – retrying in ${backoff}ms`);
         await wait(backoff);
-      } else {
-        break;
-      }
+      } else break;
     }
   }
   return null;
 }
 
 /**
- * 💸 Start crypto payment flow: fetch USD rate, show QR
+ * 💸 Start crypto payment flow
  */
 export async function handlePayment(bot, id, userMsgs) {
   const session = userSessions[id];
@@ -107,7 +99,6 @@ export async function handlePayment(bot, id, userMsgs) {
       parse_mode: "Markdown"
     }, userMsgs);
 
-    // set timeout
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
     const timer = setTimeout(() => {
       console.warn(`⌛️ [payment timeout] User ${id}`);
@@ -118,13 +109,13 @@ export async function handlePayment(bot, id, userMsgs) {
     paymentTimers[id] = timer;
 
     return sendKeyboard(bot, id, "❓ *Has the payment completed?*", [
-      [ { text: MENU_BUTTONS.CONFIRM.text } ],
-      [ { text: MENU_BUTTONS.CANCEL.text } ]
+      [{ text: MENU_BUTTONS.CONFIRM.text }],
+      [{ text: MENU_BUTTONS.CANCEL.text }]
     ], userMsgs, { parse_mode: "Markdown" });
 
   } catch (err) {
     console.error("❌ [handlePayment error]:", err.message || err);
-    session.paymentInProgress = false;
+    cleanupOnError(id);
     return sendAndTrack(bot, id, `❗️ Payment failed:\n*${err.message}*`, {
       parse_mode: "Markdown"
     }, userMsgs);
@@ -149,7 +140,7 @@ export async function handlePaymentCancel(bot, id, userMsgs) {
 }
 
 /**
- * ✅ User confirms payment – check blockchain
+ * ✅ Confirm payment → verify on blockchain
  */
 export async function handlePaymentConfirmation(bot, id, userMsgs) {
   const session = userSessions[id];
@@ -168,8 +159,8 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
 
     if (!paid) {
       return sendKeyboard(bot, id, "❌ Payment not found. Try again:", [
-        [ { text: MENU_BUTTONS.CONFIRM.text } ],
-        [ { text: MENU_BUTTONS.CANCEL.text } ]
+        [{ text: MENU_BUTTONS.CONFIRM.text }],
+        [{ text: MENU_BUTTONS.CANCEL.text }]
       ], userMsgs, { parse_mode: "Markdown" });
     }
 
@@ -188,5 +179,17 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
   } catch (err) {
     console.error("❌ [handlePaymentConfirmation error]:", err.message || err);
     return sendAndTrack(bot, id, "❗️ Verification failed. Please try again later.", {}, userMsgs);
+  }
+}
+
+// 🧼 Cleanup helper
+function cleanupOnError(id) {
+  const session = userSessions[id];
+  if (!session) return;
+  delete session.paymentInProgress;
+  delete session.expectedAmount;
+  if (paymentTimers[id]) {
+    clearTimeout(paymentTimers[id]);
+    delete paymentTimers[id];
   }
 }
