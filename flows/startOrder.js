@@ -1,5 +1,5 @@
-// 📦 flows/startOrder.js | IMMORTAL FINAL v1.0.2•999999x•DIAMONDLOCK+SYNC+PERFECTION
-// BULLETPROOF FSM START • FULL STATE CLEANUP • TIMER KILL • REGION RENDER SYNCED
+// 📦 flows/startOrder.js | IMMORTAL FINAL v9999999999.∞+GODMODE+POLISH+SYNC
+// BULLETPROOF FSM START • ULTRA CLEANUP • TYPING UX • REGION SYNC
 
 import {
   userSessions,
@@ -14,7 +14,7 @@ import { sendKeyboard } from "../helpers/messageUtils.js";
 import { getRegionKeyboard } from "../config/regions.js";
 
 /**
- * 🚀 Initializes a fully reset FSM session and renders region step
+ * 🚀 Starts a clean FSM session and renders region keyboard
  */
 export async function startOrder(bot, id, msgs = userMessages) {
   const uid = sanitizeId(id);
@@ -24,10 +24,10 @@ export async function startOrder(bot, id, msgs = userMessages) {
   }
 
   try {
-    // 🧼 1. Kill old payment timers + clear all user state
+    // 🧼 1. Wipe all previous state
     await fullResetUserState(uid);
 
-    // 🌀 2. Init new session
+    // 🌀 2. Init new FSM session
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now()
@@ -37,10 +37,10 @@ export async function startOrder(bot, id, msgs = userMessages) {
       console.debug(`🔁 [startOrder] Session initialized (ID: ${uid})`);
     }
 
-    // 🕐 3. Show "typing…" for UX polish
-    await bot.sendChatAction(uid, "typing").catch(() => {});
+    // 💬 3. Typing feedback
+    bot.sendChatAction(uid, "typing").catch(() => {}).finally(() => {});
 
-    // 🧭 4. Region keyboard
+    // 📍 4. Render region selection
     const keyboard = getRegionKeyboard();
     return await sendKeyboard(
       bot,
@@ -50,13 +50,12 @@ export async function startOrder(bot, id, msgs = userMessages) {
       msgs,
       { parse_mode: "Markdown" }
     );
-
   } catch (err) {
     logError("❌ [startOrder error]", err, uid);
     return await sendKeyboard(
       bot,
       uid,
-      "❗️ Unexpected error. Please try again.",
+      "⚠️ Something went wrong. Please try again.",
       [[{ text: MENU_BUTTONS.BUY.text }]],
       msgs,
       { parse_mode: "Markdown" }
@@ -65,7 +64,7 @@ export async function startOrder(bot, id, msgs = userMessages) {
 }
 
 // ———————————————————————
-// 🧼 Ultra-safe state cleaner
+// 🧼 Ultra-safe user state cleaner
 // ———————————————————————
 
 async function fullResetUserState(uid) {
@@ -78,8 +77,8 @@ async function fullResetUserState(uid) {
     delete paymentTimers[uid];
 
     if (userSessions[uid]) {
-      for (const k in userSessions[uid]) {
-        delete userSessions[uid][k];
+      for (const key in userSessions[uid]) {
+        delete userSessions[uid][key];
       }
     }
 
@@ -96,7 +95,7 @@ async function fullResetUserState(uid) {
 // ———————————————————————
 
 function sanitizeId(id) {
-  const s = String(id || "").trim();
+  const s = String(id ?? "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
