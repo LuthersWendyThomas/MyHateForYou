@@ -1,11 +1,17 @@
-// 📦 flows/startOrder.js | IMMORTAL FINAL v1.0.0•GODMODE DIAMONDLOCK
-// ULTRA-FSM SYNC • BULLETPROOF REGION KEYBOARD • FULL STATE RESET
+// 📦 flows/startOrder.js | IMMORTAL FINAL v1.0.1•GODMODE+SYNC+BULLETPROOF
+// ULTRA-FSM SYNC • REGION KEYBOARD • FULL STATE RESET + PAYMENT TIMER CLEAN
 
-import { userSessions, userMessages, userOrders } from "../state/userState.js";
-import { clearTimers, clearUserMessages }         from "../state/stateManager.js";
-import { MENU_BUTTONS }                           from "../helpers/keyboardConstants.js";
-import { sendKeyboard }                           from "../helpers/messageUtils.js";
-import { getRegionKeyboard }                      from "../config/regions.js";
+import {
+  userSessions,
+  userMessages,
+  userOrders,
+  paymentTimers
+} from "../state/userState.js";
+
+import { clearTimers, clearUserMessages } from "../state/stateManager.js";
+import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
+import { sendKeyboard } from "../helpers/messageUtils.js";
+import { getRegionKeyboard } from "../config/regions.js";
 
 /**
  * 🚀 Starts a clean, FSM-synced, bulletproof order session
@@ -22,10 +28,16 @@ export async function startOrder(bot, id, msgs = userMessages) {
     await resetUserState(uid);
     initializeSession(uid);
 
-    // 2) Send typing indicator
+    // 2) Clean lingering payment timeout if exists
+    if (paymentTimers[uid]) {
+      clearTimeout(paymentTimers[uid]);
+      delete paymentTimers[uid];
+    }
+
+    // 3) Send typing action
     await bot.sendChatAction(uid, "typing").catch(() => {});
 
-    // 3) Render region selection with your centralized keyboard
+    // 4) Render region selection
     const keyboard = getRegionKeyboard();
     return await sendKeyboard(
       bot,
@@ -41,42 +53,41 @@ export async function startOrder(bot, id, msgs = userMessages) {
       bot,
       uid,
       "❗️ Unexpected error. Please try again.",
-      [[{ text: MENU_BUTTONS.HELP.text }]],
+      [[{ text: MENU_BUTTONS.BUY.text }]],
       msgs,
       { parse_mode: "Markdown" }
     );
   }
 }
 
-// ==============================
+// —————————————————————
 // 🧼 Helpers
-// ==============================
+// —————————————————————
 
 async function resetUserState(uid) {
-  // Clear any running timers or stored messages
   await clearTimers(uid);
   await clearUserMessages(uid);
 
-  // Delete past orders / messages
   delete userOrders[uid];
   delete userMessages[uid];
 
-  // Wipe session fields (but keep the object for reference)
   if (userSessions[uid]) {
-    Object.keys(userSessions[uid]).forEach(k => {
-      delete userSessions[uid][k];
-    });
+    Object.keys(userSessions[uid]).forEach(k => delete userSessions[uid][k]);
   }
 
-  logAction("🧼 [resetUserState]", "State cleared", uid);
+  if (process.env.DEBUG_MESSAGES === "true") {
+    console.debug(`🧼 [resetUserState] State cleared (ID: ${uid})`);
+  }
 }
 
 function initializeSession(uid) {
-  userSessions[uid] = {
-    step: 1,
-    createdAt: Date.now(),
-  };
-  logAction("🔄 [initializeSession]", "Session started", uid);
+  if (!userSessions[uid]) userSessions[uid] = {};
+  userSessions[uid].step = 1;
+  userSessions[uid].createdAt = Date.now();
+
+  if (process.env.DEBUG_MESSAGES === "true") {
+    console.debug(`🔄 [initializeSession] FSM started (ID: ${uid})`);
+  }
 }
 
 function sanitizeId(id) {
@@ -84,11 +95,7 @@ function sanitizeId(id) {
   return uid && uid !== "undefined" && uid !== "null" ? uid : null;
 }
 
-function logAction(action, message, uid = "") {
-  console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (ID: ${uid})` : ""}`);
-}
-
-function logError(action, error, uid = "") {
+function logError(prefix, error, uid = "") {
   const msg = error?.message || error;
-  console.error(`${new Date().toISOString()} ${action} → ${msg}${uid ? ` (ID: ${uid})` : ""}`);
+  console.error(`${new Date().toISOString()} ${prefix} → ${msg}${uid ? ` (ID: ${uid})` : ""}`);
 }
