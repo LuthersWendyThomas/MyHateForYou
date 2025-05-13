@@ -192,7 +192,7 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
   const uid   = sanitizeId(id);
   const input = normalizeText(text);
 
-  // 🛡️ Anti-flood/spam filter (menu-safe)
+  // 🛡️ Anti-flood/spam filter (context-aware: ignores buttons + /start)
   if (isSpamming(uid, ctx)) return;
   const muted = await handleFlood(uid, bot, userMessages[uid], ctx);
   if (muted) return;
