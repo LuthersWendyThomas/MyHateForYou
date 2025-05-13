@@ -1,33 +1,25 @@
-// 📦 state/userState.js | IMMORTAL FINAL v1.0.9•999999X•SYNC•GODMODE
-// MAX-SYNC • NO ERROR TOLERANCE • FULL EXPORT • FSM-READY • 24/7 BULLETPROOF
+// 📦 state/userState.js | IMMORTAL FINAL v1.1.0•99999999X•DIAMONDLOCK•BULLETPROOF
+// MAX-SYNC • FSM-READY • ULTRA-STABLE • CLEANUP SAFE • 24/7 IMMORTAL ENGINE
 
 import fs   from "fs";
 import path from "path";
 
-// ————————————————
-// 🧠 Core session stores
-// ————————————————
-export const userSessions = {};    // { [userId]: { step, createdAt, ... } }
-export const userOrders   = {};    // { [userId]: totalOrders }
-export const userMessages = {};    // { [userId]: [msgId, ...] }
+// ——— Session Stores ———
+export const userSessions = {};
+export const userOrders   = {};
+export const userMessages = {};
 
-// ————————————————
-// ⏱ Timer containers
-// ————————————————
-export const activeTimers  = {};   // { [userId]: Timeout } – delivery/cleanup
-export const paymentTimers = {};   // { [userId]: Timeout } – payment expiry
+// ——— Timers ———
+export const activeTimers  = {};
+export const paymentTimers = {};
 
-// ————————————————
-// 🛡️ Security trackers
-// ————————————————
-export const failedAttempts = {};  // { [userId]: count }
-export const bannedUntil    = {};  // { [userId]: timestamp }
-export const antiSpam       = {};  // { [userId]: lastMsgTs }
-export const antiFlood      = {};  // { [userId]: { count, startTs } }
+// ——— Security ———
+export const failedAttempts = {};
+export const bannedUntil    = {};
+export const antiSpam       = {};
+export const antiFlood      = {};
 
-// ————————————————
-// 👥 Live user registry
-// ————————————————
+// ——— Active Users ———
 export const activeUsers = {
   list: new Set(),
   get count() {
@@ -49,25 +41,23 @@ export const activeUsers = {
   }
 };
 
-// ———————————————————————————
-// 🔄 Full reset of user session (preserves order history)
-// ———————————————————————————
+// ——— Full Session Wipe ———
 export function clearUserSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
 
   clearTimersForUser(uid);
 
-  [ userSessions, userMessages, failedAttempts, bannedUntil, antiSpam, antiFlood ]
+  [userSessions, userMessages, failedAttempts, bannedUntil, antiSpam, antiFlood]
     .forEach(store => { if (uid in store) delete store[uid]; });
 
-  activeUsers.remove(uid);
+  if (activeUsers.remove) activeUsers.remove(uid);
+  else activeUsers.list.delete(uid);
+
   logAction("🧼 [clearUserSession]", "Session cleared", uid);
 }
 
-// ———————————————————————————
-// 🧼 Kill all timers for this user
-// ———————————————————————————
+// ——— Timer Cleanup ———
 export function clearTimersForUser(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
@@ -75,30 +65,26 @@ export function clearTimersForUser(id) {
   if (activeTimers[uid]) {
     clearTimeout(activeTimers[uid]);
     delete activeTimers[uid];
-    logAction("🕒 [clearTimersForUser]", "Cleared active", uid);
+    logAction("🕒 [clearTimers]", "Active cleared", uid);
   }
   if (paymentTimers[uid]) {
     clearTimeout(paymentTimers[uid]);
     delete paymentTimers[uid];
-    logAction("💳 [clearTimersForUser]", "Cleared payment", uid);
+    logAction("💳 [clearTimers]", "Payment cleared", uid);
   }
 }
 
-// ———————————————————————————
-// ✅ Start fresh user session
-// ———————————————————————————
+// ——— Session Start ———
 export function safeStartSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
 
   userSessions[uid] = { step: 1, createdAt: Date.now() };
   activeUsers.add(uid);
-  logAction("✅ [safeStartSession]", "Started session", uid);
+  logAction("✅ [safeStartSession]", "Session started", uid);
 }
 
-// ———————————————————————————
-// ⚠️ Track failures + auto-ban logic
-// ———————————————————————————
+// ——— Fail Tracking ———
 export function trackFailedAttempts(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
@@ -107,14 +93,12 @@ export function trackFailedAttempts(id) {
   logAction("⚠️ [trackFailedAttempts]", `Count=${failedAttempts[uid]}`, uid);
 
   if (failedAttempts[uid] >= 5) {
-    bannedUntil[uid] = Date.now() + 15 * 60_000; // 15 min
+    bannedUntil[uid] = Date.now() + 15 * 60_000;
     logAction("⛔ [trackFailedAttempts]", "Auto-banned", uid);
   }
 }
 
-// ———————————————————————————
-// 🔄 Step validation & sync
-// ———————————————————————————
+// ——— Step Validation ———
 export function verifySessionStep(id) {
   const uid = sanitizeId(id);
   if (!uid) return 1;
@@ -131,9 +115,7 @@ export function isValidStep(step) {
   return typeof step === "number" && step >= 1 && step <= 9;
 }
 
-// ———————————————————————————
-// 📤 Export full snapshot of user stats
-// ———————————————————————————
+// ——— Export Snapshot ———
 export function exportUserStats() {
   try {
     const now = new Date();
@@ -167,16 +149,16 @@ export function exportUserStats() {
   }
 }
 
-// ———————————————————————————
-// 🧩 Internal helpers
-// ———————————————————————————
+// ——— Helpers ———
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
+
 function logAction(label, msg, uid = "") {
   console.log(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
 }
+
 function logError(label, err, uid = "") {
   const msg = err?.message || err;
   console.error(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
