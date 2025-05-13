@@ -409,12 +409,21 @@ async function handleConfirmOrCancel(bot, uid, input, session, userMessages) {
   return renderStep(bot, uid, session.step, userMessages);
 }
 
+// 🔧 BACK MYGTUKO FUNKCIJOS
 async function handleBackButton(bot, uid, session, userMessages) {
-  // jei grįžtam iš city selection – full reset
+  // jei grįžtam iš miesto pasirinkimo → grįžtam į regionus
   if (session.step === 1.2) {
+    session.city = null;
+    session.step = 1;
+    return renderStep(bot, uid, 1, userMessages);
+  }
+
+  // jei grįžtam iš regiono pasirinkimo → į safeStart
+  if (session.step === 1) {
     await resetSession(uid);
     return safeStart(bot, uid);
   }
+
   // kituose žingsniuose – FSM atgal
   const prevMap = { 2:1.2, "2.1":2, "2.2":2.1, 3:2.1, 4:3, 5:4, 6:5, 7:6, 8:7 };
   session.step = prevMap[session.step] || 1;
