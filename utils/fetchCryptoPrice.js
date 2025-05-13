@@ -1,99 +1,77 @@
-// utils/fetchCryptoPrice.js | IMMORTAL FINAL v3.1.0•GODMODE DIAMONDLOCK
-// RATE-LIMITED • CONCURRENCY LOCK • CACHE (5 min) • USD-ONLY • BULLETPROOF
+// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v3.1.1•DIAMONDLOCK+SYNC
+// CACHE + RATE-LIMIT LOCK + PROVIDER FALLBACK + SYNC-OPTIMIZED
 
 import fetch from 'node-fetch';
 import { rateLimiter } from './rateLimiter.js';
 import { ALIASES }     from '../config/config.js';
 
-const CACHE_TTL       = 5 * 60 * 1000;  // 5 minutes
-const REQUEST_TIMEOUT = 10 * 1000;      // 10 seconds
+const CACHE_TTL       = 5 * 60 * 1000;
+const REQUEST_TIMEOUT = 10000;
 
-// in-memory cache & locks
-const cache = new Map();  // Map<symbol, { rate: number, ts: number }>
-const locks = new Map();  // Map<symbol, Promise<number>>
+const cache = new Map(); // <symbol, { rate, ts }>
+const locks = new Map(); // <symbol, Promise<number>>
 
-/**
- * Each symbol gets two providers. For MATIC, CoinGecko will
- * try both 'polygon' and then 'matic-network' slugs.
- */
 export const NETWORKS = {
   BTC: {
     coinGecko: {
       buildUrls: [() =>
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
-      ],
-      extract: data => Number(data.bitcoin?.usd)
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'],
+      extract: d => Number(d.bitcoin?.usd)
     },
     coinCap: {
       buildUrls: [() =>
-        'https://api.coincap.io/v2/assets/bitcoin'
-      ],
-      extract: data => Number(data.data?.priceUsd)
+        'https://api.coincap.io/v2/assets/bitcoin'],
+      extract: d => Number(d.data?.priceUsd)
     }
   },
   ETH: {
     coinGecko: {
       buildUrls: [() =>
-        'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
-      ],
-      extract: data => Number(data.ethereum?.usd)
+        'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'],
+      extract: d => Number(d.ethereum?.usd)
     },
     coinCap: {
       buildUrls: [() =>
-        'https://api.coincap.io/v2/assets/ethereum'
-      ],
-      extract: data => Number(data.data?.priceUsd)
+        'https://api.coincap.io/v2/assets/ethereum'],
+      extract: d => Number(d.data?.priceUsd)
     }
   },
   MATIC: {
     coinGecko: {
-      // try both known slugs so we never miss MATIC
       buildUrls: [
         () => 'https://api.coingecko.com/api/v3/simple/price?ids=polygon&vs_currencies=usd',
         () => 'https://api.coingecko.com/api/v3/simple/price?ids=matic-network&vs_currencies=usd'
       ],
-      extract: data =>
-        // pick whichever one exists
-        Number(data.polygon?.usd ?? data['matic-network']?.usd)
+      extract: d => Number(d.polygon?.usd ?? d['matic-network']?.usd)
     },
     coinCap: {
       buildUrls: [() =>
-        'https://api.coincap.io/v2/assets/polygon'
-      ],
-      extract: data => Number(data.data?.priceUsd)
+        'https://api.coincap.io/v2/assets/polygon'],
+      extract: d => Number(d.data?.priceUsd)
     }
   },
   SOL: {
     coinGecko: {
       buildUrls: [() =>
-        'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd'
-      ],
-      extract: data => Number(data.solana?.usd)
+        'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd'],
+      extract: d => Number(d.solana?.usd)
     },
     coinCap: {
       buildUrls: [() =>
-        'https://api.coincap.io/v2/assets/solana'
-      ],
-      extract: data => Number(data.data?.priceUsd)
+        'https://api.coincap.io/v2/assets/solana'],
+      extract: d => Number(d.data?.priceUsd)
     }
   }
-  // …extend here for more symbols
 };
 
 class RateLimitError extends Error {
-  constructor(msg, retryAfterMs) {
+  constructor(msg, ms) {
     super(msg);
-    this.retryAfterMs = retryAfterMs;
+    this.retryAfterMs = ms;
   }
 }
 
-/**
- * Fetch USD price for rawSymbol (alias-aware).
- * Returns rounded number or null on fatal.
- */
 export async function fetchCryptoPrice(rawSymbol) {
-  if (!rawSymbol) return null;
-
   const sym = normalize(rawSymbol);
   const cfg = NETWORKS[sym];
   if (!cfg) {
@@ -101,99 +79,77 @@ export async function fetchCryptoPrice(rawSymbol) {
     return null;
   }
 
-  // rate-limit per symbol
   await rateLimiter(sym);
 
-  // concurrency lock
-  if (locks.has(sym)) {
-    return locks.get(sym);
-  }
-  const job = fetchAndCache(sym, cfg);
-  locks.set(sym, job);
+  if (locks.has(sym)) return locks.get(sym);
+  const task = fetchAndCache(sym, cfg);
+  locks.set(sym, task);
   try {
-    return await job;
+    return await task;
   } finally {
     locks.delete(sym);
   }
 }
 
-/** check cache, then try providers in order */
-async function fetchAndCache(sym, { coinGecko, coinCap }) {
+async function fetchAndCache(sym, providers) {
   const now = Date.now();
   const hit = cache.get(sym);
-  if (hit && now - hit.ts < CACHE_TTL) {
-    return hit.rate;
-  }
+  if (hit && now - hit.ts < CACHE_TTL) return hit.rate;
 
-  let lastErr;
+  const { coinGecko, coinCap } = providers;
+  let err;
+
   for (const [name, provider] of [['CoinGecko', coinGecko], ['CoinCap', coinCap]]) {
     try {
-      const rate = await fetchWithRetry(() => doFetch(provider, name));
+      const rate = await retry(() => tryUrls(provider, name));
       if (rate > 0) {
         cache.set(sym, { rate, ts: Date.now() });
         return rate;
       }
-    } catch (err) {
-      lastErr = err;
-      console.warn(`⚠️ [${sym} → ${name}] ${err.message}`);
+    } catch (e) {
+      err = e;
+      console.warn(`⚠️ [${sym} → ${name}] ${e.message}`);
     }
   }
 
-  throw new Error(`❌ All providers failed for "${sym}": ${lastErr?.message}`);
+  throw new Error(`❌ All providers failed for "${sym}": ${err?.message}`);
 }
 
-/**
- * Try one provider’s URLs in sequence, with timeout + extraction.
- */
-async function doFetch(provider, name) {
-  const urls = Array.isArray(provider.buildUrls)
-    ? provider.buildUrls
-    : [provider.buildUrls];
-
-  for (const buildFn of urls) {
-    const url = buildFn();
-    if (process.env.DEBUG_MESSAGES === 'true') {
-      console.debug(`[fetch][${name}] GET ${url}`);
-    }
-
-    // timeout guard
+async function tryUrls(provider, name) {
+  const urls = provider.buildUrls || [];
+  for (const fn of urls) {
+    const url = fn();
     const ctrl = new AbortController();
     const tid  = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT);
 
-    let res;
     try {
-      res = await fetch(url, { headers: { 'User-Agent': 'Node.js' }, signal: ctrl.signal });
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        throw new Error('Request timeout');
-      }
-      throw err;
-    } finally {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        signal: ctrl.signal
+      });
+
       clearTimeout(tid);
-    }
 
-    if (res.status === 429) {
-      const ra = parseRetryAfter(res.headers.get('Retry-After'));
-      throw new RateLimitError('429 Too Many Requests', ra);
-    }
-    if (!res.ok) {
-      // try next URL (for matic fallback) or get caught in retry
-      continue;
-    }
+      if (res.status === 429) {
+        const ra = parseRetryAfter(res.headers.get("Retry-After"));
+        throw new RateLimitError("429 Too Many Requests", ra);
+      }
+      if (!res.ok) continue;
 
-    const json = await res.json();
-    const val  = provider.extract(json);
-    if (isValid(val)) {
-      return +val.toFixed(2);
+      const json = await res.json();
+      const value = provider.extract(json);
+      if (isValid(value)) return +value.toFixed(2);
+    } catch (err) {
+      clearTimeout(tid);
+      if (err.name === "AbortError") throw new Error("Timeout");
+      throw err;
     }
-    // if extract failed (NaN/zero), try next URL/extract
   }
 
-  throw new Error(`All URLs failed for provider ${name}`);
+  throw new Error(`❌ All URLs failed for provider ${name}`);
 }
 
-/** retry w/ exponential backoff + handle RateLimitError */
-async function fetchWithRetry(fn, retries = 3, base = 500) {
+async function retry(fn, retries = 3, base = 500) {
   let err;
   for (let i = 0; i < retries; i++) {
     try {
@@ -203,15 +159,15 @@ async function fetchWithRetry(fn, retries = 3, base = 500) {
       const delay = e instanceof RateLimitError
         ? e.retryAfterMs
         : base * 2 ** i + Math.random() * 200;
-      await new Promise(r => setTimeout(r, delay));
+      await new Promise(res => setTimeout(res, delay));
     }
   }
   throw err;
 }
 
 function normalize(raw) {
-  const k = raw.trim().toLowerCase();
-  return (ALIASES[k] || k).toUpperCase();
+  const key = raw.trim().toLowerCase();
+  return (ALIASES[key] || key).toUpperCase();
 }
 
 function parseRetryAfter(h) {
@@ -220,5 +176,5 @@ function parseRetryAfter(h) {
 }
 
 function isValid(n) {
-  return typeof n === 'number' && Number.isFinite(n) && n > 0;
+  return typeof n === "number" && Number.isFinite(n) && n > 0;
 }
