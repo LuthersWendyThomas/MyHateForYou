@@ -1,22 +1,19 @@
-// 📦 core/handlers/stepHandler.js | IMMORTAL FINAL v1.0.2•ULTIMATE.GODMODE+SYNC+DIAMONDLOCK
-// 24/7 BULLETPROOF • INLINE FSM • DIAMOND SAFE • FULL USD SUPPORT
+// 📦 core/handlers/stepHandler.js | IMMORTAL FINAL v1.0.9•99999999X•ULTIMATE•GODMODE•DIAMONDLOCK
+// 24/7 BULLETPROOF • FSM SAFE ENGINE • FLOOD RESISTANT • FULL USD SUPPORT • PERFECT SYNC
 
 import { deliveryMethods } from "../../config/features.js";
-import { WALLETS }        from "../../config/config.js";
-import { products }       from "../../config/products.js";
+import { WALLETS } from "../../config/config.js";
+import { products } from "../../config/products.js";
 import { userSessions, isValidStep } from "../../state/userState.js";
 import { sendAndTrack, sendKeyboard } from "../../helpers/messageUtils.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
-import { resetSession, safeStart }    from "./finalHandler.js";
+import { resetSession, safeStart } from "./finalHandler.js";
 import { REGION_MAP, getRegionKeyboard, getCityKeyboard } from "../../config/regions.js";
 import { resolveDiscount } from "../../config/discountUtils.js";
-import { DISCOUNTS }       from "../../config/discounts.js";
-import { MENU_BUTTONS }    from "../../helpers/keyboardConstants.js";
+import { DISCOUNTS } from "../../config/discounts.js";
+import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 import { isSpamming, handleFlood } from "../../utils/floodHandler.js";
 
-/**
- * 🔁 Renders the given FSM step
- */
 async function renderStep(bot, uid, step, userMessages) {
   const session = userSessions[uid];
   if (!session) throw new Error("⚠️ No session found");
@@ -251,6 +248,7 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
 
 // ————— Individual handlers —————
 
+
 async function handleRegion(bot, uid, input, session, userMessages) {
   // strip leading non-alphanumerics, match full key or stripped name
   const cleaned = input.replace(/^[^a-z0-9]+/i, "").trim().toLowerCase();
@@ -267,6 +265,7 @@ async function handleRegion(bot, uid, input, session, userMessages) {
   session.step   = 1.2;
   return renderStep(bot, uid, 1.2, userMessages);
 }
+
 
 async function handleCity(bot, uid, input, session, userMessages) {
   // strip any leading emoji/special chars from user input
@@ -288,6 +287,7 @@ async function handleCity(bot, uid, input, session, userMessages) {
   return renderStep(bot, uid, 2, userMessages);
 }
 
+
 async function handleDelivery(bot, uid, input, session, userMessages) {
   const method = deliveryMethods.find(m => m.label.toLowerCase() === input);
   if (!method) return renderStep(bot, uid, 2, userMessages);
@@ -297,12 +297,14 @@ async function handleDelivery(bot, uid, input, session, userMessages) {
   return renderStep(bot, uid, 2.1, userMessages);
 }
 
+
 async function handlePromoDecision(bot, uid, input, session, userMessages) {
   if (input === MENU_BUTTONS.YES.text.toLowerCase())    session.step = 2.2;
   else if (input === MENU_BUTTONS.NO.text.toLowerCase()) session.step = 3;
   else return renderStep(bot, uid, 2.1, userMessages);
   return renderStep(bot, uid, session.step, userMessages);
 }
+
 
 async function handlePromoCode(bot, uid, raw, session, userMessages) {
   const code  = raw.toUpperCase().trim();
@@ -318,6 +320,7 @@ async function handlePromoCode(bot, uid, raw, session, userMessages) {
   return renderStep(bot, uid, 3, userMessages);
 }
 
+
 async function handleCategory(bot, uid, input, session, userMessages) {
   const cat = Object.keys(products).find(c => c.toLowerCase() === input);
   if (!cat) return renderStep(bot, uid, 3, userMessages);
@@ -326,6 +329,7 @@ async function handleCategory(bot, uid, input, session, userMessages) {
   return renderStep(bot, uid, 4, userMessages);
 }
 
+
 async function handleProduct(bot, uid, input, session, userMessages) {
   const prod = products[session.category]?.find(p => p.name.toLowerCase() === input);
   if (!prod) return renderStep(bot, uid, 4, userMessages);
@@ -333,6 +337,7 @@ async function handleProduct(bot, uid, input, session, userMessages) {
   session.step    = 5;
   return renderStep(bot, uid, 5, userMessages);
 }
+
 
 async function handleQuantity(bot, uid, input, session, userMessages) {
   const qty   = input.match(/^[^\s(]+/)?.[0];
@@ -359,6 +364,7 @@ async function handleQuantity(bot, uid, input, session, userMessages) {
   return renderStep(bot, uid, 6, userMessages);
 }
 
+
 async function handleCurrency(bot, uid, input, session, userMessages) {
   const wallet = WALLETS[input.toUpperCase()];
   if (!wallet) return renderStep(bot, uid, 6, userMessages);
@@ -368,12 +374,14 @@ async function handleCurrency(bot, uid, input, session, userMessages) {
   return renderStep(bot, uid, 7, userMessages);
 }
 
+
 async function handleOrderConfirm(bot, uid, input, session, userMessages) {
   if (input !== MENU_BUTTONS.CONFIRM.text.toLowerCase()) {
     return renderStep(bot, uid, 7, userMessages);
   }
   return handlePayment(bot, uid, userMessages);
 }
+
 
 async function handleConfirmOrCancel(bot, uid, input, session, userMessages) {
   if (input === MENU_BUTTONS.CONFIRM.text.toLowerCase()) {
@@ -388,6 +396,7 @@ async function handleConfirmOrCancel(bot, uid, input, session, userMessages) {
   return renderStep(bot, uid, session.step, userMessages);
 }
 
+
 async function handleBackButton(bot, uid, session, userMessages) {
   // jei grįžtam iš city selection – full reset
   if (session.step === 1.2) {
@@ -400,12 +409,9 @@ async function handleBackButton(bot, uid, session, userMessages) {
   return renderStep(bot, uid, session.step, userMessages);
 }
 
-// ————— Helpers —————
+// ——— Helpers ———
 
-function sanitizeId(id) {
-  const s = String(id || "").trim();
-  return s && s !== "undefined" && s !== "null" ? s : null;
-}
+
 function normalizeText(txt) {
   return txt?.toString().trim().toLowerCase();
 }
