@@ -137,7 +137,7 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
   const session = userSessions[id];
   if (
     !session || session.step !== 9 || !session.wallet ||
-    !session.currency || !session.expectedAmount
+    !session.currency || !session.expectedAmount || !session.deliveryMethod
   ) {
     return sendAndTrack(bot, id, "⚠️ Session expired or invalid. Use /start to retry.", {}, userMsgs);
   }
@@ -164,7 +164,9 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
     saveOrder(id, session.city, session.product.name, session.totalPrice)
       .catch(e => console.warn("⚠️ [saveOrder failed]", e.message));
 
-    await sendAndTrack(bot, id, "✅ Payment confirmed! Delivery starting...", {}, userMsgs);
+    session.deliveryInProgress = true;
+
+    await sendAndTrack(bot, id, "✅ Payment confirmed!\n🚚 Delivery starting...", {}, userMsgs);
     return simulateDelivery(bot, id, session.deliveryMethod, userMsgs);
 
   } catch (err) {
