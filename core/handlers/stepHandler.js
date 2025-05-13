@@ -399,11 +399,12 @@ async function handleBackButton(bot, uid, session, userMessages) {
 
 // ——— Helpers ———
 
+function normalizeText(txt) {
+  return txt?.toString().trim().toLowerCase();
+}
+
 function sanitizeId(id) {
   const s = String(id || "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-function normalizeText(txt) {
-  return txt?.toString().trim().toLowerCase();
-}
