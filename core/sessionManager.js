@@ -1,4 +1,4 @@
-// 📦 core/sessionManager.js | IMMORTAL FINAL v1.0.9•999999X•SYNC•GODMODE
+// 📦 core/sessionManager.js | IMMORTAL FINAL v1.1.0•999999X•SYNC•GODMODE•SKYLOCK
 // TITANLOCK+PROJECT-SYNC • AUTO-EXPIRE • ZOMBIE SLAYER • 24/7 BULLETPROOF
 
 import {
@@ -10,15 +10,14 @@ import {
   antiSpam,
   bannedUntil,
   userMessages,
-  // userOrders ← preserved
   activeUsers
 } from "../state/userState.js";
 
 const lastSeenAt = new Map();
 
 // ⏱ Timeout configs
-const STEP_TIMEOUT_MS = 60 * 60_000;  // 1h = zombie
-const IDLE_TIMEOUT_MS = 45 * 60_000;  // 45m = idle
+const STEP_TIMEOUT_MS = 60 * 60_000;   // 1h = zombie
+const IDLE_TIMEOUT_MS = 45 * 60_000;   // 45m = idle
 
 /** ✅ Mark user as active + timestamp */
 export function markUserActive(id) {
@@ -57,7 +56,6 @@ export function resetSession(id) {
     clearUserTimer(uid);
     clearPaymentTimer(uid);
 
-    // delete all state (excluding userOrders)
     [ userSessions, failedAttempts, antiFlood, antiSpam, bannedUntil, userMessages ]
       .forEach(store => { if (uid in store) delete store[uid]; });
 
@@ -93,7 +91,7 @@ export function autoExpireSessions(threshold = IDLE_TIMEOUT_MS) {
 
 /** 📊 Get live active count */
 export function getActiveUsersCount() {
-  const count = activeUsers.count || 0;
+  const count = activeUsers.count || activeUsers.size || 0;
   logAction("📊 [getActiveUsersCount]", `=${count}`);
   return count;
 }
