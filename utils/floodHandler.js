@@ -1,4 +1,4 @@
-// 📦 utils/floodHandler.js | IMMORTAL FINAL v999999999.∞+3 — GODMODE FLOODLOCK SYNCED 24/7
+// 📦 utils/floodHandler.js | IMMORTAL FINAL v999999999x•LIGHTSPEED•DIAMONDLOCK
 import {
   antiSpam,
   antiFlood,
@@ -12,35 +12,24 @@ import { REGION_MAP } from "../config/regions.js";
 import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { deliveryMethods } from "../config/features.js";
 
-/**
- * ✅ Detects real spam (excludes buttons, menu, /start, regions, cities, etc.)
- * @param {string|number} id
- * @param {object} ctx - Telegram context (message or callback_query)
- * @returns {boolean}
- */
 export function isSpamming(id, ctx = {}) {
   try {
     const isButton = Boolean(ctx?.callback_query || ctx?.message?.reply_markup);
     const text     = ctx?.message?.text?.trim().toLowerCase();
     const uid      = String(id).trim();
 
-    // ✅ Leisti viską jei /start, button, inline, reply_markup
     if (isButton || text === "/start") return false;
 
-    // ✅ Leisti jeigu user yra aktyviame FSM flow'e (turi session.step > 0)
     const session = userSessions?.[uid];
     if (session?.step && Number(session.step) >= 1) return false;
 
-    // ⚠️ Tik šiuo atveju taikyti anti-spam intervalą
     const now  = Date.now();
     const last = antiSpam[uid] || 0;
     antiSpam[uid] = now;
 
-    const tooFast = now - last < 1000;
-    if (tooFast) {
-      if (process.env.DEBUG_MESSAGES === "true") {
-        console.warn(`⚠️ [isSpamming] → Rapid messages detected (UID: ${uid})`);
-      }
+    const tooFast = now - last < 300; // ⏱️ Palengvinta: 300ms
+    if (tooFast && process.env.DEBUG_MESSAGES === "true") {
+      console.warn(`⚠️ [isSpamming] → Rapid messages detected (UID: ${uid})`);
     }
     return tooFast;
   } catch (err) {
@@ -49,9 +38,6 @@ export function isSpamming(id, ctx = {}) {
   }
 }
 
-/**
- * ✅ Flood mute status
- */
 export function isMuted(id) {
   try {
     const until = bannedUntil[id];
@@ -68,24 +54,18 @@ export function isMuted(id) {
   }
 }
 
-/**
- * ✅ Dynamic per-user flood limit
- */
 function getFloodLimit(id) {
   try {
     const count = parseInt(userOrders?.[id] || 0);
-    if (count >= 15) return 8;
-    if (count >= 5) return 6;
-    return 5;
+    if (count >= 15) return 24; // ⚡ Padidinta
+    if (count >= 5) return 18;
+    return 12;
   } catch (err) {
     console.warn("⚠️ [getFloodLimit fallback]:", err.message);
-    return 5;
+    return 12;
   }
 }
 
-/**
- * ✅ Flood control (excludes valid user navigation)
- */
 export async function handleFlood(id, bot, userMsgs = {}, ctx = {}) {
   try {
     const uid = String(id).trim();
@@ -107,16 +87,16 @@ export async function handleFlood(id, bot, userMsgs = {}, ctx = {}) {
     const now = Date.now();
     if (!Array.isArray(antiFlood[uid])) antiFlood[uid] = [];
 
-    antiFlood[uid] = antiFlood[uid].filter(ts => now - ts < 5000);
+    antiFlood[uid] = antiFlood[uid].filter(ts => now - ts < 2000); // ⏱️ trumpesnis langas
     antiFlood[uid].push(now);
 
     const limit = getFloodLimit(uid);
     const hits = antiFlood[uid].length;
 
     if (hits > limit) {
-      bannedUntil[uid] = now + 5 * 60 * 1000;
+      bannedUntil[uid] = now + 60 * 1000; // ⏳ Tik 1 min (užtenka)
       await sendAndTrack(bot, uid,
-        "⛔️ *Too many actions in a short time.*\n🕓 Muted for *5 minutes*.",
+        "⛔️ *Too many actions in short time.*\n🕓 Muted for *1 minute*.",
         { parse_mode: "Markdown" }, userMsgs
       );
       if (process.env.DEBUG_MESSAGES === "true") {
@@ -127,7 +107,7 @@ export async function handleFlood(id, bot, userMsgs = {}, ctx = {}) {
 
     if (hits === limit) {
       await sendAndTrack(bot, uid,
-        "⚠️ *Flood warning:* next message will mute you *for 5 minutes*.",
+        "⚠️ *Flood warning:* next action will mute you *for 1 minute*.",
         { parse_mode: "Markdown" }, userMsgs
       );
       if (process.env.DEBUG_MESSAGES === "true") {
