@@ -1,5 +1,5 @@
-// 📦 flows/startOrder.js | FINAL v9999999999.∞+SYNC+TYPERUSH+MEMFIX
-// BULLETPROOF FSM START • ULTRA CLEANUP • INSTANT UX • REGION SYNCED
+// 📦 flows/startOrder.js | FINAL IMMORTAL v9999999999.∞•GODMODE•DIAMONDLOCK
+// ULTRA BULLETPROOF FSM START • MAX CLEANUP • INSTANT UX • REGION SYNCED
 
 import {
   userSessions,
@@ -24,22 +24,22 @@ export async function startOrder(bot, id, msgs = userMessages) {
   }
 
   try {
-    // 🧼 1. Clean all past data
+    // 🧼 1. Clean all user state (timers, messages, sessions)
     await fullResetUserState(uid);
 
-    // 🌀 2. Init FSM session
+    // 🌀 2. Init fresh session
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now()
     };
 
     if (process.env.DEBUG_MESSAGES === "true") {
-      console.debug(`🔁 [startOrder] Session initialized (ID: ${uid})`);
+      console.debug(`🔁 [startOrder] Session initialized (UID: ${uid})`);
     }
 
-    // 💬 3. Send typing first (ensured no throw), then region menu
+    // 💬 3. Send typing action → render region menu
     await bot.sendChatAction(uid, "typing").catch(() => {});
-    
+
     const keyboard = getRegionKeyboard();
     return await sendKeyboard(
       bot,
@@ -63,7 +63,7 @@ export async function startOrder(bot, id, msgs = userMessages) {
 }
 
 // ———————————————————————
-// 🧼 Ultra-safe user state cleaner
+// 🧼 Bulletproof state cleaner
 // ———————————————————————
 
 async function fullResetUserState(uid) {
@@ -73,22 +73,18 @@ async function fullResetUserState(uid) {
       clearUserMessages(uid)
     ]);
 
-    delete userOrders[uid];
-    delete userMessages[uid];
-    delete paymentTimers[uid];
+    [userOrders, userMessages, paymentTimers].forEach(store => delete store[uid]);
 
     if (userSessions[uid]) {
-      for (const key in userSessions[uid]) {
-        userSessions[uid][key] = null;
-      }
+      Object.keys(userSessions[uid]).forEach(k => (userSessions[uid][k] = null));
       delete userSessions[uid];
     }
 
     if (process.env.DEBUG_MESSAGES === "true") {
-      console.debug(`🧼 [fullResetUserState] Cleared user state (ID: ${uid})`);
+      console.debug(`🧼 [fullResetUserState] State cleared (UID: ${uid})`);
     }
   } catch (err) {
-    console.warn(`⚠️ [resetUserState warn] → ${err.message} (ID: ${uid})`);
+    console.warn(`⚠️ [fullResetUserState warn] → ${err.message} (UID: ${uid})`);
   }
 }
 
@@ -103,5 +99,5 @@ function sanitizeId(id) {
 
 function logError(prefix, error, uid = "") {
   const msg = error?.message || error;
-  console.error(`${new Date().toISOString()} ${prefix} → ${msg}${uid ? ` (ID: ${uid})` : ""}`);
+  console.error(`${new Date().toISOString()} ${prefix} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
 }
