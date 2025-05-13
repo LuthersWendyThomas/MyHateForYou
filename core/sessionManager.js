@@ -1,5 +1,5 @@
-// 📦 core/sessionManager.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
-// TITANLOCK SYNCED • ZOMBIE SLAYER • AUTO-EXPIRE • 24/7 BULLETPROOF • ULTRA-OPTIMIZED
+// 📦 core/sessionManager.js | IMMORTAL FINAL v1.0.9•999999X•SYNC•GODMODE
+// TITANLOCK+PROJECT-SYNC • AUTO-EXPIRE • ZOMBIE SLAYER • 24/7 BULLETPROOF
 
 import {
   activeTimers,
@@ -10,17 +10,17 @@ import {
   antiSpam,
   bannedUntil,
   userMessages,
-  // userOrders  ← preserve order history across sessions
+  // userOrders ← preserved
   activeUsers
 } from "../state/userState.js";
 
 const lastSeenAt = new Map();
 
-// ⏱️ Timeouts
-const STEP_TIMEOUT_MS = 60 * 60_000;   // 1h zombie
-const IDLE_TIMEOUT_MS = 45 * 60_000;   // 45m idle
+// ⏱ Timeout configs
+const STEP_TIMEOUT_MS = 60 * 60_000;  // 1h = zombie
+const IDLE_TIMEOUT_MS = 45 * 60_000;  // 45m = idle
 
-/** ✅ Mark a user as active now */
+/** ✅ Mark user as active + timestamp */
 export function markUserActive(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
@@ -29,7 +29,7 @@ export function markUserActive(id) {
   logAction("✅ [markUserActive]", "User marked active", uid);
 }
 
-/** 🕒 Clear session timer */
+/** ⏱ Clear session timeout */
 export function clearUserTimer(id) {
   const uid = sanitizeId(id);
   if (uid && activeTimers[uid]) {
@@ -49,7 +49,7 @@ export function clearPaymentTimer(id) {
   }
 }
 
-/** 🔄 Fully reset a user (preserve order history) */
+/** 🔄 Fully wipe session (but keep order history) */
 export function resetSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
@@ -57,36 +57,33 @@ export function resetSession(id) {
     clearUserTimer(uid);
     clearPaymentTimer(uid);
 
-    // wipe per-session stores (but keep userOrders)
+    // delete all state (excluding userOrders)
     [ userSessions, failedAttempts, antiFlood, antiSpam, bannedUntil, userMessages ]
-      .forEach(store => { if (store[uid] !== undefined) delete store[uid]; });
+      .forEach(store => { if (uid in store) delete store[uid]; });
 
     lastSeenAt.delete(uid);
-    activeUsers.remove(uid);
+    if (activeUsers.remove) activeUsers.remove(uid);
+    else activeUsers.delete(uid);
 
-    logAction("🧼 [resetSession]", "Session fully reset", uid);
+    logAction("🧼 [resetSession]", "Session reset complete", uid);
   } catch (err) {
     logError("❌ [resetSession error]", err, uid);
   }
 }
 
-/** ⏳ Expire idle or “zombie” sessions */
+/** ⏳ Auto-expire stale/zombie sessions */
 export function autoExpireSessions(threshold = IDLE_TIMEOUT_MS) {
   const now = Date.now();
-  for (const [uid, lastTs] of lastSeenAt.entries()) {
+  for (const [uid, last] of lastSeenAt.entries()) {
     try {
-      const session = userSessions[uid];
-      const idleTime = now - lastTs;
-      const isZombie = session?.step >= 1 && idleTime > STEP_TIMEOUT_MS;
-      const isIdle   = idleTime > threshold;
+      const session  = userSessions[uid];
+      const idleTime = now - last;
+      const zombie   = session?.step >= 1 && idleTime > STEP_TIMEOUT_MS;
+      const idle     = idleTime > threshold;
 
-      if (isZombie || isIdle) {
+      if (zombie || idle) {
         resetSession(uid);
-        logAction(
-          "⏳ [autoExpireSessions]",
-          `Auto-expired (${isZombie ? "ZOMBIE" : "IDLE"})`,
-          uid
-        );
+        logAction("⏳ [autoExpireSessions]", `Expired (${zombie ? "ZOMBIE" : "IDLE"})`, uid);
       }
     } catch (err) {
       logError("❌ [autoExpireSessions error]", err, uid);
@@ -94,30 +91,33 @@ export function autoExpireSessions(threshold = IDLE_TIMEOUT_MS) {
   }
 }
 
-/** 📊 Current active users count */
+/** 📊 Get live active count */
 export function getActiveUsersCount() {
-  const count = activeUsers.count;
+  const count = activeUsers.count || 0;
   logAction("📊 [getActiveUsersCount]", `=${count}`);
   return count;
 }
 
-/** 🔥 Wipe all sessions (admin only) */
+/** 🔥 Wipe all user sessions (admin only!) */
 export function wipeAllSessions() {
   try {
-    Object.keys(userSessions).forEach(uid => resetSession(uid));
-    logAction("🔥 [wipeAllSessions]", `All sessions wiped`);
+    for (const uid of Object.keys(userSessions)) {
+      resetSession(uid);
+    }
+    logAction("🔥 [wipeAllSessions]", "All sessions reset");
   } catch (err) {
     logError("❌ [wipeAllSessions error]", err);
   }
 }
 
-/** 🧽 Clear stale payment timers */
+/** 🧽 Cleanup payment timers not tied to active payments */
 export function cleanStalePaymentTimers() {
   for (const uid in paymentTimers) {
     try {
-      if (userSessions[uid]?.step !== 8) {
+      const step = userSessions[uid]?.step;
+      if (step !== 8 && step !== 9) {
         clearPaymentTimer(uid);
-        logAction("🧽 [cleanStalePaymentTimers]", "Stale payment timer cleared", uid);
+        logAction("🧽 [cleanStalePaymentTimers]", "Stale timer cleared", uid);
       }
     } catch (err) {
       logError("❌ [cleanStalePaymentTimers error]", err, uid);
@@ -125,30 +125,30 @@ export function cleanStalePaymentTimers() {
   }
 }
 
-/** 🧪 Debug print of active sessions */
+/** 🧪 Debug log of live sessions */
 export function printSessionSummary() {
   const now = Date.now();
-  const sessions = Object.entries(userSessions);
-  logAction("📊 [printSessionSummary]", `Count=${sessions.length}`);
-  sessions.forEach(([uid, session]) => {
-    const last = lastSeenAt.get(uid);
-    const ago = last ? `${Math.floor((now - last)/1000)}s ago` : "unknown";
-    console.log(`— ${uid} | Step: ${session.step ?? "?"} | LastSeen: ${ago}`);
-  });
+  const entries = Object.entries(userSessions);
+  logAction("📊 [printSessionSummary]", `Count=${entries.length}`);
+  for (const [uid, sess] of entries) {
+    const seen = lastSeenAt.get(uid);
+    const ago  = seen ? `${Math.floor((now - seen) / 1000)}s ago` : "unknown";
+    console.log(`• ${uid} | Step: ${sess?.step ?? "?"} | LastSeen: ${ago}`);
+  }
 }
 
-// ————— HELPERS —————
+// ——— Helpers ———
 
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-function logAction(action, msg, uid = "") {
-  console.log(`${new Date().toISOString()} ${action} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
+function logAction(label, msg, uid = "") {
+  console.log(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
 }
 
-function logError(action, err, uid = "") {
-  const m = err?.message || err;
-  console.error(`${new Date().toISOString()} ${action} → ${m}${uid ? ` (UID: ${uid})` : ""}`);
+function logError(label, err, uid = "") {
+  const msg = err?.message || err;
+  console.error(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
 }
