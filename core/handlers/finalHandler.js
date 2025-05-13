@@ -1,56 +1,49 @@
-// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
-// 24/7 LOCKED • GREETING+RESET IMMORTAL • MENU+DELIVERY BULLETPROOF
+// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v999999999.∞+SYNC+DIAMONDLOCK
+// MAIN MENU GREETING • FULL SESSION RESET • DELIVERY FINISHER • 24/7 STABILITY
 
-import fs    from "fs/promises";
-import path  from "path";
-import {
-  sendAndTrack,
-  sendPhotoAndTrack
-} from "../../helpers/messageUtils.js";
+import fs from "fs/promises";
+import path from "path";
+
+import { sendAndTrack, sendPhotoAndTrack } from "../../helpers/messageUtils.js";
 import { getMainMenu } from "../../helpers/menu.js";
-import {
-  clearTimers,
-  clearUserMessages,
-  resetUser
-} from "../../state/stateManager.js";
+import { clearTimers, clearUserMessages, resetUser } from "../../state/stateManager.js";
+
 import {
   userSessions,
   userMessages,
   activeUsers,
   paymentTimers
 } from "../../state/userState.js";
+
 import { simulateDelivery } from "./deliveryHandler.js";
 
 /**
- * 🚀 /start — full session wipe, greeting + main menu
+ * 🚀 /start — full wipe + greeting + main menu render
  */
 export async function safeStart(bot, id) {
   const uid = sanitizeId(id);
   if (!bot?.sendMessage || !uid) return;
 
   try {
-    // 1️⃣ full reset
     await fullSessionReset(uid);
     userSessions[uid] = { step: 1, createdAt: Date.now() };
     activeUsers.add(uid);
 
-    // 2️⃣ typing indicator
     await bot.sendChatAction(uid, "typing").catch(() => {});
 
-    // 3️⃣ prepare menu + image
-    const menu    = getMainMenu(uid);             // raw reply_markup object
+    const menu = getMainMenu(uid);
     const imgPath = path.join(process.cwd(), "assets", "greeting.jpg");
-    let buffer;
+
+    let buffer = null;
     try {
       buffer = await fs.readFile(imgPath);
     } catch {
       buffer = null;
     }
 
-    const count = activeUsers.count || 1;
+    const count = activeUsers?.size || 1;
 
-    // 4️⃣ send greeting
-    if (buffer && buffer.byteLength > 10) {
+    if (buffer?.byteLength > 10) {
       return sendPhotoAndTrack(
         bot,
         uid,
@@ -58,7 +51,7 @@ export async function safeStart(bot, id) {
         {
           caption: greetingText(count),
           parse_mode: "Markdown",
-          reply_markup: menu        // ← use menu directly
+          reply_markup: menu
         },
         userMessages
       );
@@ -69,7 +62,7 @@ export async function safeStart(bot, id) {
         fallbackText(count),
         {
           parse_mode: "Markdown",
-          reply_markup: menu        // ← use menu directly
+          reply_markup: menu
         },
         userMessages
       );
@@ -83,7 +76,7 @@ export async function safeStart(bot, id) {
       "⚠️ Failed to start. Please try again.",
       {
         parse_mode: "Markdown",
-        reply_markup: menu        // ← use menu directly
+        reply_markup: menu
       },
       userMessages
     );
@@ -91,7 +84,7 @@ export async function safeStart(bot, id) {
 }
 
 /**
- * ✅ finishOrder — simulate delivery then reset → show menu
+ * ✅ Order completion → delivery → main menu
  */
 export async function finishOrder(bot, id) {
   const uid = sanitizeId(id);
@@ -101,23 +94,19 @@ export async function finishOrder(bot, id) {
     const session = userSessions[uid];
     if (!session?.deliveryMethod) throw new Error("Missing delivery method");
 
-    // 🚚 simulate delivery
     await simulateDelivery(bot, uid, session.deliveryMethod, userMessages);
-
-    // 🔄 reset session
     await resetSession(uid);
 
     const menu = getMainMenu(uid);
     await bot.sendChatAction(uid, "typing").catch(() => {});
 
-    // 📬 show main menu
     return sendAndTrack(
       bot,
       uid,
       "✅ Order confirmed!\n🚚 Delivery started...\n\nMain menu:",
       {
         parse_mode: "Markdown",
-        reply_markup: menu      // ← use menu directly
+        reply_markup: menu
       },
       userMessages
     );
@@ -130,7 +119,7 @@ export async function finishOrder(bot, id) {
       "❗️ Delivery error. Try again or use /start.",
       {
         parse_mode: "Markdown",
-        reply_markup: menu      // ← use menu directly
+        reply_markup: menu
       },
       userMessages
     );
@@ -138,7 +127,7 @@ export async function finishOrder(bot, id) {
 }
 
 /**
- * 🔄 resetSession — public hook to wipe session state
+ * 🔄 Public session reset
  */
 export async function resetSession(id) {
   const uid = sanitizeId(id);
@@ -147,10 +136,11 @@ export async function resetSession(id) {
 }
 
 /**
- * 🧯 fullSessionReset — clear timers, messages, state, sessions
+ * 🧼 Resets user state, timers, memory
  */
 async function fullSessionReset(uid) {
   if (!uid) return;
+
   try {
     await clearTimers(uid);
     await clearUserMessages(uid);
@@ -162,22 +152,32 @@ async function fullSessionReset(uid) {
     }
 
     delete userSessions[uid];
-    activeUsers.remove
-      ? activeUsers.remove(uid)
-      : activeUsers.delete(uid);
 
+    if (activeUsers.remove) {
+      activeUsers.remove(uid);
+    } else {
+      activeUsers.delete(uid);
+    }
+
+    if (process.env.DEBUG_MESSAGES === "true") {
+      console.debug(`🧼 [fullSessionReset] Session cleared for ${uid}`);
+    }
   } catch (err) {
     console.error("❌ [fullSessionReset error]:", err);
   }
 }
 
-/** 🧠 sanitizeId — ensure valid string ID */
+/**
+ * 🧠 UID sanitizer
+ */
 function sanitizeId(id) {
-  const s = String(id || "").trim();
+  const s = String(id ?? "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-/** 📸 greetingText — image caption */
+/**
+ * 📸 Greeting caption (with image)
+ */
 function greetingText(count) {
   return `
 🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
@@ -199,7 +199,9 @@ function greetingText(count) {
 `.trim();
 }
 
-/** 🧾 fallbackText — no-image version */
+/**
+ * 🧾 Text-only fallback greeting
+ */
 function fallbackText(count) {
   return `
 🇺🇸 *BalticPharmacyBot* — 30+ cities live  
