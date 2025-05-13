@@ -1,4 +1,4 @@
-// 📦 helpers/keyboardConstants.js | FINAL IMMORTAL v1.0.0•GODMODE DIAMONDLOCK
+// 📦 helpers/keyboardConstants.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
 // SKYLOCKED SYNC • BULLETPROOF • ULTRA-SAFE • DIAMONDLOCK MAX-PERFECTION
 
 import { BOT } from "../config/config.js";
@@ -122,18 +122,15 @@ export function getFallbackKeyboard() {
 
 // ————— Helpers —————
 
-/** 🔒 Sanitizes incoming IDs into non-empty strings */
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-/** 📋 Logs successful actions */
 function logAction(fn, msg) {
   console.log(`${new Date().toISOString()} [${fn}] → ${msg}`);
 }
 
-/** ⚠️ Logs errors uniformly */
 function logError(fn, err, uid = "") {
   const m = err?.message || err;
   console.error(`${new Date().toISOString()} [${fn}] → ${m}${uid ? ` (UID: ${uid})` : ""}`);
