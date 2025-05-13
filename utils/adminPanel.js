@@ -1,5 +1,5 @@
-// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.9999∞.1
-// MAX SYNC + DISCOUNT CONTROL + TOGGLE SYSTEM + BROADCAST + STATS + BULLETPROOF UPGRADE
+// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.9999∞.2
+// MAX SYNC + DISCOUNT CONTROL + TOGGLE SYSTEM + BROADCAST + STATS + BULLETPROOF FSM FIX
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import {
@@ -48,6 +48,7 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
   if (!id || String(id) !== String(BOT.ADMIN_ID) || !text) return;
 
   const s = (sessions[id] ||= {});
+  s.step = null; // ⬅ garantuotas išėjimas iš FSM funnel
 
   try {
     if (s.adminStep === "ban_user") {
@@ -170,7 +171,8 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
       case "🟢 Toggle Items":
         s.adminStep = "toggle_manage";
         return sendAndTrack(bot, id,
-          `🟢 *Toggle ON/OFF*\n\nRegions: ${allRegions.length}\nCities: ${allCities.length}\nCategories: ${allCategories.length}\nProducts: ${allProductNames.length}\n\n✍️ Format: \`name 1|0\``, { parse_mode: "Markdown" }, {});
+          `🟢 *Toggle ON/OFF*\n\nRegions: ${allRegions.length}\nCities: ${allCities.length}\nCategories: ${allCategories.length}\nProducts: ${allProductNames.length}\n\n✍️ Format: \`name 1|0\``,
+          { parse_mode: "Markdown" }, {});
 
       case "📣 Broadcast":
         s.adminStep = "broadcast";
