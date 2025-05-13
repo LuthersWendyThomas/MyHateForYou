@@ -1,44 +1,44 @@
-// 📦 utils/rateLimiter.js | IMMORTAL FINAL v999999999.∞ — GODMODE RATE SHIELD + MEMGUARD + DEBUG LOCKED
+// utils/rateLimiter.js | IMMORTAL FINAL v999999999.∞ — GODMODE RATE SHIELD + MEMGUARD + DEBUG LOCKED
 
 const limits = new Map();
 
-const DELAY_MS = 1000;         // ⏱️ Bazinis užklausų tarpas
-const JITTER_MS = 200;         // 🔀 Atsitiktinis papildomas delay
-const MAX_ENTRIES = 1000;      // 🧠 Apsauga nuo memory leak
-const CLEANUP_THRESHOLD = 60_000; // ⌛ Pašalinti senus įrašus (>60s)
+const DELAY_MS = 1000;             // ⏱️ Base delay between calls
+const JITTER_MS = 200;             // 🔀 Random extra delay
+const MAX_ENTRIES = 1000;          // 🧠 Prevent unbounded growth
+const CLEANUP_THRESHOLD = 60_000;  // ⌛ Remove entries older than 60s
 
 /**
- * 🛡️ Užtikrina saugų dažnio ribojimą pagal raktą (valiuta/API)
- * @param {string} key - pvz. "btc", "eth", "sol", kt.
+ * 🛡️ Per-key rate limiter (currency/API granularity).
+ * @param {string} key – e.g. "btc", "eth", "sol"
  */
 export async function rateLimiter(key) {
   try {
     const id = String(key || "").trim().toLowerCase();
     if (!id) return;
 
-    const now = Date.now();
-    const last = limits.get(id) || 0;
+    const now     = Date.now();
+    const last    = limits.get(id) || 0;
     const elapsed = now - last;
-    const waitTime = DELAY_MS - elapsed;
+    const waitFor = DELAY_MS - elapsed;
 
-    if (waitTime > 0) {
-      const jitter = Math.floor(Math.random() * JITTER_MS);
-      const totalDelay = waitTime + jitter;
+    if (waitFor > 0) {
+      const jitter     = Math.floor(Math.random() * JITTER_MS);
+      const totalDelay = waitFor + jitter;
       debug(`⏳ [RATE LIMIT] ${id} → wait ${totalDelay}ms`);
       await wait(totalDelay);
     }
 
-    limits.set(id, now);
+    limits.set(id, Date.now());
 
-    if (limits.size > MAX_ENTRIES) cleanOldEntries(now);
+    if (limits.size > MAX_ENTRIES) {
+      cleanOldEntries(Date.now());
+    }
   } catch (err) {
     console.error("❌ [rateLimiter error]:", err.message || err);
   }
 }
 
-/**
- * 🧹 Valo pasenusius įrašus
- */
+/** 🧹 Remove stale entries to avoid memory leaks */
 function cleanOldEntries(now) {
   let cleaned = 0;
   for (const [key, ts] of limits.entries()) {
@@ -47,19 +47,17 @@ function cleanOldEntries(now) {
       cleaned++;
     }
   }
-  if (cleaned > 0) debug(`🧹 [rateLimiter] Cleaned ${cleaned} old keys`);
+  if (cleaned > 0) {
+    debug(`🧹 [rateLimiter] Cleaned ${cleaned} old keys`);
+  }
 }
 
-/**
- * ⏱ Delay helper
- */
+/** ⏱ Promise-based sleep */
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * 🪵 Debug logger
- */
+/** 🪵 Conditional debug logging (enable with DEBUG_MESSAGES="true") */
 function debug(...args) {
   if (process.env.DEBUG_MESSAGES === "true") {
     console.log(...args);
