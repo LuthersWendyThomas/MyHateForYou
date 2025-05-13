@@ -1,11 +1,11 @@
-// utils/rateLimiter.js | IMMORTAL FINAL v999999999.∞ — GODMODE RATE SHIELD + MEMGUARD + DEBUG LOCKED
+// utils/rateLimiter.js | IMMORTAL FINAL v999999999.∞+ULTRASYNC•DIAMONDLOCK
 
 const limits = new Map();
 
-const DELAY_MS = 1000;             // ⏱️ Base delay between calls
-const JITTER_MS = 200;             // 🔀 Random extra delay
-const MAX_ENTRIES = 1000;          // 🧠 Prevent unbounded growth
-const CLEANUP_THRESHOLD = 60_000;  // ⌛ Remove entries older than 60s
+const DELAY_MS = 400;              // ⚡ Pagrindinis delay (buvo 1000)
+const JITTER_MS = 150;             // 🔀 Lengvas atsitiktinumas
+const MAX_ENTRIES = 1500;          // 💾 Leista daugiau key
+const CLEANUP_THRESHOLD = 45_000;  // ⌛ Valymo ciklas (buvo 60s)
 
 /**
  * 🛡️ Per-key rate limiter (currency/API granularity).
