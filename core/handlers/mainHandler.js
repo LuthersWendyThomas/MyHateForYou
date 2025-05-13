@@ -1,5 +1,5 @@
 // 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v9999999999.∞•GODMODE+DIAMONDLOCK
-// FULL FSM INTEGRATION • FLOOD SHIELD • CALLBACK + TEXT SAFE • ZERO LAG UX
+// FULL FSM INTEGRATION • FLOOD SHIELD • CALLBACK + TEXT SAFE • ZERO LAG UX • STEP9 SYNCED
 
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages } from "../../state/userState.js";
@@ -97,29 +97,20 @@ export function registerMainHandler(bot) {
         return await safeCall(() => safeStart(bot, uid), uid);
       }
 
+      // 🛡️ Admin mode
       if (userSessions[uid].adminStep) {
         return await safeCall(() => handleAdminAction(bot, msg, userSessions), uid);
       }
 
-      if (isMatch(text, MENU_BUTTONS.BUY)) {
-        return await safeCall(() => startOrder(bot, uid, userMessages), uid);
-      }
-      if (isMatch(text, MENU_BUTTONS.PROFILE)) {
-        return await safeCall(() => sendProfile(bot, uid, userMessages), uid);
-      }
-      if (isMatch(text, MENU_BUTTONS.ORDERS)) {
-        return await safeCall(() => sendOrders(bot, uid, userMessages), uid);
-      }
-      if (isMatch(text, MENU_BUTTONS.HELP)) {
-        return await safeCall(() => sendHelp(bot, uid, userMessages), uid);
-      }
-      if (isMatch(text, MENU_BUTTONS.STATS) && isAdmin(uid)) {
-        return await safeCall(() => sendStats(bot, uid, userMessages), uid);
-      }
-      if (isMatch(text, MENU_BUTTONS.ADMIN) && isAdmin(uid)) {
-        return await safeCall(() => openAdminPanel(bot, uid), uid);
-      }
+      // 🛒 Main menu buttons
+      if (isMatch(text, MENU_BUTTONS.BUY))     return await safeCall(() => startOrder(bot, uid, userMessages), uid);
+      if (isMatch(text, MENU_BUTTONS.PROFILE)) return await safeCall(() => sendProfile(bot, uid, userMessages), uid);
+      if (isMatch(text, MENU_BUTTONS.ORDERS))  return await safeCall(() => sendOrders(bot, uid, userMessages), uid);
+      if (isMatch(text, MENU_BUTTONS.HELP))    return await safeCall(() => sendHelp(bot, uid, userMessages), uid);
+      if (isMatch(text, MENU_BUTTONS.STATS) && isAdmin(uid)) return await safeCall(() => sendStats(bot, uid, userMessages), uid);
+      if (isMatch(text, MENU_BUTTONS.ADMIN) && isAdmin(uid)) return await safeCall(() => openAdminPanel(bot, uid), uid);
 
+      // 🧠 FSM Step Handler – supports step 1...9
       return await safeCall(() => handleStep(bot, uid, raw, userMessages, msg), uid);
     } catch (err) {
       console.error("❌ [message error]:", err);
