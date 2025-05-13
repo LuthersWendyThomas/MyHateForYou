@@ -164,6 +164,14 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
     saveOrder(id, session.city, session.product.name, session.totalPrice)
       .catch(e => console.warn("⚠️ [saveOrder failed]", e.message));
 
+    // ✅ Admin notification
+    await sendAdminPing(
+      `💸 *Payment confirmed* from UID \`${id}\`\n` +
+      `📦 Product: *${session.product?.name}*\n` +
+      `🔢 Qty: *${session.quantity}* • 💵 $${session.totalPrice}\n` +
+      `🔗 Currency: *${session.currency}*`
+    );
+
     session.deliveryInProgress = true;
 
     await sendAndTrack(bot, id, "✅ Payment confirmed!\n🚚 Delivery starting...", {}, userMsgs);
@@ -183,5 +191,16 @@ function cleanupOnError(id) {
   if (paymentTimers[id]) {
     clearTimeout(paymentTimers[id]);
     delete paymentTimers[id];
+  }
+}
+
+// ✅ Admin ping util
+export async function sendAdminPing(msg) {
+  try {
+    const adminId = process.env.ADMIN_ID;
+    if (!adminId) return;
+    await BOT.INSTANCE.sendMessage(adminId, msg, { parse_mode: "Markdown" });
+  } catch (e) {
+    console.warn("⚠️ [sendAdminPing failed]", e.message);
   }
 }
