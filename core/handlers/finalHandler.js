@@ -1,5 +1,5 @@
-// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v999999999.∞+SYNC+DIAMONDLOCK
-// MAIN MENU GREETING • FULL SESSION RESET • DELIVERY FINISHER • 24/7 STABILITY
+// 📦 core/handlers/finalHandler.js | FINAL IMMORTAL v999999999.∞+DIAMONDLOCK+SYNCFIX
+// MAIN MENU GREETING • SESSION RESET • DELIVERY FINISHER • 24/7 STABILITY
 
 import fs from "fs/promises";
 import path from "path";
@@ -17,9 +17,6 @@ import {
 
 import { simulateDelivery } from "./deliveryHandler.js";
 
-/**
- * 🚀 /start — full wipe + greeting + main menu render
- */
 export async function safeStart(bot, id) {
   const uid = sanitizeId(id);
   if (!bot?.sendMessage || !uid) return;
@@ -83,9 +80,6 @@ export async function safeStart(bot, id) {
   }
 }
 
-/**
- * ✅ Order completion → delivery → main menu
- */
 export async function finishOrder(bot, id) {
   const uid = sanitizeId(id);
   if (!bot?.sendMessage || !uid) return;
@@ -126,18 +120,12 @@ export async function finishOrder(bot, id) {
   }
 }
 
-/**
- * 🔄 Public session reset
- */
 export async function resetSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
   await fullSessionReset(uid);
 }
 
-/**
- * 🧼 Resets user state, timers, memory
- */
 async function fullSessionReset(uid) {
   if (!uid) return;
 
@@ -146,17 +134,19 @@ async function fullSessionReset(uid) {
     await clearUserMessages(uid);
     await resetUser(uid);
 
-    if (paymentTimers[uid]) {
+    if (paymentTimers?.[uid]) {
       clearTimeout(paymentTimers[uid]);
       delete paymentTimers[uid];
     }
 
-    delete userSessions[uid];
+    if (userSessions?.[uid]) {
+      delete userSessions[uid];
+    }
 
-    if (activeUsers.remove) {
+    if (typeof activeUsers?.remove === "function") {
       activeUsers.remove(uid);
     } else {
-      activeUsers.delete(uid);
+      activeUsers?.delete(uid);
     }
 
     if (process.env.DEBUG_MESSAGES === "true") {
@@ -167,17 +157,11 @@ async function fullSessionReset(uid) {
   }
 }
 
-/**
- * 🧠 UID sanitizer
- */
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-/**
- * 📸 Greeting caption (with image)
- */
 function greetingText(count) {
   return `
 🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
@@ -199,9 +183,6 @@ function greetingText(count) {
 `.trim();
 }
 
-/**
- * 🧾 Text-only fallback greeting
- */
 function fallbackText(count) {
   return `
 🇺🇸 *BalticPharmacyBot* — 30+ cities live  
