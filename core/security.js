@@ -1,5 +1,5 @@
-// 🛡️ core/security.js | IMMORTAL FINAL v1.0.9•999999X•GODMODE•TITANLOCK
-// PERFECT PROJECT SYNC • ULTRA-SAFE GUARDS • FSM/STEP-FRIENDLY • FLOOD-PROOF
+// 🛡️ core/security.js | IMMORTAL FINAL v1.1.0•999999999x•SYNCED•BULLETPROOF
+// PERFECT FLOODHANDLER SYNC • ULTRA-SAFE • FSM-FRIENDLY • UX BOOSTED
 
 import { isBanned } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
@@ -7,11 +7,11 @@ import { antiSpam, antiFlood, bannedUntil, userSessions } from "../state/userSta
 import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { BOT } from "../config/config.js";
 
-// ⛔ Limits (adjusted for UX)
-const SPAM_INTERVAL_MS    = 4600;          // ~4.6s
-const FLOOD_LIMIT         = 6;
-const FLOOD_WINDOW_MS     = 15400;
-const TEMP_MUTE_MS        = 4 * 60 * 1000;
+// ⛔ Synced Limits (optimized to match floodHandler.js UX)
+const SPAM_INTERVAL_MS    = 1400;          // 🟢 ~1.4s input interval
+const FLOOD_LIMIT         = 9;             // 🟢 up to 9 hits
+const FLOOD_WINDOW_MS     = 9000;          // 🟢 reset after 9s
+const TEMP_MUTE_MS        = 90 * 1000;     // 🟢 1.5min mute duration
 const MAX_MESSAGE_LENGTH  = 600;
 const MAX_INPUT_FREQUENCY = 6;
 const MAX_DISTINCT_INPUTS = 20;
@@ -21,10 +21,7 @@ const BUTTON_TEXTS = Object.values(MENU_BUTTONS)
   .map(btn => String(btn?.text || "").trim().toLowerCase())
   .filter(Boolean);
 
-// 🔁 Recent messages tracker
 const recentTexts = new Map();
-
-// ——— Helpers ———
 
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
@@ -148,10 +145,8 @@ export async function canProceed(id, bot, text = "") {
   const session = userSessions[uid];
   const input   = String(text || "").trim().toLowerCase();
 
-  // ✅ Allow all menu buttons always
   if (BUTTON_TEXTS.includes(input)) return true;
 
-  // ✅ Allow confirm/cancel in late steps
   if (session?.step >= 8) {
     if (
       input === MENU_BUTTONS.CONFIRM.text.toLowerCase() ||
@@ -160,10 +155,10 @@ export async function canProceed(id, bot, text = "") {
   }
 
   try {
-    if (isMuted(uid))                    return false;
-    if (await handleFlood(uid, bot))    return false;
-    if (isSpamming(uid))                return false;
-    if (isMessageDangerous(uid, text))  return false;
+    if (isMuted(uid))                   return false;
+    if (await handleFlood(uid, bot))   return false;
+    if (isSpamming(uid))               return false;
+    if (isMessageDangerous(uid, text)) return false;
     if (await isBanned(uid)) {
       logAction("⛔ [canProceed]", "User permanently banned", uid);
       return false;
@@ -183,7 +178,7 @@ async function notifyUserMuted(bot, id) {
 
   try {
     await sendAndTrack(bot, uid,
-      "⛔ *Too many requests!*\nYou've been temporarily *muted for 4 minutes*.",
+      "⛔ *Too many requests!*\nYou've been temporarily *muted for 1.5 minutes*.",
       { parse_mode: "Markdown" }
     );
   } catch (err) {
