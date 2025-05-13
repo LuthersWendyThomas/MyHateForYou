@@ -1,81 +1,89 @@
+// 🛡️ utils/cryptoQR.js | IMMORTAL FINAL v1.2.0•GODMODE DIAMONDLOCK
+// QR & Payment Message Generation • SYNCED WITH CONFIG ALIASES & WALLETS • TIMEOUT • DEBUG
+
 import QRCode from "qrcode";
 import { WALLETS, ALIASES } from "../config/config.js";
 
 /**
  * ✅ Generates QR PNG buffer for supported network + amount
- * @param {string} currency - e.g. "btc", "eth", "matic", "sol"
- * @param {number|string} amount - amount in that currency
- * @param {string|null} overrideAddress - override wallet address (optional)
- * @returns {Buffer|null}
+ * @param {string} currency – e.g. "btc", "eth", "matic", "sol"
+ * @param {number|string} amount – amount in that currency
+ * @param {string|null} overrideAddress – override wallet address (optional)
+ * @returns {Promise<Buffer|null>}
  */
 export async function generateQR(currency, amount, overrideAddress = null) {
+  const raw            = String(currency || "").trim().toLowerCase();
+  const normalized     = ALIASES[raw] || raw.toUpperCase();
+  const parsedAmount   = Number(amount);
+  const address        = String(overrideAddress || WALLETS[normalized] || "").trim();
+
+  if (!isValidAddress(address)) {
+    console.warn(`⚠️ [generateQR] Invalid address for ${normalized}: "${address}"`);
+    return null;
+  }
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    console.warn(`⚠️ [generateQR] Invalid amount: ${amount}`);
+    return null;
+  }
+
   try {
-    const raw = String(currency || "").toLowerCase();
-    const normalized = ALIASES[raw] || raw.toUpperCase();
-    const parsedAmount = parseFloat(amount);
-    const address = String(overrideAddress || WALLETS[normalized] || "").trim();
+    const formatted    = parsedAmount.toFixed(6);
+    const scheme       = normalized.toLowerCase();
+    const label        = encodeURIComponent("BalticPharmacyBot");
+    const messageParam = encodeURIComponent("Order");
+    const uri          = `${scheme}:${address}?amount=${formatted}&label=${label}&message=${messageParam}`;
 
-    if (!isValidAddress(address)) {
-      console.warn(`⚠️ [generateQR] Invalid address for ${normalized}: "${address}"`);
-      return null;
-    }
+    // generate QR with 5s timeout
+    const buffer = await Promise.race([
+      QRCode.toBuffer(uri, {
+        type: "png",
+        width: 140,
+        margin: 1,
+        scale: 2,
+        errorCorrectionLevel: "H",
+        color: { dark: "#000000", light: "#FFFFFF" }
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("QR generation timeout")), 5000)
+      )
+    ]);
 
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      console.warn(`⚠️ [generateQR] Invalid amount: ${amount}`);
-      return null;
-    }
-
-    const formatted = parsedAmount.toFixed(6);
-    const uri = `${normalized.toLowerCase()}:${address}?amount=${formatted}&label=BalticPharmacyBot&message=Order`;
-
-    const buffer = await QRCode.toBuffer(uri, {
-      type: "png",
-      width: 140, // ⬅️ Smaller by ~30% (default ~200)
-      margin: 1,
-      scale: 2,
-      errorCorrectionLevel: "H",
-      color: {
-        dark: "#000000",
-        light: "#FFFFFF"
-      }
-    });
-
-    if (!(buffer instanceof Buffer)) {
+    if (!Buffer.isBuffer(buffer)) {
       throw new Error("QR generation failed (non-buffer).");
     }
-
     if (process.env.DEBUG_MESSAGES === "true") {
-      console.log(`✅ [generateQR] ${normalized} → ${formatted} → OK`);
+      console.log(`✅ [generateQR] ${normalized} → ${formatted} → buffer ${buffer.length} bytes`);
     }
-
     return buffer;
+
   } catch (err) {
-    console.error("❌ [generateQR error]:", err.message || err);
+    console.error("❌ [generateQR error]:", err.message);
     return null;
   }
 }
 
 /**
  * ✅ Generates inline message + button with wallet address
+ * @param {string} currency
+ * @param {number|string} amount
+ * @param {string|null} overrideAddress
+ * @returns {{ message: string, reply_markup: object }}
  */
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
-  const raw = String(currency || "").toLowerCase();
-  const normalized = ALIASES[raw] || raw.toUpperCase();
-  const parsedAmount = parseFloat(amount);
+  const raw             = String(currency || "").trim().toLowerCase();
+  const normalized      = ALIASES[raw] || raw.toUpperCase();
+  const parsedAmount    = Number(amount);
   const formattedAmount = Number.isFinite(parsedAmount)
     ? parsedAmount.toFixed(6)
     : "?.??????";
-
-  const address = String(overrideAddress || WALLETS[normalized] || "").trim();
-  const valid = isValidAddress(address) ? address : "[Invalid address]";
+  const address         = String(overrideAddress || WALLETS[normalized] || "").trim();
+  const validAddress    = isValidAddress(address) ? address : "[Invalid address]";
 
   const message = `
 💳 *Payment details:*
-
 • Network: *${normalized}*
 • Amount: *${formattedAmount} ${normalized}*
-• Address: \`${valid}\`
-
+• Address: \`${validAddress}\`
 ⏱️ *Expected payment within 30 minutes.*
 ✅ Use the QR code or copy the address.
 `.trim();
@@ -84,15 +92,13 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
     message,
     reply_markup: {
       inline_keyboard: [
-        [{ text: "📋 Copy address", callback_data: `copy:${valid}` }]
+        [{ text: "📋 Copy address", callback_data: `copy:${validAddress}` }]
       ]
     }
   };
 }
 
-/**
- * ✅ Basic wallet format check (8+ alphanumeric)
- */
+/** ✅ Basic wallet format check (8+ alphanumeric) */
 function isValidAddress(addr) {
   return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
 }
