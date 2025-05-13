@@ -1,3 +1,5 @@
+// 📦 utils/floodHandler.js | IMMORTAL FINAL v999999999.∞+2 — GODMODE FLOODLOCK 100% SAFE
+
 import {
   antiSpam,
   antiFlood,
@@ -16,11 +18,13 @@ import { sendAndTrack } from "../helpers/messageUtils.js";
 export function isSpamming(id, ctx = {}) {
   try {
     const isButton = Boolean(ctx?.callback_query || ctx?.message?.reply_markup);
-    if (isButton) return false;
+    const text     = ctx?.message?.text?.trim().toLowerCase();
+    if (isButton || text === "/start") return false;
 
-    const now = Date.now();
+    const now  = Date.now();
     const last = antiSpam[id] || 0;
     antiSpam[id] = now;
+
     return now - last < 1000;
   } catch (err) {
     console.error("❌ [isSpamming error]:", err.message);
@@ -63,25 +67,26 @@ function getFloodLimit(id) {
 }
 
 /**
- * ✅ Flood protection handler — ignores menu input spam
+ * ✅ Flood protection handler — ignores menu/callbacks
  */
 export async function handleFlood(id, bot, userMessages = {}, ctx = {}) {
   try {
     const uid = String(id).trim();
     const now = Date.now();
-    if (!uid || isMuted(uid)) return true;
-
     const isButton = Boolean(ctx?.callback_query || ctx?.message?.reply_markup);
-    if (isButton) return false;
+    const isStart = ctx?.message?.text?.trim().toLowerCase() === "/start";
+
+    if (!uid || isMuted(uid)) return true;
+    if (isButton || isStart) return false;
 
     if (!Array.isArray(antiFlood[uid])) antiFlood[uid] = [];
 
-    // Keep recent actions only (5 sec)
+    // Keep only last 5s
     antiFlood[uid] = antiFlood[uid].filter(ts => now - ts < 5000);
     antiFlood[uid].push(now);
 
     const limit = getFloodLimit(uid);
-    const hits = antiFlood[uid].length;
+    const hits  = antiFlood[uid].length;
 
     if (hits > limit) {
       bannedUntil[uid] = now + 5 * 60 * 1000;
@@ -99,9 +104,10 @@ export async function handleFlood(id, bot, userMessages = {}, ctx = {}) {
 
     if (hits === limit) {
       await sendAndTrack(bot, uid,
-        "⚠️ *Flood warning:* next action will mute you *for 5 minutes*.",
+        "⚠️ *Flood warning:* next message will mute you *for 5 minutes*.",
         { parse_mode: "Markdown" }, userMessages
       );
+
       if (process.env.DEBUG_MESSAGES === "true") {
         console.log(`⚠️ [FLOOD WARN] ${uid} → ${hits}/${limit}`);
       }
