@@ -1,5 +1,5 @@
-// 🛡️ utils/cryptoQR.js | IMMORTAL FINAL v1.2.0•GODMODE DIAMONDLOCK
-// QR & Payment Message Generation • SYNCED WITH CONFIG ALIASES & WALLETS • TIMEOUT • DEBUG
+// 🛡️ utils/cryptoQR.js | IMMORTAL FINAL v1.2.1•DIAMONDLOCK+9999999x SYNC
+// QR & Payment Message Generation • BULLETPROOF • TIMEOUT PROTECTED • ZERO DELAY
 
 import QRCode from "qrcode";
 import { WALLETS, ALIASES } from "../config/config.js";
@@ -12,10 +12,10 @@ import { WALLETS, ALIASES } from "../config/config.js";
  * @returns {Promise<Buffer|null>}
  */
 export async function generateQR(currency, amount, overrideAddress = null) {
-  const raw            = String(currency || "").trim().toLowerCase();
-  const normalized     = ALIASES[raw] || raw.toUpperCase();
-  const parsedAmount   = Number(amount);
-  const address        = String(overrideAddress || WALLETS[normalized] || "").trim();
+  const raw          = String(currency || "").trim().toLowerCase();
+  const normalized   = ALIASES[raw] || raw.toUpperCase();
+  const address      = String(overrideAddress || WALLETS[normalized] || "").trim();
+  const parsedAmount = Number(amount);
 
   if (!isValidAddress(address)) {
     console.warn(`⚠️ [generateQR] Invalid address for ${normalized}: "${address}"`);
@@ -26,14 +26,13 @@ export async function generateQR(currency, amount, overrideAddress = null) {
     return null;
   }
 
-  try {
-    const formatted    = parsedAmount.toFixed(6);
-    const scheme       = normalized.toLowerCase();
-    const label        = encodeURIComponent("BalticPharmacyBot");
-    const messageParam = encodeURIComponent("Order");
-    const uri          = `${scheme}:${address}?amount=${formatted}&label=${label}&message=${messageParam}`;
+  const formatted    = parsedAmount.toFixed(6);
+  const scheme       = normalized.toLowerCase();
+  const label        = encodeURIComponent("BalticPharmacyBot");
+  const messageParam = encodeURIComponent("Order");
+  const uri          = `${scheme}:${address}?amount=${formatted}&label=${label}&message=${messageParam}`;
 
-    // generate QR with 5s timeout
+  try {
     const buffer = await Promise.race([
       QRCode.toBuffer(uri, {
         type: "png",
@@ -48,12 +47,14 @@ export async function generateQR(currency, amount, overrideAddress = null) {
       )
     ]);
 
-    if (!Buffer.isBuffer(buffer)) {
-      throw new Error("QR generation failed (non-buffer).");
+    if (!Buffer.isBuffer(buffer) || !buffer.length) {
+      throw new Error("QR generation failed: no valid buffer");
     }
+
     if (process.env.DEBUG_MESSAGES === "true") {
-      console.log(`✅ [generateQR] ${normalized} → ${formatted} → buffer ${buffer.length} bytes`);
+      console.log(`✅ [generateQR] ${normalized} → ${formatted} → ${buffer.length} bytes`);
     }
+
     return buffer;
 
   } catch (err) {
