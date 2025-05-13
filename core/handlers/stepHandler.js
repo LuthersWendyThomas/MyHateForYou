@@ -187,10 +187,15 @@ async function renderStep(bot, uid, step, userMessages) {
   }
 }
 
-export async function handleStep(bot, id, text, userMessages) {
+export async function handleStep(bot, id, text, userMessages, ctx = {}) {
   const uid   = sanitizeId(id);
   const input = normalizeText(text);
-  
+
+  // 🛡️ Anti-flood/spam filter (menu-safe)
+  if (isSpamming(uid, ctx)) return;
+  const muted = await handleFlood(uid, bot, userMessages[uid], ctx);
+  if (muted) return;
+
   // ensure session exists
   if (!userSessions[uid])                   userSessions[uid] = { step: 1, createdAt: Date.now() };
   if (!isValidStep(userSessions[uid].step)) userSessions[uid].step = 1;
@@ -212,12 +217,10 @@ export async function handleStep(bot, id, text, userMessages) {
 
   // BACK pressed?
   if (input === MENU_BUTTONS.BACK.text.toLowerCase()) {
-    // at step 1.2 → full reset + greeting
     if (session.step === 1.2) {
       await resetSession(uid);
       return safeStart(bot, uid);
     }
-    // otherwise step-back in FSM
     return handleBackButton(bot, uid, session, userMessages);
   }
 
