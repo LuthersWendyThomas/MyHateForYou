@@ -1,13 +1,13 @@
-// 📦 helpers/menu.js | FINAL IMMORTAL v1.0.0•GODMODE DIAMONDLOCK
-// SKYLOCKED ADMIN-SAFE BULLETPROOF MENU SYSTEM — MAX BUTTON VALIDATION + INLINE + FALLBACK
+// 📦 helpers/menu.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
+// SKYLOCKED BULLETPROOF MENU SYSTEM — MAX SYNC • ADMIN-SAFE • INLINE-SAFE • 24/7 RELIABILITY
 
 import { BOT } from "../config/config.js";
 import { MENU_BUTTONS } from "./keyboardConstants.js";
 
 /**
- * ✅ Generates the main menu keyboard for users/admins
+ * ✅ Main menu generator (user/admin safe)
  * @param {string|number} id — Telegram user ID
- * @returns {{ keyboard: Array<Array<{ text: string }>>, resize_keyboard: boolean, one_time_keyboard: boolean, selective: boolean }}
+ * @returns {{ keyboard, resize_keyboard, one_time_keyboard, selective }}
  */
 export function getMainMenu(id) {
   const uid     = sanitizeId(id);
@@ -37,9 +37,9 @@ export function getMainMenu(id) {
 }
 
 /**
- * ✅ Generates an inline keyboard from validated button rows
+ * ✅ Inline keyboard builder with safety validation
  * @param {Array<Array<{ text: string, callback_data: string }>>} inlineButtons
- * @returns {{ inline_keyboard: Array<Array<{ text: string, callback_data: string }>> }}
+ * @returns {{ inline_keyboard: Array }}
  */
 export function getInlineKeyboard(inlineButtons) {
   const keyboard = [];
@@ -55,22 +55,16 @@ export function getInlineKeyboard(inlineButtons) {
       logError("getInlineKeyboard", new Error(`Row ${r} is not an array`));
       continue;
     }
-    const validatedRow = [];
-    for (let c = 0; c < row.length; c++) {
-      const btn = row[c];
+    const validatedRow = row.map((btn, cIdx) => {
       if (btn && typeof btn.text === "string" && typeof btn.callback_data === "string") {
-        validatedRow.push({
+        return {
           text: btn.text.trim(),
           callback_data: btn.callback_data.trim()
-        });
-      } else {
-        logError(
-          "getInlineKeyboard",
-          new Error(`Invalid button at [${r},${c}]`)
-        );
-        validatedRow.push({ text: "❌ Invalid", callback_data: "INVALID" });
+        };
       }
-    }
+      logError("getInlineKeyboard", new Error(`Invalid button at [${r},${cIdx}]`));
+      return { text: "❌ Invalid", callback_data: "INVALID" };
+    });
     keyboard.push(validatedRow);
   }
 
@@ -79,36 +73,29 @@ export function getInlineKeyboard(inlineButtons) {
 }
 
 /**
- * ✅ Validates a standard reply keyboard structure
- * @param {object} keyboard — The reply_markup object
+ * ✅ Validates reply_markup.keyboard structure
+ * @param {object} keyboard — Telegram reply_markup object
  * @returns {boolean}
  */
 export function validateMenuButtons(keyboard) {
-  if (
-    !keyboard ||
-    !Array.isArray(keyboard.keyboard) ||
-    keyboard.keyboard.length === 0
-  ) {
+  if (!keyboard || !Array.isArray(keyboard.keyboard)) {
     logError("validateMenuButtons", new Error("Invalid keyboard object"));
     return false;
   }
 
-  const allValid = keyboard.keyboard.every(row =>
-    Array.isArray(row) &&
-    row.every(btn => btn?.text && typeof btn.text === "string")
+  const isValid = keyboard.keyboard.every(row =>
+    Array.isArray(row) && row.every(btn => btn?.text && typeof btn.text === "string")
   );
 
-  if (allValid) {
-    logAction("validateMenuButtons", "All buttons valid");
-  } else {
-    logError("validateMenuButtons", new Error("Some buttons are invalid"));
-  }
-  return allValid;
+  if (isValid) logAction("validateMenuButtons", "All buttons valid");
+  else logError("validateMenuButtons", new Error("Some buttons are invalid"));
+
+  return isValid;
 }
 
 /**
- * ✅ Fallback for when menu generation fails
- * @returns {{ keyboard: Array<Array<{ text: string }>>, resize_keyboard: boolean, one_time_keyboard: boolean, selective: boolean }}
+ * ✅ Safe fallback keyboard (Help only)
+ * @returns {{ keyboard, resize_keyboard, one_time_keyboard, selective }}
  */
 export function getFallbackKeyboard() {
   const kb = {
@@ -121,19 +108,9 @@ export function getFallbackKeyboard() {
   return kb;
 }
 
-// ————— INTERNAL HELPERS —————
-
 /**
- * 🔒 Sanitizes any ID into a non-empty string or returns null
- */
-function sanitizeId(id) {
-  const s = String(id ?? "").trim();
-  return s && s !== "undefined" && s !== "null" ? s : null;
-}
-
-/**
- * ✅ Normalizes button rows into { text } objects
- * @param {Array<Array<{ text: string, callback_data?: string }>>} rows
+ * ✅ Normalizes keyboard structure into Telegram-safe format
+ * @param {Array<Array<{ text: string }>>} rows
  * @returns {Array<Array<{ text: string }>>}
  */
 function normalizeKeyboard(rows) {
@@ -143,33 +120,31 @@ function normalizeKeyboard(rows) {
   }
   return rows.map((row, rIdx) => {
     if (!Array.isArray(row)) {
-      logError("normalizeKeyboard", new Error(`Row ${rIdx} not an array`));
+      logError("normalizeKeyboard", new Error(`Row ${rIdx} not array`));
       return [];
     }
     return row.map((btn, cIdx) => {
       if (btn && typeof btn.text === "string") {
         return { text: btn.text.trim() };
       }
-      logError(
-        "normalizeKeyboard",
-        new Error(`Invalid button at [${rIdx},${cIdx}]`)
-      );
+      logError("normalizeKeyboard", new Error(`Invalid button at [${rIdx},${cIdx}]`));
       return { text: "❌ Invalid Button" };
     });
   });
 }
 
-/**
- * 📋 Logs actions uniformly
- */
-function logAction(fn, message) {
-  console.log(`${new Date().toISOString()} [${fn}] → ${message}`);
+// ——— Helpers ———
+
+function sanitizeId(id) {
+  const s = String(id ?? "").trim();
+  return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-/**
- * ⚠️ Logs errors uniformly
- */
-function logError(fn, error, uid = "") {
-  const msg = error?.message || error;
-  console.error(`${new Date().toISOString()} [${fn}] → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
+function logAction(fn, msg) {
+  console.log(`${new Date().toISOString()} [${fn}] → ${msg}`);
+}
+
+function logError(fn, err, uid = "") {
+  const m = err?.message || err;
+  console.error(`${new Date().toISOString()} [${fn}] → ${m}${uid ? ` (UID: ${uid})` : ""}`);
 }
