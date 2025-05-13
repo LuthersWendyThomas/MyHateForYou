@@ -77,22 +77,24 @@ export function registerMainHandler(bot) {
   });
 
   // 💬 Handle incoming text messages
-  bot.on("message", async (msg) => {
-    const uid = sanitizeId(msg?.chat?.id);
-    const raw = msg?.text;
-    if (!uid || !raw) return;
+bot.on("message", async (msg) => {
+  const uid = sanitizeId(msg?.chat?.id);
+  const raw = msg?.text;
+  if (!uid || !raw) return;
 
-    const text = normalizeText(raw);
+  const text = normalizeText(raw);
 
-    // 🛡️ Anti-flood/spam protection (menu-safe)
+  // 🛡️ Anti-flood **praleidžia /start**
+  if (text !== "/start") {
     if (isSpamming(uid, msg)) return;
     const muted = await handleFlood(uid, bot, userMessages[uid], msg);
     if (muted) return;
+  }
 
-    await markUserActive(uid);
-    if (!(await canProceed(uid, bot, text))) return;
+  await markUserActive(uid);
+  if (!(await canProceed(uid, bot, text))) return;
 
-    console.log(`📩 [message] ${uid}: ${text}`);
+  console.log(`📩 [message] ${uid}: ${text}`);
 
     userSessions[uid] ||= { step: 1, createdAt: Date.now() };
     userSessions[uid].lastText = text;
