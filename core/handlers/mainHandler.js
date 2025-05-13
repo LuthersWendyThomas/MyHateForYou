@@ -1,5 +1,5 @@
-// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
-// ULTRA-FSM SYNC • BULLETPROOF MAIN MENU • FULL ERROR‐CATCH • MAXIMUM IMMUNITY
+// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v1.0.2•GODMODE DIAMONDLOCK+ANTI-SPAM
+// ULTRA-FSM SYNC • BULLETPROOF MAIN MENU • FLOOD SHIELD • FULL ERROR‐CATCH
 
 import { BOT, ALIASES } from "../../config/config.js";
 import { userSessions, userMessages } from "../../state/userState.js";
@@ -16,6 +16,7 @@ import { getMainMenu } from "../../helpers/menu.js";
 import { sendKeyboard } from "../../helpers/messageUtils.js";
 import { markUserActive } from "../sessionManager.js";
 import { canProceed } from "../security.js";
+import { isSpamming, handleFlood } from "../../utils/floodHandler.js";
 
 /**
  * 🚪 Registers the bot’s entry points for callbacks & messages
@@ -56,13 +57,11 @@ export function registerMainHandler(bot) {
             await safeCall(() => sendStats(bot, uid, userMessages), uid);
             break;
           }
-          // else fallthrough to default
         case MENU_BUTTONS.ADMIN.callback_data:
           if (isAdmin(uid)) {
             await safeCall(() => openAdminPanel(bot, uid), uid);
             break;
           }
-          // else fallthrough
         default:
           console.warn(`⚠️ Unknown callback: ${data}`);
           await bot.answerCallbackQuery(query.id, {
@@ -73,7 +72,6 @@ export function registerMainHandler(bot) {
     } catch (err) {
       console.error("❌ [callback_query error]:", err);
     } finally {
-      // always acknowledge to stop the loading spinner
       await bot.answerCallbackQuery(query.id).catch(() => {});
     }
   });
@@ -85,30 +83,32 @@ export function registerMainHandler(bot) {
     if (!uid || !raw) return;
 
     const text = normalizeText(raw);
+
+    // 🛡️ Anti-flood/spam protection (menu-safe)
+    if (isSpamming(uid, msg)) return;
+    const muted = await handleFlood(uid, bot, userMessages[uid], msg);
+    if (muted) return;
+
     await markUserActive(uid);
     if (!(await canProceed(uid, bot, text))) return;
 
     console.log(`📩 [message] ${uid}: ${text}`);
 
-    // Ensure session exists
     userSessions[uid] ||= { step: 1, createdAt: Date.now() };
     userSessions[uid].lastText = text;
 
     try {
-      // 🚀 /start resets everything
       if (text === "/start") {
         console.log(`🚀 ${uid} triggered /start`);
         return await safeCall(() => safeStart(bot, uid), uid);
       }
 
-      // 🔐 Admin flows
       if (userSessions[uid].adminStep) {
         return await safeCall(() =>
           handleAdminAction(bot, msg, userSessions), uid
         );
       }
 
-      // 📋 Static main‐menu commands
       if (isMatch(text, MENU_BUTTONS.BUY)) {
         return await safeCall(() => startOrder(bot, uid, userMessages), uid);
       }
@@ -128,9 +128,8 @@ export function registerMainHandler(bot) {
         return await safeCall(() => openAdminPanel(bot, uid), uid);
       }
 
-      // 🔄 Fallback to FSM flow
       return await safeCall(() =>
-        handleStep(bot, uid, raw, userMessages), uid
+        handleStep(bot, uid, raw, userMessages, msg), uid
       );
     } catch (err) {
       console.error("❌ [message error]:", err);
@@ -140,31 +139,23 @@ export function registerMainHandler(bot) {
 
 // ————— HELPERS —————
 
-/** Sanitize chat ID */
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-/** Normalize text for matching */
 function normalizeText(txt) {
   return txt?.toString().trim().toLowerCase();
 }
 
-/** Match button text exactly */
 function isMatch(text, button) {
   return normalizeText(button?.text) === text;
 }
 
-/** Check if user is admin */
 function isAdmin(uid) {
   return String(uid) === String(BOT.ADMIN_ID);
 }
 
-/**
- * Safely invoke a handler and catch errors
- * @param {Function} fn – async function
- */
 async function safeCall(fn, uid = "unknown") {
   try {
     return await fn();
