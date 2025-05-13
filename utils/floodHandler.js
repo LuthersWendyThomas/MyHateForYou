@@ -1,31 +1,48 @@
-// 📦 utils/floodHandler.js | IMMORTAL FINAL v999999999.∞+2 — GODMODE FLOODLOCK 100% SAFE
-
+// 📦 utils/floodHandler.js | IMMORTAL FINAL v999999999.∞+3 — GODMODE FLOODLOCK SYNCED 24/7
 import {
   antiSpam,
   antiFlood,
   bannedUntil,
-  userOrders
+  userOrders,
+  userSessions
 } from "../state/userState.js";
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
+import { REGION_MAP } from "../config/regions.js";
+import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
+import { deliveryMethods } from "../config/features.js";
 
 /**
- * ✅ Detects real spam (non-callback / non-menu)
- * @param {string|number} id - User ID
- * @param {object} ctx - Telegram ctx (optional)
+ * ✅ Detects real spam (excludes buttons, menu, /start, regions, cities, etc.)
+ * @param {string|number} id
+ * @param {object} ctx - Telegram context (message or callback_query)
  * @returns {boolean}
  */
 export function isSpamming(id, ctx = {}) {
   try {
     const isButton = Boolean(ctx?.callback_query || ctx?.message?.reply_markup);
-    const text     = ctx?.message?.text?.trim().toLowerCase();
-    if (isButton || text === "/start") return false;
+    const text = ctx?.message?.text?.trim().toLowerCase();
 
-    const now  = Date.now();
+    if (
+      isButton ||
+      text === "/start" ||
+      isMenuInput(text, ctx) ||
+      isRegion(text) ||
+      isCity(ctx, text)
+    ) {
+      return false;
+    }
+
+    const now = Date.now();
     const last = antiSpam[id] || 0;
     antiSpam[id] = now;
 
-    return now - last < 1000;
+    if (now - last < 1000) {
+      console.warn(`⚠️ [isSpamming] → Rapid messages detected (UID: ${id})`);
+      return true;
+    }
+
+    return false;
   } catch (err) {
     console.error("❌ [isSpamming error]:", err.message);
     return false;
@@ -33,7 +50,7 @@ export function isSpamming(id, ctx = {}) {
 }
 
 /**
- * ✅ Checks if user is currently muted
+ * ✅ Flood mute status
  */
 export function isMuted(id) {
   try {
@@ -43,7 +60,7 @@ export function isMuted(id) {
     const now = Date.now();
     if (now < until) return true;
 
-    delete bannedUntil[id]; // mute expired
+    delete bannedUntil[id];
     return false;
   } catch (err) {
     console.error("❌ [isMuted error]:", err.message);
@@ -52,7 +69,7 @@ export function isMuted(id) {
 }
 
 /**
- * ✅ Calculates flood limit dynamically
+ * ✅ Dynamic per-user flood limit
  */
 function getFloodLimit(id) {
   try {
@@ -67,35 +84,41 @@ function getFloodLimit(id) {
 }
 
 /**
- * ✅ Flood protection handler — ignores menu/callbacks
+ * ✅ Flood control (excludes valid user navigation)
  */
-export async function handleFlood(id, bot, userMessages = {}, ctx = {}) {
+export async function handleFlood(id, bot, userMsgs = {}, ctx = {}) {
   try {
     const uid = String(id).trim();
-    const now = Date.now();
-    const isButton = Boolean(ctx?.callback_query || ctx?.message?.reply_markup);
-    const isStart = ctx?.message?.text?.trim().toLowerCase() === "/start";
-
     if (!uid || isMuted(uid)) return true;
-    if (isButton || isStart) return false;
 
+    const text = ctx?.message?.text?.trim().toLowerCase();
+    const isButton = Boolean(ctx?.callback_query || ctx?.message?.reply_markup);
+
+    if (
+      isButton ||
+      text === "/start" ||
+      isMenuInput(text, ctx) ||
+      isRegion(text) ||
+      isCity(ctx, text)
+    ) {
+      return false;
+    }
+
+    const now = Date.now();
     if (!Array.isArray(antiFlood[uid])) antiFlood[uid] = [];
 
-    // Keep only last 5s
     antiFlood[uid] = antiFlood[uid].filter(ts => now - ts < 5000);
     antiFlood[uid].push(now);
 
     const limit = getFloodLimit(uid);
-    const hits  = antiFlood[uid].length;
+    const hits = antiFlood[uid].length;
 
     if (hits > limit) {
       bannedUntil[uid] = now + 5 * 60 * 1000;
-
       await sendAndTrack(bot, uid,
         "⛔️ *Too many actions in a short time.*\n🕓 Muted for *5 minutes*.",
-        { parse_mode: "Markdown" }, userMessages
+        { parse_mode: "Markdown" }, userMsgs
       );
-
       if (process.env.DEBUG_MESSAGES === "true") {
         console.warn(`🚫 [FLOOD MUTE] ${uid} → ${hits}/${limit}`);
       }
@@ -105,9 +128,8 @@ export async function handleFlood(id, bot, userMessages = {}, ctx = {}) {
     if (hits === limit) {
       await sendAndTrack(bot, uid,
         "⚠️ *Flood warning:* next message will mute you *for 5 minutes*.",
-        { parse_mode: "Markdown" }, userMessages
+        { parse_mode: "Markdown" }, userMsgs
       );
-
       if (process.env.DEBUG_MESSAGES === "true") {
         console.log(`⚠️ [FLOOD WARN] ${uid} → ${hits}/${limit}`);
       }
@@ -118,4 +140,34 @@ export async function handleFlood(id, bot, userMessages = {}, ctx = {}) {
     console.error("❌ [handleFlood error]:", err.message || err);
     return false;
   }
+}
+
+// ————— Helpers —————
+
+function isRegion(text = "") {
+  const clean = text.trim().toLowerCase();
+  return Object.keys(REGION_MAP).some(r => {
+    const base = r.replace(/^[^a-z0-9]+/i, "").toLowerCase();
+    return base === clean || r.toLowerCase() === clean;
+  });
+}
+
+function isCity(ctx = {}, text = "") {
+  const uid = String(ctx?.message?.chat?.id);
+  const clean = text.trim().toLowerCase();
+  const region = userSessions?.[uid]?.region;
+  const cities = REGION_MAP?.[region]?.cities || {};
+  return Object.keys(cities).some(c => {
+    const base = c.replace(/^[^a-z0-9]+/i, "").toLowerCase();
+    return base === clean;
+  });
+}
+
+function isMenuInput(text = "", ctx = {}) {
+  const clean = text?.toLowerCase();
+  const allMenuTexts = [
+    ...Object.values(MENU_BUTTONS).map(btn => btn.text?.toLowerCase?.()),
+    ...deliveryMethods.map(d => d.label.toLowerCase())
+  ];
+  return allMenuTexts.includes(clean);
 }
