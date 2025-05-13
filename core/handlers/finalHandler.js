@@ -47,7 +47,7 @@ export async function safeStart(bot, id) {
         uid,
         buffer,
         {
-          caption: greetingText(count),
+          caption: greetingText(count, uid),
           parse_mode: "Markdown",
           reply_markup: menu
         },
@@ -57,7 +57,7 @@ export async function safeStart(bot, id) {
       return sendAndTrack(
         bot,
         uid,
-        fallbackText(count),
+        fallbackText(count, uid),
         {
           parse_mode: "Markdown",
           reply_markup: menu
@@ -167,7 +167,13 @@ function sanitizeId(id) {
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-function greetingText(count) {
+function isAdmin(uid) {
+  const adminId = process.env.ADMIN_ID || process.env.BOT_ADMIN_ID;
+  return uid?.toString() === adminId?.toString();
+}
+
+function greetingText(count, uid) {
+  const activeLine = isAdmin(uid) ? `\n👥 Active users: *${count}*` : "";
   return `
 🇺🇸 Welcome to *BalticPharmacyBot* 🇺🇸
 
@@ -183,19 +189,18 @@ function greetingText(count) {
 ✅ Always updated & automated
 
 ⛔ *No chatting with couriers* — instant *BAN*
-
-👥 Active users: *${count}*
+${activeLine}
 `.trim();
 }
 
-function fallbackText(count) {
+function fallbackText(count, uid) {
+  const activeLine = isAdmin(uid) ? `\n\n👥 Active users: *${count}*` : "";
   return `
 🇺🇸 *BalticPharmacyBot* — 30+ cities live  
 
 💊 Quality • Speed • Privacy  
 🚚 45min courier/drop  
 💵 Anonymous crypto payments  
-
-👥 Active users: *${count}*
+${activeLine}
 `.trim();
 }
