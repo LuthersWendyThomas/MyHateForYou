@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1.0.9•999999X•DIAMONDLOCK•SYNC•GODMODE
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v99999999.∞+ULTRASYNC•DIAMONDLOCK
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice, NETWORKS } from "../../utils/fetchCryptoPrice.js";
@@ -43,7 +43,7 @@ async function safeSend(fn, ...args) {
       return await fn(...args);
     } catch (err) {
       if (String(err.message).includes("429")) {
-        const backoff = 1000 + i * 800;
+        const backoff = 500 + i * 600; // ⚡ pagreitintas retry (buvo 1000 + i * 800)
         console.warn(`⏳ Rate limit (${i + 1}) – retrying in ${backoff}ms`);
         await wait(backoff);
       } else break;
@@ -52,9 +52,6 @@ async function safeSend(fn, ...args) {
   return null;
 }
 
-/**
- * 💸 Start crypto payment flow
- */
 export async function handlePayment(bot, id, userMsgs) {
   const session = userSessions[id];
   if (!session || session.step !== 7 || session.paymentInProgress) {
@@ -122,9 +119,6 @@ export async function handlePayment(bot, id, userMsgs) {
   }
 }
 
-/**
- * ❌ Cancel payment manually
- */
 export async function handlePaymentCancel(bot, id, userMsgs) {
   const session = userSessions[id];
   if (!session || session.step !== 9 || !session.paymentInProgress) {
@@ -139,9 +133,6 @@ export async function handlePaymentCancel(bot, id, userMsgs) {
   return safeStart(bot, id);
 }
 
-/**
- * ✅ Confirm payment → verify on blockchain
- */
 export async function handlePaymentConfirmation(bot, id, userMsgs) {
   const session = userSessions[id];
   if (
@@ -182,7 +173,6 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
   }
 }
 
-// 🧼 Cleanup helper
 function cleanupOnError(id) {
   const session = userSessions[id];
   if (!session) return;
