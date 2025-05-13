@@ -164,6 +164,20 @@ async function renderStep(bot, uid, step, userMessages) {
           { parse_mode: "Markdown" }
         );
       }
+
+      case 9: {
+        const keyboard = [
+          [{ text: MENU_BUTTONS.CONFIRM.text }],
+          [{ text: MENU_BUTTONS.CANCEL.text }]
+        ];
+        return sendKeyboard(
+          bot, uid,
+          "⏳ *Has the payment completed?*",
+          keyboard,
+          userMessages,
+          { parse_mode: "Markdown" }
+        );
+      }
       default: {
         console.warn(`⚠️ renderStep unknown step=${step} for UID=${uid}`);
         return sendAndTrack(
@@ -235,6 +249,7 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
       case 6:   return handleCurrency(      bot, uid, input, session, userMessages);
       case 7:   return handleOrderConfirm(  bot, uid, input, session, userMessages);
       case 8:   return handleConfirmOrCancel(bot, uid, input, session, userMessages);
+      case 9:   return handleFinalConfirmation(bot, uid, input, session, userMessages);
       default:
         await resetSession(uid);
         return safeStart(bot, uid);
@@ -406,6 +421,27 @@ async function handleBackButton(bot, uid, session, userMessages) {
   return renderStep(bot, uid, session.step, userMessages);
 }
 
+// 🔧 FINALINIS PATIKRINIMAS PAYMENTO
+async function handleFinalConfirmation(bot, uid, input, session, userMessages) {
+  if (input === MENU_BUTTONS.CONFIRM.text.toLowerCase()) {
+    return handlePaymentConfirmation(bot, uid, userMessages); // iš paymentHandler.js
+  }
+
+  if (input === MENU_BUTTONS.CANCEL.text.toLowerCase()) {
+    await sendAndTrack(
+      bot,
+      uid,
+      "❌ Payment canceled. Returning to main menu...",
+      { parse_mode: "Markdown" },
+      userMessages
+    );
+    await resetSession(uid); // iš finalHandler.js
+    return safeStart(bot, uid);
+  }
+
+  return renderStep(bot, uid, 9, userMessages); // jei kažkas netikro parašo
+}
+
 // ——— Helpers ———
 
 function normalizeText(txt) {
@@ -416,4 +452,3 @@ function sanitizeId(id) {
   const s = String(id || "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
-
