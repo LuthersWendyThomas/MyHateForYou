@@ -1,5 +1,5 @@
-// 📦 flows/startOrder.js | IMMORTAL FINAL v9999999999.∞+GODMODE+POLISH+SYNC
-// BULLETPROOF FSM START • ULTRA CLEANUP • TYPING UX • REGION SYNC
+// 📦 flows/startOrder.js | FINAL v9999999999.∞+SYNC+TYPERUSH+MEMFIX
+// BULLETPROOF FSM START • ULTRA CLEANUP • INSTANT UX • REGION SYNCED
 
 import {
   userSessions,
@@ -24,10 +24,10 @@ export async function startOrder(bot, id, msgs = userMessages) {
   }
 
   try {
-    // 🧼 1. Wipe all previous state
+    // 🧼 1. Clean all past data
     await fullResetUserState(uid);
 
-    // 🌀 2. Init new FSM session
+    // 🌀 2. Init FSM session
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now()
@@ -37,10 +37,9 @@ export async function startOrder(bot, id, msgs = userMessages) {
       console.debug(`🔁 [startOrder] Session initialized (ID: ${uid})`);
     }
 
-    // 💬 3. Typing feedback
-    bot.sendChatAction(uid, "typing").catch(() => {}).finally(() => {});
-
-    // 📍 4. Render region selection
+    // 💬 3. Send typing first (ensured no throw), then region menu
+    await bot.sendChatAction(uid, "typing").catch(() => {});
+    
     const keyboard = getRegionKeyboard();
     return await sendKeyboard(
       bot,
@@ -69,8 +68,10 @@ export async function startOrder(bot, id, msgs = userMessages) {
 
 async function fullResetUserState(uid) {
   try {
-    await clearTimers(uid);
-    await clearUserMessages(uid);
+    await Promise.all([
+      clearTimers(uid),
+      clearUserMessages(uid)
+    ]);
 
     delete userOrders[uid];
     delete userMessages[uid];
@@ -78,8 +79,9 @@ async function fullResetUserState(uid) {
 
     if (userSessions[uid]) {
       for (const key in userSessions[uid]) {
-        delete userSessions[uid][key];
+        userSessions[uid][key] = null;
       }
+      delete userSessions[uid];
     }
 
     if (process.env.DEBUG_MESSAGES === "true") {
