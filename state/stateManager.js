@@ -1,5 +1,5 @@
-// 📦 state/stateManager.js | FINAL IMMORTAL v1.0.1•GODMODE DIAMONDLOCK
-// SYNCED • BULLETPROOF CORE • FULL RESET • ULTRA-OPTIMIZED
+// 📦 state/stateManager.js | IMMORTAL FINAL v1.0.9•999999999X•GODMODE•DIAMONDLOCK
+// MAX-SYNCED • ZOMBIE SAFE • ANTI-LEAK • 24/7 BULLETPROOF • FSM READY
 
 import {
   userSessions,
@@ -15,8 +15,7 @@ import {
 } from "./userState.js";
 
 /**
- * 🧼 Fully clears all state for a user:
- * sessions, orders, messages, timers, bans, flags
+ * 🧼 Full purge of user: sessions, messages, timers, flags, orders
  */
 export function resetUser(id) {
   const uid = sanitizeId(id);
@@ -25,7 +24,6 @@ export function resetUser(id) {
   try {
     clearTimers(uid);
 
-    // Wipe everything (including order count)
     [
       userSessions,
       userOrders,
@@ -35,11 +33,10 @@ export function resetUser(id) {
       bannedUntil,
       antiFlood
     ].forEach(store => {
-      if (store[uid] !== undefined) delete store[uid];
+      if (uid in store) delete store[uid];
     });
 
     activeUsers.remove(uid);
-
     logAction("🧼 [resetUser]", "All state cleared", uid);
   } catch (err) {
     logError("❌ [resetUser error]", err, uid);
@@ -47,8 +44,7 @@ export function resetUser(id) {
 }
 
 /**
- * 🧹 Clears only security/activity flags and tracked messages
- * (does NOT affect session data or order history)
+ * 🧹 Clears all temporary flags and messages (keeps session+orders)
  */
 export function clearUserActivity(id) {
   const uid = sanitizeId(id);
@@ -59,18 +55,17 @@ export function clearUserActivity(id) {
     delete failedAttempts[uid];
     delete antiSpam[uid];
     delete antiFlood[uid];
-    bannedUntil[uid] = null;
+    delete bannedUntil[uid];
 
     activeUsers.remove(uid);
-
-    logAction("🧹 [clearUserActivity]", "Security flags cleared", uid);
+    logAction("🧹 [clearUserActivity]", "Flags/messages cleared", uid);
   } catch (err) {
     logError("❌ [clearUserActivity error]", err, uid);
   }
 }
 
 /**
- * 🗑️ Clears only tracked messages (for auto-delete logic)
+ * 🗑️ Deletes only tracked messages (used for auto-delete)
  */
 export function clearUserMessages(id) {
   const uid = sanitizeId(id);
@@ -85,8 +80,7 @@ export function clearUserMessages(id) {
 }
 
 /**
- * 🕒 Stops and removes any delivery/payment timers
- * and clears the cleanupScheduled flag if present
+ * ⏱️ Stops any active delivery/payment timers & flags
  */
 export function clearTimers(id) {
   const uid = sanitizeId(id);
@@ -113,8 +107,7 @@ export function clearTimers(id) {
 }
 
 /**
- * 🚫 Completely unregisters a user:
- * full clear of state, messages, timers, and sessions
+ * 🚫 Full unregistration: resets everything, including order stats
  */
 export function unregisterUser(id) {
   const uid = sanitizeId(id);
@@ -124,7 +117,6 @@ export function unregisterUser(id) {
     clearTimers(uid);
     clearUserMessages(uid);
     resetUser(uid);
-
     logAction("🚫 [unregisterUser]", "User fully unregistered", uid);
   } catch (err) {
     logError("❌ [unregisterUser error]", err, uid);
@@ -132,31 +124,29 @@ export function unregisterUser(id) {
 }
 
 /**
- * 🛡️ Checks if a user has an active session
- * @returns {boolean}
+ * 🛡️ Checks if user has an active session
  */
 export function isUserRegistered(id) {
   const uid = sanitizeId(id);
   const registered = uid != null && userSessions[uid] !== undefined;
-  logAction("🛡️ [isUserRegistered]", `User is ${registered ? "" : "not "}registered`, uid);
+  logAction("🛡️ [isUserRegistered]", registered ? "✅ Registered" : "❌ Not registered", uid);
   return registered;
 }
 
-// ————— HELPERS —————
+// ———————————————————————————
+// 🔧 Helpers
+// ———————————————————————————
 
-/** 🔒 Safely sanitize any ID into a non-empty string or return null */
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
-/** 📋 Uniform action logger */
-function logAction(action, message, uid = "") {
-  console.log(`${new Date().toISOString()} ${action} → ${message}${uid ? ` (UID: ${uid})` : ""}`);
+function logAction(action, msg, uid = "") {
+  console.log(`${new Date().toISOString()} ${action} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
 }
 
-/** 🚨 Uniform error logger */
-function logError(action, error, uid = "") {
-  const msg = error?.message || error;
-  console.error(`${new Date().toISOString()} ${action} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
+function logError(action, err, uid = "") {
+  const m = err?.message || err;
+  console.error(`${new Date().toISOString()} ${action} → ${m}${uid ? ` (UID: ${uid})` : ""}`);
 }
