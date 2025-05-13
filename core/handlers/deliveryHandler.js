@@ -6,6 +6,7 @@ import { autobanEnabled, autodeleteEnabled } from "../../config/features.js";
 import { sendAndTrack } from "../../helpers/messageUtils.js";
 import { userSessions, userMessages, activeTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
+import { sendAdminPing } from "./paymentHandler.js"; // ✅ ADMIN PING IMPORT
 
 /** Delay before final cleanup (27min) */
 const FINAL_CLEANUP_DELAY = 27 * 60 * 1000;
@@ -134,8 +135,18 @@ async function triggerCleanup(bot, uid) {
         userMessages
       );
     } catch {}
+
     await banUser(uid);
     console.warn(`⛔️ Auto-banned user ${uid}`);
+
+    // ✅ ADMIN PING
+    await sendAdminPing(
+      `⛔️ *Auto-ban/delete completed*\n` +
+      `👤 UID: \`${uid}\`\n` +
+      `📦 Product: *${session.product?.name || "—"}*\n` +
+      `💵 Total: *$${session.totalPrice?.toFixed(2) || "0.00"}*\n` +
+      `🔚 Delivery completed + cleanup done`
+    );
   }
 
   cleanupSession(uid);
