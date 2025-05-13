@@ -32,7 +32,7 @@ export const NETWORKS = {
   ETH: {
     coinGecko: {
       buildUrl: () =>
-        'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd',
+        'https://api.coingecko.com/api/v3/simple/price?ids=polygon&vs_currencies=usd',
       extract: data => Number(data.ethereum?.usd)
     },
     coinCap: {
