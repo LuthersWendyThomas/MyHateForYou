@@ -1,5 +1,3 @@
-// 📦 utils/floodHandler.js | IMMORTAL FINAL v999999999.∞+1 — BULLETPROOF FLOODLOCK SYNCED GODMODE
-
 import {
   antiSpam,
   antiFlood,
@@ -10,12 +8,16 @@ import {
 import { sendAndTrack } from "../helpers/messageUtils.js";
 
 /**
- * ✅ Detects rapid repeated messages (<1s)
+ * ✅ Detects real spam (non-callback / non-menu)
  * @param {string|number} id - User ID
- * @returns {boolean} - True if spamming, false otherwise
+ * @param {object} ctx - Telegram ctx (optional)
+ * @returns {boolean}
  */
-export function isSpamming(id) {
+export function isSpamming(id, ctx = {}) {
   try {
+    const isButton = Boolean(ctx?.callback_query || ctx?.message?.reply_markup);
+    if (isButton) return false;
+
     const now = Date.now();
     const last = antiSpam[id] || 0;
     antiSpam[id] = now;
@@ -28,8 +30,6 @@ export function isSpamming(id) {
 
 /**
  * ✅ Checks if user is currently muted
- * @param {string|number} id - User ID
- * @returns {boolean} - True if muted, false otherwise
  */
 export function isMuted(id) {
   try {
@@ -39,7 +39,7 @@ export function isMuted(id) {
     const now = Date.now();
     if (now < until) return true;
 
-    delete bannedUntil[id]; // Expire mute
+    delete bannedUntil[id]; // mute expired
     return false;
   } catch (err) {
     console.error("❌ [isMuted error]:", err.message);
@@ -48,39 +48,35 @@ export function isMuted(id) {
 }
 
 /**
- * ✅ Calculates flood limit dynamically based on user trust (orders)
- * @param {string|number} id - User ID
- * @returns {number} - Flood limit
+ * ✅ Calculates flood limit dynamically
  */
 function getFloodLimit(id) {
   try {
     const count = parseInt(userOrders?.[id] || 0);
-    if (count >= 15) return 8; // Trusted user
-    if (count >= 5) return 6;  // Semi-trusted user
-    return 5;                 // Default limit
+    if (count >= 15) return 8;
+    if (count >= 5) return 6;
+    return 5;
   } catch (err) {
     console.warn("⚠️ [getFloodLimit fallback]:", err.message);
-    return 5; // Default fallback
+    return 5;
   }
 }
 
 /**
- * ✅ Handles flood events: warns and mutes users if needed
- * @param {string|number} id - User ID
- * @param {object} bot - Telegram bot instance
- * @param {object} userMessages - Message tracking object
- * @returns {Promise<boolean>} - True if muted, false otherwise
+ * ✅ Flood protection handler — ignores menu input spam
  */
-export async function handleFlood(id, bot, userMessages = {}) {
+export async function handleFlood(id, bot, userMessages = {}, ctx = {}) {
   try {
     const uid = String(id).trim();
     const now = Date.now();
-
     if (!uid || isMuted(uid)) return true;
+
+    const isButton = Boolean(ctx?.callback_query || ctx?.message?.reply_markup);
+    if (isButton) return false;
 
     if (!Array.isArray(antiFlood[uid])) antiFlood[uid] = [];
 
-    // Filter the last 5-second window
+    // Keep recent actions only (5 sec)
     antiFlood[uid] = antiFlood[uid].filter(ts => now - ts < 5000);
     antiFlood[uid].push(now);
 
@@ -88,38 +84,30 @@ export async function handleFlood(id, bot, userMessages = {}) {
     const hits = antiFlood[uid].length;
 
     if (hits > limit) {
-      bannedUntil[uid] = now + 5 * 60 * 1000; // 5-minute mute
+      bannedUntil[uid] = now + 5 * 60 * 1000;
 
-      await sendAndTrack(
-        bot,
-        uid,
-        "⛔️ *Too many actions in a short time.*\n🕓 Session has been *muted for 5 minutes*.",
-        { parse_mode: "Markdown" },
-        userMessages
+      await sendAndTrack(bot, uid,
+        "⛔️ *Too many actions in a short time.*\n🕓 Muted for *5 minutes*.",
+        { parse_mode: "Markdown" }, userMessages
       );
 
       if (process.env.DEBUG_MESSAGES === "true") {
         console.warn(`🚫 [FLOOD MUTE] ${uid} → ${hits}/${limit}`);
       }
-
-      return true; // User muted
+      return true;
     }
 
     if (hits === limit) {
-      await sendAndTrack(
-        bot,
-        uid,
-        "⚠️ *Flood warning:* one more action and your session will be *muted for 5 minutes*.",
-        { parse_mode: "Markdown" },
-        userMessages
+      await sendAndTrack(bot, uid,
+        "⚠️ *Flood warning:* next action will mute you *for 5 minutes*.",
+        { parse_mode: "Markdown" }, userMessages
       );
-
       if (process.env.DEBUG_MESSAGES === "true") {
         console.log(`⚠️ [FLOOD WARN] ${uid} → ${hits}/${limit}`);
       }
     }
 
-    return false; // No mute applied
+    return false;
   } catch (err) {
     console.error("❌ [handleFlood error]:", err.message || err);
     return false;
