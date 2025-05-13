@@ -1,13 +1,11 @@
-// 📛 utils/punishUser.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
-// BULLETPROOF SHIELD + AUTO-DELETE SYNCED LOCKED
-
+// 📛 utils/punishUser.js | IMMORTAL FINAL v1.9.9•DIAMONDLOCK•FASTSAFE
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
 import { MAIN_KEYBOARD, MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { resetSession } from "../core/handlers/finalHandler.js";
 
-// Precompute all valid button texts
+// ✅ Precache all valid button texts
 const BUTTON_TEXTS = Object.values(MENU_BUTTONS)
   .map(btn => String(btn.text || "").trim().toLowerCase())
   .filter(Boolean);
@@ -24,26 +22,23 @@ export async function punish(bot, id, messages = userMessages) {
     const uid = String(id).trim();
     if (!uid || uid === "undefined" || uid === "null") return;
 
-    // 1) Don’t punish if last action was a menu/button press:
+    // ✅ 1) Don’t punish if last message was a legit button press
     const last = userSessions[uid]?.lastText?.toString().trim().toLowerCase();
-    if (last && BUTTON_TEXTS.includes(last)) {
-      return;
-    }
+    if (last && BUTTON_TEXTS.includes(last)) return;
 
-    // 2) If they’ve somehow lost session, reset entirely:
+    // ✅ 2) If user is fully broken – restore clean state
     if (!userSessions[uid] || !isValidStep(userSessions[uid].step)) {
       await resetSession(uid);
       userSessions[uid] = { step: 1, createdAt: Date.now() };
     }
 
+    // ✅ 3) Warning message + fallback keyboard
     const warning = "⚠️ *Invalid action.*\nPlease use the *buttons below*.";
-    // MAIN_KEYBOARD should be a full reply_markup; if not, wrap it:
     let reply_markup = MAIN_KEYBOARD;
     if (!reply_markup?.keyboard) {
       reply_markup = { keyboard: MAIN_KEYBOARD, resize_keyboard: true, selective: true };
     }
 
-    // 3) Send the warning
     const msg = await sendAndTrack(
       bot,
       uid,
@@ -52,7 +47,7 @@ export async function punish(bot, id, messages = userMessages) {
       messages
     );
 
-    // 4) Auto-delete if enabled
+    // ✅ 4) Auto-delete after 1.5s (if enabled)
     const mid = msg?.message_id;
     if (autodeleteEnabled?.status && mid) {
       setTimeout(async () => {
@@ -64,7 +59,7 @@ export async function punish(bot, id, messages = userMessages) {
         } catch (e) {
           console.warn(`⚠️ [punish] Couldn’t delete #${mid}: ${e.message}`);
         }
-      }, 3_000);
+      }, 1500);
     }
   } catch (err) {
     console.error("❌ [punish error]:", err.message || err);
@@ -73,7 +68,7 @@ export async function punish(bot, id, messages = userMessages) {
 
 // ————— Helpers —————
 
-/** Ensure step is from 1–9 */
+/** ✅ Ensure step is within valid FSM flow */
 function isValidStep(s) {
   return (
     Number.isFinite(s) &&
