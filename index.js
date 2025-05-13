@@ -1,5 +1,5 @@
-// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.0.1•GODMODE+TITANLOCK+SYNC
-// 24/7 BULLETPROOF • AUTO-RESILIENT • MAX DIAGNOSTICS
+// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.0.2•GODMODE+TITANLOCK+SYNCFIX
+// 24/7 BULLETPROOF • AUTO-RESILIENT • MAX DIAGNOSTICS • ADMIN PING SUPPORT
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -8,6 +8,7 @@ import { readFile } from "fs/promises";
 import { initBotInstance, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions, cleanStalePaymentTimers } from "./core/sessionManager.js";
+import { sendAdminPing } from "./core/handlers/paymentHandler.js"; // ✅ admin notify
 import "./config/discountSync.js"; // ⛓️ Always last: pulls latest live discount state
 
 /**
@@ -56,10 +57,12 @@ async function notifyCrash(source, err) {
 👤 Logged in as: @${me.username} (${me.first_name})
 `.trim());
 
-    // Admin startup ping disabled
+    // ✅ NEW: notify admin on successful boot
+    await sendAdminPing(`✅ Bot started successfully\nVersion: *v${version}*\n🕒 ${now}`);
 
   } catch (err) {
     console.error("💥 [BOOT ERROR]:", err);
+    await sendAdminPing(`❌ Bot failed to start:\n\`\`\`\n${err.message}\n\`\`\``); // ✅ notify admin
     await notifyCrash("boot", err);
     process.exit(1);
   }
