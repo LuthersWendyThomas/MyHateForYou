@@ -1,15 +1,28 @@
-// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.0.2•GODMODE+TITANLOCK+SYNCFIX
-// 24/7 BULLETPROOF • AUTO-RESILIENT • MAX DIAGNOSTICS • ADMIN PING SUPPORT
+// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.0.4•GODMODE+TITANLOCK+JOINTRACK+PERSIST
+// 24/7 BULLETPROOF • ADMIN NOTIFY • NEW USER TRACKING • SAFE DISK CACHE • DIAMONDLOCK SYSTEM
 
 import dotenv from "dotenv";
 dotenv.config();
 
-import { readFile } from "fs/promises";
+import fs from "fs";
+import { readFile, writeFile } from "fs/promises";
 import { initBotInstance, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions, cleanStalePaymentTimers } from "./core/sessionManager.js";
-import { sendAdminPing } from "./core/handlers/paymentHandler.js"; // ✅ admin notify
-import "./config/discountSync.js"; // ⛓️ Always last: pulls latest live discount state
+import { sendAdminPing } from "./core/handlers/paymentHandler.js";
+import "./config/discountSync.js";
+
+// ✅ Persistent set of joined users
+const NEW_USERS_FILE = "./.newusers.json";
+let newUserSet = new Set();
+
+try {
+  const raw = fs.existsSync(NEW_USERS_FILE) ? fs.readFileSync(NEW_USERS_FILE, "utf8") : "[]";
+  const parsed = JSON.parse(raw);
+  if (Array.isArray(parsed)) newUserSet = new Set(parsed);
+} catch (err) {
+  console.warn("⚠️ Failed to read .newusers.json", err.message);
+}
 
 /**
  * 🔔 Crash + rejection notifier (no admin notifications)
@@ -22,6 +35,28 @@ async function notifyCrash(source, err) {
 (async () => {
   try {
     initBotInstance();
+
+    // ✅ JOIN TRACKING (ADMIN SKIP, persistent memory)
+    BOT.INSTANCE.on("message", async (msg) => {
+      const uid = msg?.from?.id;
+      const adminId = process.env.ADMIN_ID || process.env.BOT_ADMIN_ID;
+      if (!uid || String(uid) === String(adminId) || newUserSet.has(uid)) return;
+
+      newUserSet.add(uid);
+      try {
+        await writeFile(NEW_USERS_FILE, JSON.stringify([...newUserSet]), "utf8");
+      } catch (err) {
+        console.warn("⚠️ Failed to save .newusers.json", err.message);
+      }
+
+      const timestamp = new Date().toLocaleString("en-GB");
+      await sendAdminPing(
+        `🆕 *New user joined*\n` +
+        `👤 UID: \`${uid}\`\n` +
+        `🕒 Joined: ${timestamp}`
+      );
+    });
+
     registerMainHandler(BOT.INSTANCE);
 
     // ♻️ Auto-expire zombie/idle sessions every 10 minutes
@@ -57,12 +92,11 @@ async function notifyCrash(source, err) {
 👤 Logged in as: @${me.username} (${me.first_name})
 `.trim());
 
-    // ✅ NEW: notify admin on successful boot
     await sendAdminPing(`✅ Bot started successfully\nVersion: *v${version}*\n🕒 ${now}`);
 
   } catch (err) {
     console.error("💥 [BOOT ERROR]:", err);
-    await sendAdminPing(`❌ Bot failed to start:\n\`\`\`\n${err.message}\n\`\`\``); // ✅ notify admin
+    await sendAdminPing(`❌ Bot failed to start:\n\`\`\`\n${err.message}\n\`\`\``);
     await notifyCrash("boot", err);
     process.exit(1);
   }
