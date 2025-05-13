@@ -1,5 +1,5 @@
-// 🛡️ utils/cryptoChecker.js | IMMORTAL FINAL v1.1.1•DIAMONDLOCK 999999999x SYNC
-// BULLETPROOF PAYMENT VERIFICATION • BTC/ETH/MATIC/SOL • 24/7 GUARANTEED • NON-BLOCKING
+// 🛡️ utils/cryptoChecker.js | IMMORTAL FINAL v1.9.9•DIAMONDLOCK+FASTSAFE
+// BULLETPROOF PAYMENT VERIFICATION • BTC/ETH/MATIC/SOL • 24/7 • FAST+SYNC+SAFE
 
 import fetch from "node-fetch";
 import { promises as fs } from "fs";
@@ -8,12 +8,9 @@ import { API, ALIASES } from "../config/config.js";
 
 const LOG_DIR   = path.join(process.cwd(), "logs");
 const LOG_FILE  = path.join(LOG_DIR, "cryptoChecks.log");
-const TIMEOUT   = 5_000;   // max per check (ms)
+const TIMEOUT   = 4000; // ⚡ Sutrumpintas atsakas, greitesnis UI
 const SUPPORTED = new Set(["BTC", "ETH", "MATIC", "SOL"]);
 
-/**
- * ✅ Verifies on-chain payment >= expectedAmount
- */
 export async function checkPayment(wallet, currency, expectedAmount) {
   const curInput = String(currency || "").trim().toLowerCase();
   const cur      = (ALIASES[curInput] || curInput).toUpperCase();
