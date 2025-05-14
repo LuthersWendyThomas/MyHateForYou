@@ -117,10 +117,3 @@ function sanitize(str) {
     .replace(/[^a-z0-9]/gi, "_")
     .replace(/_+/g, "_");
 }
-
-// ✅ Final export
-
-export {
-  generateFullQrCache,
-  refreshQrCache
-};
