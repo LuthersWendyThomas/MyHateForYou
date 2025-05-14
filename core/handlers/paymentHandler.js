@@ -1,5 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v99999999.∞+ULTRASYNC•DIAMONDLOCK
-import { generateQR } from "../../utils/generateQR.js";
+import { getCachedQR } from "../../utils/qrCacheManager.js"; // ✅ QR CACHE
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice, NETWORKS } from "../../utils/fetchCryptoPrice.js";
 import { saveOrder } from "../../utils/saveOrder.js";
@@ -43,7 +42,7 @@ async function safeSend(fn, ...args) {
       return await fn(...args);
     } catch (err) {
       if (String(err.message).includes("429")) {
-        const backoff = 500 + i * 600; // ⚡ pagreitintas retry (buvo 1000 + i * 800)
+        const backoff = 500 + i * 600;
         console.warn(`⏳ Rate limit (${i + 1}) – retrying in ${backoff}ms`);
         await wait(backoff);
       } else break;
@@ -74,8 +73,9 @@ export async function handlePayment(bot, id, userMsgs) {
     session.expectedAmount = amount;
     session.step = 9;
 
-    const qrBuffer = await generateQR(symbol, amount, session.wallet);
-    if (!qrBuffer) throw new Error("Failed to generate QR code");
+    // ✅ CACHED QR fallback
+    const qrBuffer = await getCachedQR(symbol, amount, session.wallet, session.product.name, session.quantity);
+    if (!qrBuffer) throw new Error("QR generation failed");
 
     const summary = `
 💸 *Payment summary:*
@@ -164,7 +164,6 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
     saveOrder(id, session.city, session.product.name, session.totalPrice)
       .catch(e => console.warn("⚠️ [saveOrder failed]", e.message));
 
-    // ✅ Admin notification
     await sendAdminPing(
       `💸 *Payment confirmed* from UID \`${id}\`\n` +
       `📦 Product: *${session.product?.name}*\n` +
