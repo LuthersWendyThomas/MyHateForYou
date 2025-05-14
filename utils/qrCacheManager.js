@@ -1,5 +1,5 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v2.0•AMOUNTLOCK•FALLBACKSAFE•AUTOSYNCED
-// 100% AMOUNT-BASED FALLBACK CACHE ENGINE — FULLY SYNCED WITH generateQR.js
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v3.0•DIAMONDLOCK•AMOUNTSAFE•BULLETPROOF
+// 100% AMOUNT-BASED PNG CACHING • FALLBACK AUTO-GENERATION • FULLY SYNCED WITH generateQR.js
 
 import fs from "fs/promises";
 import path from "path";
@@ -7,11 +7,11 @@ import { existsSync } from "fs";
 import { generateQR } from "./generateQR.js";
 import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js";
 import { products } from "../config/products.js";
-import { DISCOUNTS } from "../config/discounts.js";
 import { deliveryMethods } from "../config/features.js";
 
 const CACHE_DIR = path.join(process.cwd(), "qr-cache");
 
+// ✅ Ensure cache dir exists
 export async function initQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) {
@@ -22,10 +22,12 @@ export async function initQrCacheDir() {
   }
 }
 
+// ✅ Build fallback filename (e.g. ETH_0.123456.png)
 function getAmountFilename(symbol, amount) {
   return `${symbol}_${Number(amount).toFixed(6)}.png`;
 }
 
+// ✅ Return cached QR or generate + store if missing
 export async function getCachedQR(symbol, amount) {
   const fileName = getAmountFilename(symbol, amount);
   const filePath = path.join(CACHE_DIR, fileName);
@@ -41,6 +43,7 @@ export async function getCachedQR(symbol, amount) {
       }
     }
 
+    // ❌ Miss → generate live and cache it
     console.warn(`❌ [getCachedQR] Missed: ${fileName} → generating live...`);
     const buffer = await generateQR(symbol, amount);
     if (!buffer || buffer.length < 1000) {
@@ -57,6 +60,7 @@ export async function getCachedQR(symbol, amount) {
   }
 }
 
+// ✅ Delete all existing cached PNGs
 export async function cleanQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) return;
@@ -76,14 +80,14 @@ export async function cleanQrCacheDir() {
   }
 }
 
+// ✅ Generate full fallback cache for all products + delivery + networks
 export async function generateFullQrCache() {
   try {
     await initQrCacheDir();
     await cleanQrCacheDir();
 
-    const discountPct = DISCOUNTS.global?.active ? DISCOUNTS.global.percentage || 0 : 0;
     const deliveryFees = Object.values(deliveryMethods)
-      .map(m => Number(m.fee || 0))
+      .map(method => Number(method.fee || 0))
       .filter(fee => fee > 0);
 
     for (const category in products) {
@@ -92,23 +96,34 @@ export async function generateFullQrCache() {
         if (!active) continue;
 
         for (const [qty, basePrice] of Object.entries(prices)) {
+          const baseUSD = Number(basePrice);
+          if (!Number.isFinite(baseUSD)) continue;
+
           for (const deliveryFee of deliveryFees) {
-            const usd = (basePrice + deliveryFee) * (1 - discountPct / 100);
+            const totalUSD = baseUSD + deliveryFee;
 
             for (const symbol of Object.keys(NETWORKS)) {
-              const rate = await fetchCryptoPrice(symbol);
-              if (!Number.isFinite(rate) || rate <= 0) continue;
+              try {
+                const rate = await fetchCryptoPrice(symbol);
+                if (!Number.isFinite(rate) || rate <= 0) continue;
 
-              const amount = +(usd / rate).toFixed(6);
-              const fileName = getAmountFilename(symbol, amount);
-              const filePath = path.join(CACHE_DIR, fileName);
+                const amount = +(totalUSD / rate).toFixed(6);
+                const fileName = getAmountFilename(symbol, amount);
+                const filePath = path.join(CACHE_DIR, fileName);
 
-              if (!existsSync(filePath)) {
-                const buffer = await generateQR(symbol, amount);
-                if (buffer) {
-                  await fs.writeFile(filePath, buffer);
-                  console.log(`✅ [generateFullQrCache] Cached: ${fileName}`);
+                if (!existsSync(filePath)) {
+                  const buffer = await generateQR(symbol, amount);
+                  if (buffer) {
+                    await fs.writeFile(filePath, buffer);
+                    console.log(`✅ [generateFullQrCache] Cached: ${fileName}`);
+                  }
                 }
+
+                // ✅ Delay to avoid rate limits
+                await new Promise(r => setTimeout(r, 300));
+
+              } catch (innerErr) {
+                console.warn(`⚠️ [generateFullQrCache] Skipped ${symbol}:`, innerErr.message);
               }
             }
           }
@@ -122,6 +137,7 @@ export async function generateFullQrCache() {
   }
 }
 
+// ✅ External trigger (used by refresh job)
 export async function refreshQrCache() {
   console.log("♻️ [refreshQrCache] Refresh started...");
   await generateFullQrCache();
