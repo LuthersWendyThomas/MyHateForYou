@@ -1,16 +1,16 @@
-// 📦 helpers/messageUtils.js | IMMORTAL FINAL v1.0.2•DIAMONDLOCK•SYNCED•QRREADY
-// BULLETPROOF • CHUNKED MARKDOWN • AUTO-CLEANUP • FALLBACK PNG READY
+// 📦 helpers/messageUtils.js | IMMORTAL FINAL v1.0.3•DIAMONDLOCK•SYNCED•QRREADY•BULLETPROOF
+// CHUNKED MESSAGES • AUTO-DELETE • BAN/SESSION INTEGRATION • FALLBACK-READY
 
 import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
 import { banUser } from "../utils/bans.js";
 import { BOT } from "../config/config.js";
-import { getAmountFilename } from "../utils/fallbackPathUtils.js"; // ✅ New import
+import { getAmountFilename } from "../utils/fallbackPathUtils.js"; // ✅ fallback-based tracking
 
-const CLEANUP_DELAY_MS     = 27 * 60 * 1000;
-const MAX_TELEGRAM_LENGTH  = 4096;
+const CLEANUP_DELAY_MS = 27 * 60 * 1000;
+const MAX_TELEGRAM_LENGTH = 4096;
 
-// ————— PUBLIC SENDERS —————
+// ——— PUBLIC SENDERS ———
 
 export async function sendAndTrack(bot, id, text, options = {}, messages = userMessages) {
   const uid = sanitizeId(id);
@@ -128,7 +128,7 @@ export async function safeSend(bot, id, text, options = {}) {
   }
 }
 
-// ————— HELPERS —————
+// ——— HELPERS ———
 
 function track(uid, msgId, messages) {
   if (!messages[uid]) messages[uid] = [];
