@@ -373,8 +373,11 @@ async function handleQuantity(bot, uid, input, session, userMessages) {
 }
 
 async function handleCurrency(bot, uid, input, session, userMessages) {
+  if (session.step !== 6) return renderStep(bot, uid, session.step, userMessages);
+
   const wallet = WALLETS[input.toUpperCase()];
   if (!wallet) return renderStep(bot, uid, 6, userMessages);
+
   session.currency = input.toUpperCase();
   session.wallet   = wallet;
   session.step     = 7;
