@@ -1,18 +1,18 @@
-// 📦 flows/startOrder.js | FINAL IMMORTAL v9999999999.∞•GODMODE•DIAMONDLOCK
-// ULTRA BULLETPROOF FSM START • MAX CLEANUP • INSTANT UX • REGION SYNCED
+// 📦 flows/startOrder.js | IMMORTAL FINAL v999999999999999999x•GODMODE•DIAMONDLOCK•SYNCED
+// FSM SAFE • BULLETPROOF RESET • QR/PAYMENT READY • REGION UX INSTANT • ZERO LEAKS
 
 import {
   userSessions,
   userMessages
 } from "../state/userState.js";
 
-import { fullResetUserState } from "../core/sessionManager.js"; // ✅ NEW SYNCED RESET
+import { fullResetUserState } from "../core/sessionManager.js";
 import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
 import { getRegionKeyboard } from "../config/regions.js";
 
 /**
- * 🚀 Starts a clean FSM session and renders region keyboard
+ * 🚀 Start a clean FSM session with synced state and region keyboard
  */
 export async function startOrder(bot, id, msgs = userMessages) {
   const uid = sanitizeId(id);
@@ -22,10 +22,10 @@ export async function startOrder(bot, id, msgs = userMessages) {
   }
 
   try {
-    // 🧼 1. Clean all user state (timers, messages, sessions)
-    await fullResetUserState(uid); // ✅ USE SYNCED MASTER RESET
+    // 🧼 Full cleanup: timers, wallet, messages, sessions, flags
+    await fullResetUserState(uid);
 
-    // 🌀 2. Init fresh session
+    // 🌀 Start fresh session
     userSessions[uid] = {
       step: 1,
       createdAt: Date.now()
@@ -35,9 +35,10 @@ export async function startOrder(bot, id, msgs = userMessages) {
       console.debug(`🔁 [startOrder] Session initialized (UID: ${uid})`);
     }
 
-    // 💬 3. Send typing action → render region menu
+    // ✨ UX signal
     await bot.sendChatAction(uid, "typing").catch(() => {});
 
+    // 🗺️ Show region keyboard
     const keyboard = getRegionKeyboard();
     return await sendKeyboard(
       bot,
@@ -60,9 +61,7 @@ export async function startOrder(bot, id, msgs = userMessages) {
   }
 }
 
-// ———————————————————————
-// Helpers
-// ———————————————————————
+// ————— Helpers —————
 
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
