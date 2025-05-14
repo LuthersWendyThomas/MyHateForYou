@@ -14,7 +14,7 @@ import {
   userOrders
 } from "../state/userState.js";
 
-import { clearTimers, clearUserMessages, resetUser } from "./stateManager.js";
+import { clearTimers, clearUserMessages, resetUser } from "../state/stateManager.js";
 
 const lastSeenAt = new Map();
 
