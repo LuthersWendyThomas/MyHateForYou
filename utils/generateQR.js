@@ -1,13 +1,14 @@
-// 📦 utils/generateQR.js | FINAL IMMORTAL v10.2.0•DIAMONDLOCK•SYNCED•FALLBACK-SAFE
+// 📦 utils/generateQR.js | FINAL IMMORTAL v11.0.0•GODMODE•SKYLOCK•9999999999x
+// SINGLE-SOURCE FALLBACK GENERATOR • QR MASTER CORE • AUTO HEALING
 
 import QRCode from "qrcode";
 import fs from "fs";
+import path from "path";
 import { WALLETS, ALIASES } from "../config/config.js";
 import {
+  FALLBACK_DIR,
   getFallbackPath,
-  getAmountFilename,
-  sanitizeAmount,
-  FALLBACK_DIR
+  sanitizeAmount
 } from "./fallbackPathUtils.js";
 
 /**
@@ -26,13 +27,6 @@ export function resolveAddress(symbol, overrideAddress) {
 }
 
 /**
- * 🧪 PNG buffer validity
- */
-function isValidBuffer(buffer) {
-  return Buffer.isBuffer(buffer) && buffer.length > 1000;
-}
-
-/**
  * 🔐 Wallet validator
  */
 function isValidAddress(addr) {
@@ -40,7 +34,14 @@ function isValidAddress(addr) {
 }
 
 /**
- * ⚡ Fast QR buffer generation with timeout
+ * 🧪 PNG buffer validity
+ */
+function isValidBuffer(buffer) {
+  return Buffer.isBuffer(buffer) && buffer.length > 1000;
+}
+
+/**
+ * ⚡ Generate QR buffer (timeout-safe)
  */
 export async function generateQRBuffer(symbol, amount, address) {
   const formatted = sanitizeAmount(amount).toFixed(6);
@@ -58,7 +59,7 @@ export async function generateQRBuffer(symbol, amount, address) {
       new Promise((_, reject) => setTimeout(() => reject(new Error("QR timeout")), 4000))
     ]);
 
-    if (!isValidBuffer(buffer)) throw new Error("QR buffer invalid or too small");
+    if (!isValidBuffer(buffer)) throw new Error("QR buffer invalid");
     return buffer;
 
   } catch (err) {
@@ -68,7 +69,7 @@ export async function generateQRBuffer(symbol, amount, address) {
 }
 
 /**
- * 🚀 Main QR generator — fallback-first + live + cache
+ * 🧠 Master QR generator — cache-safe + fallback auto-heal
  */
 export async function generateQR(currency, amount, overrideAddress = null) {
   const symbol = normalizeSymbol(currency);
@@ -87,29 +88,31 @@ export async function generateQR(currency, amount, overrideAddress = null) {
   }
 
   try {
+    // 1️⃣ Try cache first
     if (fs.existsSync(filePath)) {
       const buffer = fs.readFileSync(filePath);
       if (isValidBuffer(buffer)) {
         if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`📦 [generateQR] Cache hit: ${filePath.split("/").pop()}`);
+          console.log(`📦 [generateQR] Cache hit: ${path.basename(filePath)}`);
         }
         return buffer;
       } else {
-        console.warn(`⚠️ [generateQR] Corrupt fallback: ${filePath.split("/").pop()}`);
+        console.warn(`⚠️ [generateQR] Corrupt fallback: ${path.basename(filePath)}`);
       }
     }
 
-    console.warn(`❌ [generateQR] Cache miss → generating live: ${symbol} ${sanitizedAmount}`);
+    // 2️⃣ Generate new QR
+    console.warn(`🧪 [generateQR] Cache miss → generating: ${symbol} ${sanitizedAmount}`);
     const buffer = await generateQRBuffer(symbol, sanitizedAmount, address);
     if (!buffer) return null;
 
     if (!fs.existsSync(FALLBACK_DIR)) fs.mkdirSync(FALLBACK_DIR, { recursive: true });
     fs.writeFileSync(filePath, buffer);
-    console.log(`💾 [generateQR] Live fallback saved: ${filePath.split("/").pop()}`);
+    console.log(`💾 [generateQR] Fallback saved: ${path.basename(filePath)}`);
     return buffer;
 
   } catch (err) {
-    console.error("❌ [generateQR error]", err.message);
+    console.error("❌ [generateQR fatal]", err.message);
     return null;
   }
 }
@@ -139,23 +142,4 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
       inline_keyboard: [[{ text: "📋 Copy address", callback_data: `copy:${validAddr}` }]]
     }
   };
-}
-
-/**
- * 🧼 Cleanup PNGs for specific symbol
- */
-export function cleanOldPngs(symbol) {
-  try {
-    const files = fs.readdirSync(FALLBACK_DIR);
-    const regex = new RegExp(`^${symbol.toUpperCase()}_[\\d.]+\\.png$`);
-    const targets = files.filter(f => regex.test(f));
-
-    for (const file of targets) {
-      fs.unlinkSync(path.join(FALLBACK_DIR, file));
-    }
-
-    console.log(`🧹 [cleanOldPngs] Removed ${targets.length} QR(s) for ${symbol}`);
-  } catch (err) {
-    console.warn("⚠️ [cleanOldPngs] Failed:", err.message);
-  }
 }
