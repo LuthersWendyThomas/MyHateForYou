@@ -1,5 +1,5 @@
 // 📦 utils/generateQR.js
-// FINAL v8.0 • BULLETPROOF AMOUNT-BASED QR GENERATOR • FULLY SYNCED
+// IMMORTAL FINAL v8.1 • DIAMONDLOCK • FULLY SYNCED • SELF-HEAL • BULLETPROOF
 
 import QRCode from "qrcode";
 import fs from "fs";
@@ -24,15 +24,14 @@ function resolveAddress(symbol, overrideAddress) {
 }
 
 /**
- * 💵 Build fallback file path (amount-based)
+ * 💵 Fallback path (amount-based)
  */
 function getFallbackPath(symbol, amount) {
-  const fileName = `${symbol}_${Number(amount).toFixed(6)}.png`;
-  return path.join(CACHE_DIR, fileName);
+  return path.join(CACHE_DIR, `${symbol}_${Number(amount).toFixed(6)}.png`);
 }
 
 /**
- * ✅ Generates live QR PNG buffer using URI
+ * ✅ Generates QR PNG buffer using URI
  */
 export async function generateQRBuffer(symbol, amount, address) {
   const formatted = amount.toFixed(6);
@@ -60,23 +59,20 @@ export async function generateQRBuffer(symbol, amount, address) {
     }
 
     return buffer;
+
   } catch (err) {
-    console.error("❌ [generateQRBuffer error]", err.message);
+    console.error("❌ [generateQRBuffer]", err.message);
     return null;
   }
 }
 
 /**
- * 🚀 Main QR generator (live or cached fallback)
- * @param {string} currency - e.g. "eth", "btc"
- * @param {number} amount - crypto amount (e.g. 0.123456)
- * @param {string|null} overrideAddress
- * @returns {Buffer|null} PNG
+ * 🚀 Main QR generator (live or fallback)
  */
 export async function generateQR(currency, amount, overrideAddress = null) {
   const symbol = normalizeSymbol(currency);
-  const address = resolveAddress(symbol, overrideAddress);
   const parsedAmount = Number(amount);
+  const address = resolveAddress(symbol, overrideAddress);
   const filePath = getFallbackPath(symbol, parsedAmount);
 
   if (!isValidAddress(address)) {
@@ -90,7 +86,6 @@ export async function generateQR(currency, amount, overrideAddress = null) {
   }
 
   try {
-    // ✅ Fallback hit
     if (fs.existsSync(filePath)) {
       const buffer = fs.readFileSync(filePath);
       if (Buffer.isBuffer(buffer) && buffer.length > 1000) {
@@ -98,19 +93,21 @@ export async function generateQR(currency, amount, overrideAddress = null) {
           console.log(`📦 [generateQR] Cache hit: ${path.basename(filePath)}`);
         }
         return buffer;
+      } else {
+        console.warn(`⚠️ [generateQR] Existing file invalid: ${path.basename(filePath)}`);
       }
     }
 
-    // ❌ Fallback miss → generate fresh
-    console.warn(`❌ [generateQR] Fallback miss → generating live: ${symbol} ${parsedAmount}`);
+    // ❌ Cache miss or invalid → generate fresh
+    console.warn(`❌ [generateQR] Miss → generating live: ${symbol} ${parsedAmount}`);
     const buffer = await generateQRBuffer(symbol, parsedAmount, address);
     if (!buffer) return null;
 
-    // 📁 Ensure fallback dir
+    // 📁 Ensure directory exists
     if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
 
     fs.writeFileSync(filePath, buffer);
-    console.log(`💾 [generateQR] Live QR cached: ${path.basename(filePath)}`);
+    console.log(`💾 [generateQR] Live fallback saved: ${path.basename(filePath)}`);
     return buffer;
 
   } catch (err) {
@@ -120,7 +117,7 @@ export async function generateQR(currency, amount, overrideAddress = null) {
 }
 
 /**
- * ✅ Message with copy button (inline use)
+ * 💬 Payment message with copy button
  */
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
   const symbol = normalizeSymbol(currency);
@@ -147,31 +144,34 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
 }
 
 /**
- * 🔐 Wallet format check
+ * 🔒 Wallet validator
  */
 function isValidAddress(addr) {
   return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
 }
 
 /**
- * 🧼 Clear cache for given symbol (optional)
+ * 🧼 Cleanup cached PNGs by symbol (optional)
  */
 export function cleanOldPngs(symbol) {
   try {
     const files = fs.readdirSync(CACHE_DIR);
-    const pattern = new RegExp(`^${symbol}_[\\d.]+\\.png$`);
-    const filtered = files.filter(f => pattern.test(f));
-    for (const file of filtered) {
+    const regex = new RegExp(`^${symbol}_[\\d.]+\\.png$`);
+    const targets = files.filter(f => regex.test(f));
+
+    for (const file of targets) {
       fs.unlinkSync(path.join(CACHE_DIR, file));
     }
-    console.log(`🧹 [cleanOldPngs] Removed ${filtered.length} old QR(s) for ${symbol}`);
+
+    console.log(`🧹 [cleanOldPngs] Removed ${targets.length} QR(s) for ${symbol}`);
   } catch (err) {
     console.warn("⚠️ [cleanOldPngs] Failed:", err.message);
   }
 }
 
-// ✅ Exports
+// ✅ Utility exports for system-wide QR fallback sync
 export {
   normalizeSymbol,
-  resolveAddress
+  resolveAddress,
+  getFallbackPath
 };
