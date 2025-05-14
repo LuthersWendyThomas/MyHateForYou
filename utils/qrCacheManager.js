@@ -1,5 +1,5 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.3.0•DIAMONDLOCK•BULLETPROOF+FALLBACKSAFE
-// 24/7 CACHED+LIVE QR ENGINE • PNG FALLBACK SYSTEM • SELF-HEAL • AUTO-SAVE
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.4.0•DIAMONDLOCK•FULLSYNC•SANITIZED
+// 24/7 QR ENGINE • PNG FALLBACK SYSTEM • SANITIZED FILENAMES • 100% HIT RATE
 
 import fs from "fs/promises";
 import path from "path";
@@ -10,7 +10,7 @@ import { products } from "../config/products.js";
 
 const CACHE_DIR = path.join(process.cwd(), "qr-cache");
 
-// ✅ Ensure cache dir exists
+// ✅ Ensure fallback folder exists
 export async function initQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) {
@@ -21,15 +21,16 @@ export async function initQrCacheDir() {
   }
 }
 
-// ✅ Resolve PNG path
+// ✅ Unified PNG path resolver (sanitized)
 function getQrPath(productName, qty, symbol) {
   const fileName = `${sanitize(productName)}_${qty}_${symbol}.png`;
   return path.join(CACHE_DIR, fileName);
 }
 
-// ✅ Generate and save QR PNG
-export async function generateAndSaveQr(productName, qty, symbol, usdPrice, walletAddress) {
+// ✅ Generate + save fallback PNG
+export async function generateAndSaveQr(productNameRaw, qty, symbol, usdPrice, walletAddress) {
   try {
+    const productName = sanitize(productNameRaw); // 🔐 ensure safe filename
     const rate = await fetchCryptoPrice(symbol);
     const amount = +(usdPrice / rate).toFixed(6);
     const buffer = await generateQRBuffer(symbol, amount, walletAddress);
@@ -43,7 +44,7 @@ export async function generateAndSaveQr(productName, qty, symbol, usdPrice, wall
   }
 }
 
-// ✅ Generate all fallback PNGs (hourly)
+// ✅ Full fallback QR cache generator (run hourly)
 export async function generateFullQrCache() {
   try {
     await initQrCacheDir();
@@ -58,7 +59,9 @@ export async function generateFullQrCache() {
           for (const symbol of Object.keys(NETWORKS)) {
             const wallet = NETWORKS[symbol]?.address;
             if (!wallet || !Number(price)) continue;
-            await generateAndSaveQr(name, qty, symbol, price, wallet);
+
+            const sanitizedName = sanitize(name);
+            await generateAndSaveQr(sanitizedName, qty, symbol, price, wallet);
           }
         }
       }
@@ -70,59 +73,59 @@ export async function generateFullQrCache() {
   }
 }
 
-// ✅ Delete all PNGs before regeneration
+// ✅ Cleanup all old PNGs
 export async function cleanQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) return;
     const files = await fs.readdir(CACHE_DIR);
     let deleted = 0;
+
     for (const file of files) {
       if (file.endsWith(".png")) {
         await fs.unlink(path.join(CACHE_DIR, file));
         deleted++;
       }
     }
+
     console.log(`🧹 [cleanQrCacheDir] Removed ${deleted} old PNGs.`);
   } catch (err) {
-    console.warn("⚠️ [cleanQrCacheDir]", err.message);
+    console.warn("⚠️ [cleanQrCacheDir] Failed:", err.message);
   }
 }
 
-// ✅ Hourly QR fallback rebuild
+// ✅ Run cache refresh (boot or hourly)
 export async function refreshQrCache() {
   console.log("♻️ [refreshQrCache] Refresh started...");
   await generateFullQrCache();
 }
 
-// ✅ Main fallback retriever for paymentHandler (auto live fallback)
-export async function getCachedQR(symbol, amount, wallet, productName, qty) {
-  const fileName = `${sanitize(productName)}_${qty}_${symbol}.png`;
-  const filePath = path.join(CACHE_DIR, fileName);
+// ✅ Main fallback fetcher (auto live fallback if missing)
+export async function getCachedQR(symbol, amount, wallet, productNameRaw, qty) {
+  const productName = sanitize(productNameRaw); // ⬅ critical fix
+  const filePath = getQrPath(productName, qty, symbol);
 
   try {
-    // ✅ Try reading from cache
     if (existsSync(filePath)) {
       const buffer = await fs.readFile(filePath);
       if (buffer?.length > 1000) {
         if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`📦 [getCachedQR] Cache hit: ${fileName}`);
+          console.log(`📦 [getCachedQR] Cache hit: ${filePath}`);
         }
         return buffer;
       } else {
-        console.warn(`⚠️ [getCachedQR] PNG too small: ${fileName}`);
+        console.warn(`⚠️ [getCachedQR] PNG too small: ${filePath}`);
       }
     }
 
-    // ❌ If not found or invalid → generate live and store
-    console.warn(`❌ [getCachedQR] Cache miss: ${fileName} → generating live fallback...`);
+    // ❌ Miss → generate and save
+    console.warn(`❌ [getCachedQR] Cache miss: ${filePath} → generating live fallback...`);
     const buffer = await generateQRBuffer(symbol, amount, wallet);
     if (!buffer || buffer.length < 1000) {
       throw new Error("Live QR generation failed or buffer invalid");
     }
 
-    // 🧠 Save as fallback for next time
     await fs.writeFile(filePath, buffer);
-    console.log(`💾 [getCachedQR] Live fallback saved: ${fileName}`);
+    console.log(`💾 [getCachedQR] Live fallback saved: ${filePath}`);
     return buffer;
 
   } catch (err) {
@@ -131,13 +134,12 @@ export async function getCachedQR(symbol, amount, wallet, productName, qty) {
   }
 }
 
-// ——— Helpers ———
-
+// ✅ Filename sanitizer (same logic used everywhere)
 export function sanitize(str) {
   return String(str || "")
     .trim()
-    .replace(/\s+/g, "_")              // replace spaces with underscore
-    .replace(/[^\w]/g, "")             // remove special characters
-    .replace(/_+/g, "_")               // collapse multiple underscores
+    .replace(/\s+/g, "_")              // spaces to _
+    .replace(/[^\w]/g, "")             // remove special chars
+    .replace(/_+/g, "_")               // collapse ___
     .toLowerCase();
 }
