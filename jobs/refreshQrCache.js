@@ -1,40 +1,45 @@
-// 📦 jobs/refreshQrCache.js | IMMORTAL FINAL v2.1.1•DIAMONDLOCK•RETRYFIXED
-// 4-HOURLY FALLBACK QR REFRESH • FULLY SYNCED WITH IMMORTAL FINAL v3.1.0 qrCacheManager.js
+// 📦 jobs/refreshQrCache.js | IMMORTAL FINAL v3.2.0•DIAMONDLOCK•ULTRASYNC
+// FULL 4-HOURLY FALLBACK QR REBUILDER • SYNCHRONIZED WITH qrCacheManager v3.2.0
 
 import { refreshQrCache } from "../utils/qrCacheManager.js";
 import { sendAdminPing } from "../core/handlers/paymentHandler.js";
 
 /**
- * 🚀 Starts the QR cache refresh scheduler
- * - Runs immediately on startup
- * - Then every 4 hours
+ * 🚀 Start QR fallback PNG refresher
+ * - Triggers on startup
+ * - Then every 4 hours (14400000 ms)
  */
 export function startQrCacheRefresher() {
   console.log("🕒 [refreshQrCache] QR refresher initialized — running every 4 hours");
 
-  // 🔄 Initial boot refresh
+  // 🔄 Immediate full rebuild on boot
   tryRefresh(true);
 
-  // ♻️ Scheduled every 4h (14400000 ms)
+  // ♻️ Every 4 hours
   setInterval(() => tryRefresh(false), 4 * 60 * 60 * 1000);
 }
 
 /**
- * 🔁 Triggers full fallback QR refresh
- * @param {boolean} isStartup - true if run on boot
+ * 🔁 Attempt QR cache rebuild with admin ping
+ * @param {boolean} isStartup - true = first boot, false = interval
  */
 async function tryRefresh(isStartup = false) {
   const now = new Date().toLocaleTimeString("en-GB");
   const label = isStartup
     ? "🔄 QR fallback cache generated on bot startup."
-    : "♻️ QR fallback cache refreshed (4h interval).";
+    : "♻️ QR fallback cache auto-refreshed (every 4h).";
 
   try {
     console.log(`♻️ [refreshQrCache] Started at ${now} (${isStartup ? "startup" : "interval"})`);
-    await refreshQrCache(); // 🚀 This handles dir init + full retry-safe build
-    console.log("✅ [refreshQrCache] QR fallback cache rebuilt.");
+    await refreshQrCache();
+    console.log("✅ [refreshQrCache] Full PNG fallback cache rebuilt.");
     await sendAdminPing(label);
   } catch (err) {
     console.error("❌ [refreshQrCache] Refresh failed:", err.message);
+    try {
+      await sendAdminPing(`❌ QR refresh failed: *${err.message}*`);
+    } catch (e) {
+      console.warn("⚠️ [Admin ping error]:", e.message);
+    }
   }
 }
