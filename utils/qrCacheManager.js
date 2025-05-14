@@ -74,7 +74,7 @@ export async function generateFullQrCache() {
               }
 
               const buffer = await generateQR(symbol, amount);
-              if (buffer) {
+              if (buffer && Buffer.isBuffer(buffer) && buffer.length > 1000) {
                 seenAmounts.add(key);
                 done++;
                 console.log(`✅ [QR Fallback] ${symbol} $${totalUSD} → ${amount.toFixed(6)} (${done}/${total})`);
