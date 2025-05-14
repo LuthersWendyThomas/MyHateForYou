@@ -20,7 +20,7 @@ export const autodeleteEnabled = {
 // 🚚 Delivery Methods — Used in stepHandler & simulateDelivery
 // ===============================
 
-export const deliveryMethods = [
+export const DELIVERY_METHODS = [
   {
     label: "📍 Drop (5$)",
     key: "drop",
