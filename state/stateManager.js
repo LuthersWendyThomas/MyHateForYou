@@ -1,13 +1,11 @@
-// 📦 state/stateManager.js | IMMORTAL FINAL v1.1.1•999999999X•GODMODE•DIAMONDLOCK+SYNC
-// FULL WALLET SUPPORT • FSM SAFE • CLEANUP RESILIENT • 24/7 BULLETPROOF ENGINE
+// 📦 state/stateManager.js | IMMORTAL FINAL v2.0.0•9999999999X•DIAMONDLOCK•SYNCED•BULLETPROOF
+// MAX-STABILITY • 24/7 SAFE • FSM + PAYMENT + CLEANUP INTEGRATED • SESSION + WALLET + TIMER RESET
 
 import {
   userSessions,
   userOrders,
   userMessages,
-  userWallets, // ✅ NEW
-  activeTimers,
-  paymentTimers,
+  userWallets,
   failedAttempts,
   antiSpam,
   bannedUntil,
@@ -15,21 +13,23 @@ import {
   activeUsers
 } from "./userState.js";
 
+import { clearTimersForUser } from "./timers.js";
+
 /**
- * 🧼 Full user reset: session + flags + messages + timers + orders + wallets
+ * 🧼 Full reset: session, orders, messages, wallet, flags, timers
  */
 export function resetUser(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
 
   try {
-    clearTimers(uid);
+    clearTimersForUser(uid);
 
     [
       userSessions,
       userOrders,
       userMessages,
-      userWallets, // ✅ also clear wallets
+      userWallets,
       failedAttempts,
       antiSpam,
       bannedUntil,
@@ -46,7 +46,7 @@ export function resetUser(id) {
 }
 
 /**
- * 🧹 Clear volatile activity (flags/messages only — preserves session/orders)
+ * 🧹 Clear only volatile activity: messages, spam, bans (preserve session + orders)
  */
 export function clearUserActivity(id) {
   const uid = sanitizeId(id);
@@ -67,7 +67,7 @@ export function clearUserActivity(id) {
 }
 
 /**
- * 🗑️ Clear tracked messages only
+ * 🗑️ Only clear tracked messages
  */
 export function clearUserMessages(id) {
   const uid = sanitizeId(id);
@@ -75,32 +75,21 @@ export function clearUserMessages(id) {
 
   try {
     delete userMessages[uid];
-    logAction("🗑️ [clearUserMessages]", "Tracked messages cleared", uid);
+    logAction("🗑️ [clearUserMessages]", "Messages cleared", uid);
   } catch (err) {
     logError("❌ [clearUserMessages error]", err, uid);
   }
 }
 
 /**
- * ⏱️ Clear all timers (active/payment) + cleanupScheduled flag
+ * ⏱️ Clear all timers + cleanupScheduled flag
  */
 export function clearTimers(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
 
   try {
-    if (activeTimers[uid]) {
-      clearTimeout(activeTimers[uid]);
-      delete activeTimers[uid];
-      logAction("🕒 [clearTimers]", "Active timer cleared", uid);
-    }
-
-    if (paymentTimers[uid]) {
-      clearTimeout(paymentTimers[uid]);
-      delete paymentTimers[uid];
-      logAction("💳 [clearTimers]", "Payment timer cleared", uid);
-    }
-
+    clearTimersForUser(uid);
     if (userSessions[uid]?.cleanupScheduled) {
       delete userSessions[uid].cleanupScheduled;
       logAction("🧽 [clearTimers]", "Cleanup flag removed", uid);
@@ -111,24 +100,23 @@ export function clearTimers(id) {
 }
 
 /**
- * 🚫 Fully unregister user — full wipe incl. orders + wallets
+ * 🚫 Fully remove user from system: reset all state
  */
 export function unregisterUser(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
 
   try {
-    clearTimers(uid);
     clearUserMessages(uid);
     resetUser(uid);
-    logAction("🚫 [unregisterUser]", "User fully unregistered", uid);
+    logAction("🚫 [unregisterUser]", "User unregistered", uid);
   } catch (err) {
     logError("❌ [unregisterUser error]", err, uid);
   }
 }
 
 /**
- * 🛡️ Check if user has an active session
+ * 🛡️ Check if user is currently registered (has session)
  */
 export function isUserRegistered(id) {
   const uid = sanitizeId(id);
@@ -137,7 +125,7 @@ export function isUserRegistered(id) {
   return !!registered;
 }
 
-// ————— Helpers —————
+// ——— Helpers ———
 
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
