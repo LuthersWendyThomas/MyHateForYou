@@ -1,10 +1,10 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.0.0•GODMODE•CACHELOCK
-// FULL QR FALLBACK SYSTEM • PER PRODUCT + QUANTITY + SYMBOL • PNG PERSISTENCE
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.0.9•GODMODE•CACHELOCK•SYNC
+// BULLETPROOF QR FALLBACK SYSTEM • PER PRODUCT + QTY + SYMBOL • AUTO CLEANUP + PNG CACHE
 
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateQRBuffer } from "./generateQR.js";
+import { generateQR as generateQRBuffer } from "./generateQR.js"; // ✅ FIXED IMPORT
 import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js";
 import { products } from "../config/products.js";
 
@@ -41,7 +41,8 @@ export async function getCachedQrPath(productName, qty, symbol) {
 // ✅ Generate and save QR PNG for given inputs
 export async function generateAndSaveQr(productName, qty, symbol, usdPrice, walletAddress) {
   try {
-    const amount = +(usdPrice / (await fetchCryptoPrice(symbol))).toFixed(6);
+    const rate = await fetchCryptoPrice(symbol);
+    const amount = +(usdPrice / rate).toFixed(6);
     const buffer = await generateQRBuffer(symbol, amount, walletAddress);
     const filePath = getQrPath(productName, qty, symbol);
     await fs.writeFile(filePath, buffer);
@@ -55,6 +56,7 @@ export async function generateAndSaveQr(productName, qty, symbol, usdPrice, wall
 export async function generateFullQrCache() {
   try {
     await initQrCacheDir();
+    await cleanQrCacheDir(); // ✅ DELETE OLD PNGS BEFORE REFRESH
 
     for (const category in products) {
       for (const product of products[category]) {
@@ -70,13 +72,38 @@ export async function generateFullQrCache() {
         }
       }
     }
+
+    console.log("✅ [generateFullQrCache] All QR combinations cached.");
   } catch (err) {
     console.error("❌ [generateFullQrCache]", err.message);
+  }
+}
+
+// ✅ Delete old cached PNGs
+async function cleanQrCacheDir() {
+  try {
+    if (!existsSync(CACHE_DIR)) return;
+    const files = await fs.readdir(CACHE_DIR);
+    let deleted = 0;
+
+    for (const file of files) {
+      if (file.endsWith(".png")) {
+        await fs.unlink(path.join(CACHE_DIR, file));
+        deleted++;
+      }
+    }
+
+    console.log(`🧹 [cleanQrCacheDir] Cleared ${deleted} old PNGs.`);
+  } catch (err) {
+    console.warn("⚠️ [cleanQrCacheDir] Failed:", err.message);
   }
 }
 
 // ——— Helpers ———
 
 function sanitize(str) {
-  return String(str || "").toLowerCase().replace(/[^a-z0-9]/gi, "_");
+  return String(str || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/gi, "_")
+    .replace(/_+/g, "_");
 }
