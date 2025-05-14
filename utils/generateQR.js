@@ -6,7 +6,7 @@ import fs from "fs";
 import path from "path";
 import { WALLETS, ALIASES } from "../config/config.js";
 
-const CACHE_DIR = "./qr-cache"; // MUST match everywhere in qrCacheManager
+const CACHE_DIR = path.join(process.cwd(), "qr-cache");
 
 /**
  * ✅ Main QR generator: uses cache if found, else generates and saves
