@@ -8,7 +8,7 @@ import { generateQR } from "./generateQR.js";
 import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js";
 import { products } from "../config/products.js";
 import { DISCOUNTS } from "../config/discounts.js";
-import { DELIVERY_METHODS } from "../config/features.js";
+import { deliveryMethods } from "../config/features.js";
 
 const CACHE_DIR = path.join(process.cwd(), "qr-cache");
 
@@ -82,7 +82,7 @@ export async function generateFullQrCache() {
     await cleanQrCacheDir();
 
     const discountPct = DISCOUNTS.global?.active ? DISCOUNTS.global.percentage || 0 : 0;
-    const deliveryFees = Object.values(DELIVERY_METHODS)
+    const deliveryFees = Object.values(deliveryMethods)
       .map(m => Number(m.fee || 0))
       .filter(fee => fee > 0);
 
