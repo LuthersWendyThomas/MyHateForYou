@@ -1,5 +1,5 @@
-// 📦 core/sessionManager.js | IMMORTAL FINAL v1.1.1•999999X•ULTRASYNC•GODMODE•SKYLOCK
-// TITANLOCK+PROJECT-SYNC • AUTO-EXPIRE • FULL SESSION RESET • 24/7 BULLETPROOF
+// 📦 core/sessionManager.js | IMMORTAL FINAL v2.0.0•99999999999X•DIAMONDLOCK•SYNCED
+// 100% WALLET + TIMER + QR + FSM SESSION LIFECYCLE SUPPORT • FULL RESET ENGINE
 
 import {
   activeTimers,
@@ -14,7 +14,8 @@ import {
   userOrders
 } from "../state/userState.js";
 
-import { clearTimers, clearUserMessages, resetUser } from "../state/stateManager.js";
+import { clearTimersForUser } from "../state/timers.js";
+import { clearUserMessages, resetUser } from "../state/stateManager.js";
 
 const lastSeenAt = new Map();
 
@@ -31,77 +32,45 @@ export function markUserActive(id) {
   logAction("✅ [markUserActive]", "User marked active", uid);
 }
 
-/** ⏱ Clear session timer */
-export function clearUserTimer(id) {
-  const uid = sanitizeId(id);
-  if (uid && activeTimers[uid]) {
-    clearTimeout(activeTimers[uid]);
-    delete activeTimers[uid];
-    logAction("🕒 [clearUserTimer]", "Session timer cleared", uid);
-  }
-}
-
-/** 💳 Clear payment timer */
-export function clearPaymentTimer(id) {
-  const uid = sanitizeId(id);
-  if (uid && paymentTimers[uid]) {
-    clearTimeout(paymentTimers[uid]);
-    delete paymentTimers[uid];
-    logAction("💳 [clearPaymentTimer]", "Payment timer cleared", uid);
-  }
-}
-
-/** 🔄 Legacy partial reset */
+/** 🔄 Partial session reset — for minimal failures/back navigation */
 export function resetSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
   try {
-    clearUserTimer(uid);
-    clearPaymentTimer(uid);
+    clearTimersForUser(uid);
 
-    [ userSessions, failedAttempts, antiFlood, antiSpam, bannedUntil, userMessages ]
+    [userSessions, failedAttempts, antiFlood, antiSpam, bannedUntil, userMessages]
       .forEach(store => { if (uid in store) delete store[uid]; });
 
     lastSeenAt.delete(uid);
-    if (activeUsers.remove) activeUsers.remove(uid);
-    else activeUsers.delete(uid);
-
+    activeUsers.remove?.(uid);
     logAction("🧼 [resetSession]", "Session reset complete", uid);
   } catch (err) {
     logError("❌ [resetSession error]", err, uid);
   }
 }
 
-/** 🔥 FULL RESET — deletes session + messages + payment + timers + FSM data */
-export async function fullResetUserState(uid) {
-  uid = sanitizeId(uid);
+/** 🔥 Full state wipe for user — all systems */
+export async function fullResetUserState(id) {
+  const uid = sanitizeId(id);
   if (!uid) return;
+
   try {
-    await clearTimers(uid);
+    await clearTimersForUser(uid);
     await clearUserMessages(uid);
     await resetUser(uid);
 
-    [ userOrders, userMessages, paymentTimers ].forEach(store => delete store[uid]);
-
-    if (userSessions[uid]) {
-      Object.keys(userSessions[uid]).forEach(k => (userSessions[uid][k] = null));
-      delete userSessions[uid];
-    }
-
+    [userOrders, paymentTimers].forEach(store => delete store[uid]);
+    if (userSessions[uid]) delete userSessions[uid];
     lastSeenAt.delete(uid);
-    if (typeof activeUsers.remove === "function") {
-      activeUsers.remove(uid);
-    } else {
-      activeUsers.delete(uid);
-    }
-
-    logAction("🔥 [fullResetUserState]", "Total wipe complete", uid);
+    activeUsers.remove?.(uid);
+    logAction("🔥 [fullResetUserState]", "Full state reset complete", uid);
   } catch (err) {
     logError("❌ [fullResetUserState error]", err, uid);
   }
 }
 
-/** ⏳ Expire idle or zombie sessions */
+/** ⏳ Expire zombie or idle sessions */
 export function autoExpireSessions(threshold = IDLE_TIMEOUT_MS) {
   const now = Date.now();
   for (const [uid, last] of lastSeenAt.entries()) {
@@ -120,33 +89,34 @@ export function autoExpireSessions(threshold = IDLE_TIMEOUT_MS) {
   }
 }
 
-/** 📊 Get live count */
+/** 📊 Count active users */
 export function getActiveUsersCount() {
   const count = activeUsers.count || activeUsers.size || 0;
   logAction("📊 [getActiveUsersCount]", `=${count}`);
   return count;
 }
 
-/** 🧽 Wipe all sessions (admin) */
+/** 🧽 Admin: wipe all sessions */
 export function wipeAllSessions() {
   try {
     for (const uid of Object.keys(userSessions)) {
       resetSession(uid);
     }
-    logAction("🔥 [wipeAllSessions]", "All sessions reset");
+    logAction("🔥 [wipeAllSessions]", "All sessions wiped");
   } catch (err) {
     logError("❌ [wipeAllSessions error]", err);
   }
 }
 
-/** 💳 Remove orphaned timers */
+/** 💳 Cleanup orphaned payment timers */
 export function cleanStalePaymentTimers() {
   for (const uid in paymentTimers) {
     try {
       const step = userSessions[uid]?.step;
       if (step !== 8 && step !== 9) {
-        clearPaymentTimer(uid);
-        logAction("🧽 [cleanStalePaymentTimers]", "Stale timer cleared", uid);
+        clearTimeout(paymentTimers[uid]);
+        delete paymentTimers[uid];
+        logAction("🧽 [cleanStalePaymentTimers]", "Stale payment timer removed", uid);
       }
     } catch (err) {
       logError("❌ [cleanStalePaymentTimers error]", err, uid);
@@ -154,11 +124,11 @@ export function cleanStalePaymentTimers() {
   }
 }
 
-/** 🧪 Print session debug */
+/** 🧪 Debug: print all active sessions */
 export function printSessionSummary() {
   const now = Date.now();
   const entries = Object.entries(userSessions);
-  logAction("📊 [printSessionSummary]", `Count=${entries.length}`);
+  logAction("📊 [printSessionSummary]", `Sessions=${entries.length}`);
   for (const [uid, sess] of entries) {
     const seen = lastSeenAt.get(uid);
     const ago = seen ? `${Math.floor((now - seen) / 1000)}s ago` : "unknown";
@@ -166,7 +136,7 @@ export function printSessionSummary() {
   }
 }
 
-// ——— Helpers ———
+// ——— Internal Helpers ———
 
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
