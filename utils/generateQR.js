@@ -1,5 +1,6 @@
-// 📦 utils/generateQR.js
-// IMMORTAL FINAL v8.1 • DIAMONDLOCK • FULLY SYNCED • SELF-HEAL • BULLETPROOF
+// 📦 utils/generateQR.js | IMMORTAL FINAL v10.0.0•DIAMONDLOCK•INSTANTCACHE+SELFHEAL+SYNCED
+// ⚡ 100% Fallback PNG hit or live speed guarantee
+// 🔐 Wallet + Buffer Validator • 🛡️ Self-Healing Fallback Saver • 💾 Safe Write & Retry
 
 import QRCode from "qrcode";
 import fs from "fs";
@@ -9,7 +10,7 @@ import { WALLETS, ALIASES } from "../config/config.js";
 const CACHE_DIR = path.join(process.cwd(), "qr-cache");
 
 /**
- * 🔐 Normalize + validate symbol
+ * 🔐 Normalize symbol to standard form
  */
 function normalizeSymbol(symbol) {
   const raw = String(symbol || "").trim().toLowerCase();
@@ -17,28 +18,39 @@ function normalizeSymbol(symbol) {
 }
 
 /**
- * 🏦 Resolve wallet address (overridable)
+ * 🏦 Resolve wallet address from override or config
  */
 function resolveAddress(symbol, overrideAddress) {
   return String(overrideAddress || WALLETS[symbol] || "").trim();
 }
 
 /**
- * 💵 Fallback path (amount-based)
+ * 💵 Path to fallback PNG file
  */
 function getFallbackPath(symbol, amount) {
   return path.join(CACHE_DIR, `${symbol}_${Number(amount).toFixed(6)}.png`);
 }
 
 /**
- * ✅ Generates QR PNG buffer using URI
+ * 🔒 Validate wallet address
  */
-export async function generateQRBuffer(symbol, amount, address) {
+function isValidAddress(addr) {
+  return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
+}
+
+/**
+ * 🧪 Validate buffer integrity
+ */
+function isValidBuffer(buffer) {
+  return Buffer.isBuffer(buffer) && buffer.length > 1000;
+}
+
+/**
+ * ⚡ Generate QR PNG buffer with timeout protection
+ */
+async function generateQRBuffer(symbol, amount, address) {
   const formatted = amount.toFixed(6);
-  const scheme = symbol.toLowerCase();
-  const label = encodeURIComponent("BalticPharmacyBot");
-  const msg = encodeURIComponent("Order");
-  const uri = `${scheme}:${address}?amount=${formatted}&label=${label}&message=${msg}`;
+  const uri = `${symbol.toLowerCase()}:${address}?amount=${formatted}&label=${encodeURIComponent("BalticPharmacyBot")}&message=${encodeURIComponent("Order")}`;
 
   try {
     const buffer = await Promise.race([
@@ -49,13 +61,11 @@ export async function generateQRBuffer(symbol, amount, address) {
         errorCorrectionLevel: "H",
         color: { dark: "#000000", light: "#FFFFFF" }
       }),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("QR generation timeout")), 4000)
-      )
+      new Promise((_, reject) => setTimeout(() => reject(new Error("QR timeout")), 4000))
     ]);
 
-    if (!Buffer.isBuffer(buffer) || buffer.length < 1000) {
-      throw new Error("Generated QR buffer is invalid or too small.");
+    if (!isValidBuffer(buffer)) {
+      throw new Error("Generated QR buffer is invalid or too small");
     }
 
     return buffer;
@@ -67,7 +77,7 @@ export async function generateQRBuffer(symbol, amount, address) {
 }
 
 /**
- * 🚀 Main QR generator (live or fallback)
+ * 🚀 Master QR generator — fallback-first + live + auto-save
  */
 export async function generateQR(currency, amount, overrideAddress = null) {
   const symbol = normalizeSymbol(currency);
@@ -86,25 +96,27 @@ export async function generateQR(currency, amount, overrideAddress = null) {
   }
 
   try {
+    // ✅ Fallback hit
     if (fs.existsSync(filePath)) {
       const buffer = fs.readFileSync(filePath);
-      if (Buffer.isBuffer(buffer) && buffer.length > 1000) {
+      if (isValidBuffer(buffer)) {
         if (process.env.DEBUG_MESSAGES === "true") {
           console.log(`📦 [generateQR] Cache hit: ${path.basename(filePath)}`);
         }
         return buffer;
       } else {
-        console.warn(`⚠️ [generateQR] Existing file invalid: ${path.basename(filePath)}`);
+        console.warn(`⚠️ [generateQR] Corrupted PNG: ${path.basename(filePath)}`);
       }
     }
 
-    // ❌ Cache miss or invalid → generate fresh
-    console.warn(`❌ [generateQR] Miss → generating live: ${symbol} ${parsedAmount}`);
+    // ❌ Fallback miss → live generate
+    console.warn(`❌ [generateQR] Cache miss → generating live: ${symbol} ${parsedAmount}`);
     const buffer = await generateQRBuffer(symbol, parsedAmount, address);
     if (!buffer) return null;
 
-    // 📁 Ensure directory exists
-    if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+    if (!fs.existsSync(CACHE_DIR)) {
+      fs.mkdirSync(CACHE_DIR, { recursive: true });
+    }
 
     fs.writeFileSync(filePath, buffer);
     console.log(`💾 [generateQR] Live fallback saved: ${path.basename(filePath)}`);
@@ -117,7 +129,7 @@ export async function generateQR(currency, amount, overrideAddress = null) {
 }
 
 /**
- * 💬 Payment message with copy button
+ * 📬 Payment message with copy address inline button
  */
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
   const symbol = normalizeSymbol(currency);
@@ -144,14 +156,7 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
 }
 
 /**
- * 🔒 Wallet validator
- */
-function isValidAddress(addr) {
-  return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
-}
-
-/**
- * 🧼 Cleanup cached PNGs by symbol (optional)
+ * 🧼 Cleanup all PNGs for given symbol
  */
 export function cleanOldPngs(symbol) {
   try {
@@ -169,7 +174,7 @@ export function cleanOldPngs(symbol) {
   }
 }
 
-// ✅ Utility exports for system-wide QR fallback sync
+// ✅ Global exports for use in qrCacheManager / paymentHandler / etc
 export {
   normalizeSymbol,
   resolveAddress,
