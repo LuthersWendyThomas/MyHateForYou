@@ -21,7 +21,7 @@ export async function initQrCacheDir() {
 
 // ✅ Standardized fallback PNG name
 function getAmountFilename(symbol, amount) {
-  return `${symbol}_${Number(amount).toFixed(6)}.png`;
+  return `${symbol.toUpperCase()}_${Number(amount).toFixed(6)}.png`;
 }
 
 // ✅ Load from fallback or generate it live
