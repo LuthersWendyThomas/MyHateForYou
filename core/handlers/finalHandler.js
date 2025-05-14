@@ -6,15 +6,8 @@ import path from "path";
 
 import { sendAndTrack, sendPhotoAndTrack } from "../../helpers/messageUtils.js";
 import { getMainMenu } from "../../helpers/menu.js";
-import { clearTimers, clearUserMessages, resetUser } from "../../state/stateManager.js";
-
-import {
-  userSessions,
-  userMessages,
-  activeUsers,
-  paymentTimers
-} from "../../state/userState.js";
-
+import { fullResetUserState } from "../sessionManager.js"; // ✅ central reset
+import { userSessions, activeUsers } from "../../state/userState.js";
 import { simulateDelivery } from "./deliveryHandler.js";
 
 export async function safeStart(bot, id) {
@@ -22,13 +15,12 @@ export async function safeStart(bot, id) {
   if (!bot?.sendMessage || !uid) return;
 
   try {
-    await fullSessionReset(uid);
+    await fullResetUserState(uid); // ✅ centralized reset
 
     userSessions[uid] = { step: 1, createdAt: Date.now() };
     activeUsers.add(uid);
 
     await bot.sendChatAction(uid, "typing").catch(() => {});
-
     const menu = getMainMenu(uid);
     const imgPath = path.join(process.cwd(), "assets", "greeting.jpg");
 
@@ -50,8 +42,7 @@ export async function safeStart(bot, id) {
           caption: greetingText(count, uid),
           parse_mode: "Markdown",
           reply_markup: menu
-        },
-        userMessages
+        }
       );
     } else {
       return sendAndTrack(
@@ -61,8 +52,7 @@ export async function safeStart(bot, id) {
         {
           parse_mode: "Markdown",
           reply_markup: menu
-        },
-        userMessages
+        }
       );
     }
   } catch (err) {
@@ -75,8 +65,7 @@ export async function safeStart(bot, id) {
       {
         parse_mode: "Markdown",
         reply_markup: menu
-      },
-      userMessages
+      }
     );
   }
 }
@@ -89,7 +78,7 @@ export async function finishOrder(bot, id) {
     const session = userSessions[uid];
     if (!session?.deliveryMethod) throw new Error("Missing delivery method");
 
-    await simulateDelivery(bot, uid, session.deliveryMethod, userMessages);
+    await simulateDelivery(bot, uid, session.deliveryMethod);
     await resetSession(uid);
 
     const menu = getMainMenu(uid);
@@ -102,8 +91,7 @@ export async function finishOrder(bot, id) {
       {
         parse_mode: "Markdown",
         reply_markup: menu
-      },
-      userMessages
+      }
     );
   } catch (err) {
     console.error("❌ [finishOrder error]:", err);
@@ -115,8 +103,7 @@ export async function finishOrder(bot, id) {
       {
         parse_mode: "Markdown",
         reply_markup: menu
-      },
-      userMessages
+      }
     );
   }
 }
@@ -125,42 +112,13 @@ export async function resetSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
 
-  await fullSessionReset(uid);
-
-  // ✅ GARANTUOTAS ATKŪRIMAS – nauja sesija
+  await fullResetUserState(uid); // ✅ centralized reset
   userSessions[uid] = { step: 1, createdAt: Date.now() };
 }
 
-async function fullSessionReset(uid) {
-  if (!uid) return;
-
-  try {
-    await clearTimers(uid);
-    await clearUserMessages(uid);
-    await resetUser(uid);
-
-    if (paymentTimers?.[uid]) {
-      clearTimeout(paymentTimers[uid]);
-      delete paymentTimers[uid];
-    }
-
-    if (userSessions?.[uid]) {
-      delete userSessions[uid];
-    }
-
-    if (typeof activeUsers?.remove === "function") {
-      activeUsers.remove(uid);
-    } else {
-      activeUsers?.delete(uid);
-    }
-
-    if (process.env.DEBUG_MESSAGES === "true") {
-      console.debug(`🧼 [fullSessionReset] Session cleared for ${uid}`);
-    }
-  } catch (err) {
-    console.error("❌ [fullSessionReset error]:", err);
-  }
-}
+// ———————————————————————
+// Helpers
+// ———————————————————————
 
 function sanitizeId(id) {
   const s = String(id ?? "").trim();
