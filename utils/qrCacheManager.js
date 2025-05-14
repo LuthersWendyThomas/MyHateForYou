@@ -119,10 +119,11 @@ function sanitize(str) {
 }
 
 // ✅ Final export
+
 export {
-  getCachedQR,
   generateFullQrCache,
   refreshQrCache,
+  getCachedQR,
   generateAndSaveQr,
   initQrCacheDir
 };
