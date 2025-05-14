@@ -1,6 +1,3 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v3.0.0•DIAMONDLOCK•FULLSYNC
-// AMOUNT-BASED QR SYSTEM • BULLETPROOF FALLBACK • 24/7 CACHED + LIVE
-
 import { getCachedQR } from "../../utils/qrCacheManager.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice, NETWORKS } from "../../utils/fetchCryptoPrice.js";
@@ -22,24 +19,19 @@ import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 
 const TIMEOUT_MS = 30 * 60 * 1000;
 
-/**
- * 💤 Sleep util (used for rate-limit backoff)
- */
 function wait(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
-/**
- * 🔁 Normalizes currency input to full uppercase symbol
- */
 function normalizeSymbol(raw) {
   const key = String(raw || "").trim().toLowerCase();
   return (ALIASES[key] || key).toUpperCase();
 }
 
-/**
- * 📈 Fetches live crypto rate
- */
+function isValidAddress(addr) {
+  return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
+}
+
 async function getSafeRate(currency) {
   const symbol = normalizeSymbol(currency);
   if (!NETWORKS[symbol]) throw new Error(`Unsupported currency: ${symbol}`);
@@ -48,9 +40,6 @@ async function getSafeRate(currency) {
   return { rate, symbol };
 }
 
-/**
- * 🔁 Executes Telegram API calls with retry logic (3x)
- */
 async function safeSend(fn, ...args) {
   for (let i = 0; i < 3; i++) {
     try {
@@ -69,9 +58,6 @@ async function safeSend(fn, ...args) {
   return null;
 }
 
-/**
- * 💸 Payment flow entrypoint (step 7 → 9)
- */
 export async function handlePayment(bot, id, userMsgs) {
   const session = userSessions[id];
   if (!session || session.step !== 7 || session.paymentInProgress) {
@@ -86,20 +72,20 @@ export async function handlePayment(bot, id, userMsgs) {
     const usd = productUSD + deliveryUSD;
 
     if (
-      !session.wallet || !session.currency || !session.product?.name ||
-      !session.quantity || !isFinite(usd)
-    ) throw new Error("Incomplete order data");
+      !session.wallet || !isValidAddress(session.wallet) ||
+      !session.currency || !session.product?.name ||
+      !session.quantity || !Number.isFinite(usd)
+    ) throw new Error("Incomplete or invalid order data");
 
     const { rate, symbol } = await getSafeRate(session.currency);
     const amount = +(usd / rate).toFixed(6);
-    if (!isFinite(amount) || amount <= 0) throw new Error("Calculated crypto amount invalid");
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error("Calculated crypto amount invalid");
 
     session.expectedAmount = amount;
     session.step = 9;
 
-    // ✅ Get fallback or live QR via amount-based file
     const qrBuffer = await getCachedQR(symbol, amount);
-    if (!qrBuffer || !Buffer.isBuffer(qrBuffer)) {
+    if (!qrBuffer || !Buffer.isBuffer(qrBuffer) || qrBuffer.length < 1000) {
       throw new Error("QR fallback failed (both cache and live)");
     }
 
@@ -122,13 +108,13 @@ export async function handlePayment(bot, id, userMsgs) {
       parse_mode: "Markdown"
     }, userMsgs);
 
-    // ⏳ Start payment timer
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
     const timer = setTimeout(() => {
       console.warn(`⌛️ [payment timeout] User ${id}`);
       delete paymentTimers[id];
       delete userSessions[id];
     }, TIMEOUT_MS);
+
     session.paymentTimer = timer;
     paymentTimers[id] = timer;
 
@@ -146,9 +132,6 @@ export async function handlePayment(bot, id, userMsgs) {
   }
 }
 
-/**
- * ❌ Cancels payment step
- */
 export async function handlePaymentCancel(bot, id, userMsgs) {
   const session = userSessions[id];
   if (!session || session.step !== 9 || !session.paymentInProgress) {
@@ -163,14 +146,11 @@ export async function handlePaymentCancel(bot, id, userMsgs) {
   return safeStart(bot, id);
 }
 
-/**
- * ✅ Verifies blockchain payment
- */
 export async function handlePaymentConfirmation(bot, id, userMsgs) {
   const session = userSessions[id];
   if (
-    !session || session.step !== 9 || !session.wallet ||
-    !session.currency || !session.expectedAmount || !session.deliveryMethod
+    !session || session.step !== 9 || !isValidAddress(session.wallet) ||
+    !session.currency || !Number.isFinite(session.expectedAmount)
   ) {
     return sendAndTrack(bot, id, "⚠️ Session expired or invalid. Use /start to retry.", {}, userMsgs);
   }
@@ -215,9 +195,6 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
   }
 }
 
-/**
- * 🧼 Cleans session/timer on error
- */
 function cleanupOnError(id) {
   const session = userSessions[id];
   if (!session) return;
@@ -229,9 +206,6 @@ function cleanupOnError(id) {
   }
 }
 
-/**
- * 🔔 Sends admin message (Markdown)
- */
 export async function sendAdminPing(msg) {
   try {
     const adminId = process.env.ADMIN_ID;
