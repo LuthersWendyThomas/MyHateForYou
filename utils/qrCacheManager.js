@@ -133,7 +133,7 @@ export async function getCachedQR(symbol, amount, wallet, productName, qty) {
 
 // ——— Helpers ———
 
-function sanitize(str) {
+export function sanitize(str) {
   return String(str || "")
     .trim()
     .replace(/\s+/g, "_")              // replace spaces with underscore
@@ -141,4 +141,3 @@ function sanitize(str) {
     .replace(/_+/g, "_")               // collapse multiple underscores
     .toLowerCase();
 }
-
