@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v4.0.0•DIAMONDLOCK•ULTRASYNC+INSTANTQR
+// 📦 core/handlers/paymentHandler.js | FINAL IMMORTAL v5.0.0•DIAMONDLOCK•SYNCED
 
 import { getCachedQR } from "../../utils/qrCacheManager.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -18,6 +18,7 @@ import {
 } from "../../state/userState.js";
 import { BOT, ALIASES } from "../../config/config.js";
 import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
+import { sanitizeAmount } from "../../utils/fallbackPathUtils.js";
 
 const TIMEOUT_MS = 30 * 60 * 1000;
 
@@ -47,11 +48,10 @@ async function safeSend(fn, ...args) {
     try {
       return await fn(...args);
     } catch (err) {
-      const isRateLimit = String(err.message).includes("429");
-      if (isRateLimit) {
-        const backoff = 500 + i * 700;
-        console.warn(`⏳ Rate limit (${i + 1}) – retrying in ${backoff}ms`);
-        await wait(backoff);
+      if (String(err.message).includes("429")) {
+        const delay = 500 + i * 700;
+        console.warn(`⏳ Rate limit (${i + 1}) – retry in ${delay}ms`);
+        await wait(delay);
       } else {
         break;
       }
@@ -80,15 +80,19 @@ export async function handlePayment(bot, id, userMsgs) {
     ) throw new Error("Incomplete or invalid order data");
 
     const { rate, symbol } = await getSafeRate(session.currency);
-    const amount = +(usd / rate).toFixed(6);
-    if (!Number.isFinite(amount) || amount <= 0) throw new Error("Calculated crypto amount invalid");
+    const rawAmount = usd / rate;
+    const amount = sanitizeAmount(rawAmount);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error("Calculated crypto amount invalid");
+    }
 
     session.expectedAmount = amount;
     session.step = 9;
 
     const qrBuffer = await getCachedQR(symbol, amount);
     if (!qrBuffer || !Buffer.isBuffer(qrBuffer) || qrBuffer.length < 1000) {
-      throw new Error("QR fallback failed (cache and live failed)");
+      throw new Error("QR fallback failed (both cache and live failed)");
     }
 
     const summary = `
