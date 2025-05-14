@@ -391,7 +391,6 @@ async function handleCurrency(bot, uid, input, session, userMessages) {
 
 async function handleOrderConfirm(bot, uid, input, session, userMessages) {
   if (input !== MENU_BUTTONS.CONFIRM.text.toLowerCase()) {
-    return renderStep(bot, uid, 7, userMessages);
   }
 
   return handlePayment(bot, uid, userMessages);
