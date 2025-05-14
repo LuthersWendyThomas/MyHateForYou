@@ -1,5 +1,5 @@
-// 🛡️ core/security.js | FINAL IMMORTAL v2.0.0•999999999X•DIAMONDLOCK•FULLSYNC
-// BULLETPROOF UX • FSM-SAFE • BUTTON-FRIENDLY • FLOOD+SPAM+BAN ENGINE
+// 🛡️ core/security.js | IMMORTAL FINAL v3.0.0•999999999999999999X•DIAMONDLOCK•SYNCED
+// FSM-SAFE • QR/STEP 9 SAFE • BUTTON-FRIENDLY • ULTRA UX • ZERO FALSE BLOCKS • FULLY SYNCED
 
 import { isBanned } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
@@ -7,7 +7,7 @@ import { antiSpam, antiFlood, bannedUntil, userSessions } from "../state/userSta
 import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { BOT } from "../config/config.js";
 
-// ⏱️ Limits
+// ——— Limitai ———
 const SPAM_INTERVAL_MS    = 1400;
 const FLOOD_LIMIT         = 9;
 const FLOOD_WINDOW_MS     = 9000;
@@ -16,33 +16,35 @@ const MAX_MESSAGE_LENGTH  = 600;
 const MAX_INPUT_FREQUENCY = 6;
 const MAX_DISTINCT_INPUTS = 20;
 
-// ✅ Cache button texts
+// ✅ Mygtukų cache
 const BUTTON_TEXTS = Object.values(MENU_BUTTONS)
   .map(btn => String(btn?.text || "").trim().toLowerCase())
   .filter(Boolean);
 
-// 🧠 Recent inputs per user
+// 🧠 Tekstų istorija
 const recentTexts = new Map();
 
-// ——— Main FSM-Aware Filter ———
-
+/**
+ * 🧠 Pagrindinis UX/FSM aware leidimo filtras
+ */
 export async function canProceed(id, bot, text = "") {
   const uid = sanitizeId(id);
   if (!uid) return false;
   if (isAdmin(uid)) return true;
 
-  const session = userSessions[uid];
+  const session = userSessions[uid] || {};
   const input = String(text || "").trim().toLowerCase();
 
-  // ✅ Always allow known buttons
+  // ✅ Leisti mygtukus
   if (BUTTON_TEXTS.includes(input)) return true;
 
-  // ✅ Allow confirm/cancel during steps 8–9
-  if (session?.step >= 8) {
-    if (
-      input === MENU_BUTTONS.CONFIRM.text.toLowerCase() ||
-      input === MENU_BUTTONS.CANCEL.text.toLowerCase()
-    ) return true;
+  // ✅ Leisti confirm/cancel žingsniuose 8–9
+  if (session.step === 8 || session.step === 9) {
+    const allowed = [
+      MENU_BUTTONS.CONFIRM.text.toLowerCase(),
+      MENU_BUTTONS.CANCEL.text.toLowerCase()
+    ];
+    if (allowed.includes(input)) return true;
   }
 
   try {
@@ -61,19 +63,15 @@ export async function canProceed(id, bot, text = "") {
   }
 }
 
-// ——— Flood Detection ———
-
+/**
+ * 💦 FLOOD detekcija
+ */
 export async function handleFlood(id, bot) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
 
   const now = Date.now();
-  let state = antiFlood[uid];
-
-  if (!state) {
-    antiFlood[uid] = { count: 1, start: now };
-    return false;
-  }
+  const state = antiFlood[uid] || { count: 0, start: now };
 
   if (now - state.start <= FLOOD_WINDOW_MS) {
     state.count++;
@@ -85,19 +83,22 @@ export async function handleFlood(id, bot) {
       return true;
     }
   } else {
-    antiFlood[uid] = { count: 1, start: now };
+    state.count = 1;
+    state.start = now;
   }
 
+  antiFlood[uid] = state;
   return false;
 }
 
-// ——— Spam Detection ———
-
+/**
+ * 🚫 SPAM detekcija
+ */
 export function isSpamming(id) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
 
-  const now  = Date.now();
+  const now = Date.now();
   const last = antiSpam[uid] || 0;
   antiSpam[uid] = now;
 
@@ -106,8 +107,9 @@ export function isSpamming(id) {
   return tooFast;
 }
 
-// ——— Dangerous Input (length + repetition) ———
-
+/**
+ * 🚨 Per ilgas arba per daug kartų kartojamas tekstas
+ */
 function isMessageDangerous(id, rawText) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
@@ -118,9 +120,7 @@ function isMessageDangerous(id, rawText) {
     return true;
   }
 
-  let history = recentTexts.get(uid) || [];
-  if (!Array.isArray(history)) history = [];
-
+  const history = recentTexts.get(uid) || [];
   if (history.length >= MAX_DISTINCT_INPUTS) history.shift();
   history.push(text);
   recentTexts.set(uid, history);
@@ -134,8 +134,9 @@ function isMessageDangerous(id, rawText) {
   return false;
 }
 
-// ——— Mute Status ———
-
+/**
+ * 🔇 Ar useris mute'intas
+ */
 export function isMuted(id) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
@@ -143,24 +144,25 @@ export function isMuted(id) {
   const until = bannedUntil[uid];
   if (!until) return false;
 
-  const muted = Date.now() < until;
-  if (!muted) {
+  const stillMuted = Date.now() < until;
+  if (!stillMuted) {
     delete bannedUntil[uid];
     recentTexts.delete(uid);
   }
 
-  if (muted) logAction("🔇 [isMuted]", "User muted", uid);
-  return muted;
+  if (stillMuted) logAction("🔇 [isMuted]", "User muted", uid);
+  return stillMuted;
 }
 
-// ——— Mute Notification ———
-
+/**
+ * 📣 Mute notification
+ */
 async function notifyUserMuted(bot, uid) {
   try {
     const session = userSessions[uid];
     if (!session?.mutedNotified) {
       await sendAndTrack(bot, uid,
-        "⛔ *Too many requests!*\nYou've been temporarily *muted for 1.5 minutes*.",
+        "⛔ *Too many actions!*\nYou've been *muted for 1.5 minutes*. Please slow down.",
         { parse_mode: "Markdown" }
       );
       if (session) session.mutedNotified = true;
@@ -186,6 +188,6 @@ function logAction(label, msg, uid = "") {
 }
 
 function logError(label, err, uid = "") {
-  const msg = err?.message || err;
-  console.error(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
+  const m = err?.message || err;
+  console.error(`${new Date().toISOString()} ${label} → ${m}${uid ? ` (UID: ${uid})` : ""}`);
 }
