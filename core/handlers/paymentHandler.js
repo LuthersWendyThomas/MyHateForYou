@@ -76,11 +76,12 @@ export async function handlePayment(bot, id, userMsgs) {
     session.step = 9;
 
     // ✅ Try cached fallback QR (or auto-generate if missing)
+    const sanitizedName = sanitize(session.product.name);
     const qrBuffer = await getCachedQR(
       symbol,
       amount,
       session.wallet,
-      session.product.name,
+      sanitizedName,
       session.quantity
     );
 
