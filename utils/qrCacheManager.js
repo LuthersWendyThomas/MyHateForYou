@@ -1,16 +1,16 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.1.0•GODMODE•CACHELOCK•BULLETPROOF
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.2.0•GODMODE•CACHELOCK•BULLETPROOF
 // QR PNG FALLBACK SYSTEM • PRODUCT + QTY + SYMBOL • AUTO REFRESH + CLEAN
 
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateQR, generateQRBuffer } from "./generateQR.js"; // ✅ Fix: full imports
+import { generateQRBuffer } from "./generateQR.js";
 import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js";
 import { products } from "../config/products.js";
 
 const CACHE_DIR = path.join(process.cwd(), "qr-cache");
 
-// ✅ Create cache dir if not exist
+// ✅ Ensure cache dir exists
 export async function initQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) {
@@ -27,20 +27,7 @@ function getQrPath(productName, qty, symbol) {
   return path.join(CACHE_DIR, fileName);
 }
 
-// ✅ Return buffer if cached QR PNG exists
-export async function getCachedQR(productName, qty, symbol) {
-  try {
-    const filePath = getQrPath(productName, qty, symbol);
-    await fs.access(filePath);
-    const buffer = await fs.readFile(filePath);
-    if (buffer?.length > 0) return buffer;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-// ✅ Generate QR + save as PNG
+// ✅ Generate and save QR PNG to disk
 export async function generateAndSaveQr(productName, qty, symbol, usdPrice, walletAddress) {
   try {
     const rate = await fetchCryptoPrice(symbol);
@@ -56,11 +43,11 @@ export async function generateAndSaveQr(productName, qty, symbol, usdPrice, wall
   }
 }
 
-// ✅ Generate full fallback PNG set
+// ✅ Main full QR cache generation (run every hour)
 export async function generateFullQrCache() {
   try {
     await initQrCacheDir();
-    await cleanQrCacheDir(); // 🧼 clean before regenerating
+    await cleanQrCacheDir();
 
     for (const category in products) {
       for (const product of products[category]) {
@@ -83,7 +70,7 @@ export async function generateFullQrCache() {
   }
 }
 
-// ✅ Delete all existing PNGs before refresh
+// ✅ Clean out all cached PNGs before refresh
 export async function cleanQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) return;
@@ -103,10 +90,37 @@ export async function cleanQrCacheDir() {
   }
 }
 
-// ✅ Hourly refresh starter
+// ✅ Hourly QR refresher entry point
 export async function refreshQrCache() {
   console.log("♻️ [refreshQrCache] Refresh started...");
   await generateFullQrCache();
+}
+
+// ✅ PNG fallback fetcher from disk (used by handlePayment)
+export async function getCachedQR(symbol, amount, wallet, productName, qty) {
+  try {
+    const fileName = `${sanitize(productName)}_${qty}_${symbol}.png`;
+    const filePath = path.join(CACHE_DIR, fileName);
+
+    if (existsSync(filePath)) {
+      const buffer = await fs.readFile(filePath);
+      if (buffer?.length > 1000) {
+        if (process.env.DEBUG_MESSAGES === "true") {
+          console.log(`📦 [getCachedQR] Fallback hit: ${fileName}`);
+        }
+        return buffer;
+      } else {
+        console.warn(`⚠️ [getCachedQR] PNG too small: ${fileName}`);
+      }
+    } else {
+      console.warn(`❌ [getCachedQR] PNG fallback not found: ${fileName}`);
+    }
+
+    return null;
+  } catch (err) {
+    console.error("❌ [getCachedQR]", err.message);
+    return null;
+  }
 }
 
 // ——— Helpers ———
@@ -116,28 +130,4 @@ function sanitize(str) {
     .toLowerCase()
     .replace(/[^a-z0-9]/gi, "_")
     .replace(/_+/g, "_");
-}
-
-// ✅ Full fallback for paymentHandler
-export async function getCachedQR(symbol, amount, wallet, productName, qty) {
-  try {
-    const filename = `${sanitize(productName)}_${qty}_${symbol}.png`;
-    const filepath = path.join(CACHE_DIR, filename);
-
-    if (fs.existsSync(filepath)) {
-      const buffer = await fs.readFile(filepath);
-      if (buffer?.length > 1000) {
-        return buffer;
-      } else {
-        console.warn(`⚠️ [getCachedQR] PNG too small: ${filename}`);
-      }
-    } else {
-      console.warn(`❌ [getCachedQR] PNG fallback not found: ${filename}`);
-    }
-
-    return null;
-  } catch (err) {
-    console.error("❌ [getCachedQR]", err.message);
-    return null;
-  }
 }
