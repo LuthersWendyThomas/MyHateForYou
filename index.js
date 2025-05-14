@@ -94,6 +94,12 @@ async function notifyCrash(source, err) {
 
     await sendAdminPing(`✅ Bot started successfully\nVersion: *v${version}*\n🕒 ${now}`);
 
+    // ✅ Delayed memory-ready alert (12min RAM warmup)
+    setTimeout(() => {
+      sendAdminPing("✅ Bot fully ready (RAM warmed up, timers running, FSM live).");
+    }, 12 * 60 * 1000); // 12 minutes
+
+    
   } catch (err) {
     console.error("💥 [BOOT ERROR]:", err);
     await sendAdminPing(`❌ Bot failed to start:\n\`\`\`\n${err.message}\n\`\`\``);
