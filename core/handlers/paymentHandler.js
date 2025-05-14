@@ -1,6 +1,6 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1.0.9•CACHED•QRLOCK•BULLETPROOF
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1.1.0•DIAMONDLOCK•QRSAFE•CACHEFALLBACK
 
-import { getCachedQR } from "../../utils/qrCacheManager.js"; // ✅ Fallback PNG QR
+import { getCachedQR } from "../../utils/qrCacheManager.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice, NETWORKS } from "../../utils/fetchCryptoPrice.js";
 import { saveOrder } from "../../utils/saveOrder.js";
@@ -75,15 +75,17 @@ export async function handlePayment(bot, id, userMsgs) {
     session.expectedAmount = amount;
     session.step = 9;
 
-    // ✅ Try QR fallback from cache (PNG)
-    const cachedBuffer = await getCachedQR(
+    // ✅ Try cached fallback QR (or auto-generate if missing)
+    const qrBuffer = await getCachedQR(
+      symbol,
+      amount,
+      session.wallet,
       session.product.name,
-      session.quantity,
-      symbol
+      session.quantity
     );
 
-    if (!cachedBuffer || !Buffer.isBuffer(cachedBuffer)) {
-      throw new Error(`QR PNG fallback not found for ${session.product.name}/${session.quantity}/${symbol}`);
+    if (!qrBuffer || !Buffer.isBuffer(qrBuffer)) {
+      throw new Error("QR fallback failed (both cache and live)");
     }
 
     const summary = `
@@ -100,7 +102,7 @@ export async function handlePayment(bot, id, userMsgs) {
 ✅ Scan QR or copy address`.trim();
 
     await safeSend(() => bot.sendChatAction(id, "upload_photo"));
-    await sendPhotoAndTrack(bot, id, cachedBuffer, {
+    await sendPhotoAndTrack(bot, id, qrBuffer, {
       caption: summary,
       parse_mode: "Markdown"
     }, userMsgs);
