@@ -1,4 +1,4 @@
-// 📦 utils/generateQR.js | IMMORTAL FINAL v5.3•GODMODE•EXPORTLOCK•SYNC
+// 📦 utils/generateQR.js | IMMORTAL FINAL v6.0•DIAMONDLOCK•CACHEFALLBACK•GODMODE
 // QR FALLBACK SYSTEM • PNG BUFFER EXPORT • LOCAL CACHE • BULLETPROOF INTEGRATION
 
 import QRCode from "qrcode";
@@ -6,18 +6,18 @@ import fs from "fs";
 import path from "path";
 import { WALLETS, ALIASES } from "../config/config.js";
 
-const CACHE_DIR = "./qr-cache";
+const CACHE_DIR = "./qr-cache"; // MUST match everywhere in qrCacheManager
 
 /**
- * ✅ Retrieves or generates and caches QR buffer (based on currency + amount)
+ * ✅ Main QR generator: uses cache if found, else generates and saves
  */
 async function generateQR(currency, amount, overrideAddress = null) {
   const raw = String(currency || "").trim().toLowerCase();
   const normalized = ALIASES[raw] || raw.toUpperCase();
   const address = String(overrideAddress || WALLETS[normalized] || "").trim();
   const parsedAmount = Number(amount);
-  const filename = `${normalized}_${parsedAmount.toFixed(6)}.png`;
-  const filepath = path.join(CACHE_DIR, filename);
+  const fileName = `${normalized}_${parsedAmount.toFixed(6)}.png`;
+  const filePath = path.join(CACHE_DIR, fileName);
 
   if (!isValidAddress(address)) {
     console.warn(`⚠️ [generateQR] Invalid address for ${normalized}: "${address}"`);
@@ -29,33 +29,45 @@ async function generateQR(currency, amount, overrideAddress = null) {
   }
 
   try {
-    if (fs.existsSync(filepath)) {
-      const buffer = fs.readFileSync(filepath);
-      if (buffer?.length > 0) {
+    // ✅ Attempt from cache
+    if (fs.existsSync(filePath)) {
+      const buffer = fs.readFileSync(filePath);
+      if (Buffer.isBuffer(buffer) && buffer.length > 1000) {
         if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`⚡ [generateQR] Cache hit: ${filename}`);
+          console.log(`⚡ [generateQR] Cache hit: ${fileName}`);
         }
         return buffer;
+      } else {
+        console.warn(`⚠️ [generateQR] Cached PNG too small or invalid: ${fileName}`);
       }
     }
 
+    // ❌ Cache miss or invalid — generate fresh
     const buffer = await generateQRBuffer(normalized, parsedAmount, address);
-    if (!buffer) return null;
+    if (!buffer) {
+      console.error("❌ [generateQR] QR buffer generation failed.");
+      return null;
+    }
 
+    // 🧼 Ensure directory exists
     if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR);
-    cleanOldPngs(normalized);
-    fs.writeFileSync(filepath, buffer);
-    console.log(`✅ [generateQR] New QR cached: ${filename}`);
+
+    // 🧹 Optional cleanup per symbol (if needed):
+    // cleanOldPngs(normalized); ← Optional, or handled by hourly job
+
+    fs.writeFileSync(filePath, buffer);
+    console.log(`✅ [generateQR] Fresh QR cached: ${fileName}`);
+
     return buffer;
 
   } catch (err) {
-    console.error("❌ [generateQR error]:", err.message);
+    console.error("❌ [generateQR error]", err.message);
     return null;
   }
 }
 
 /**
- * ✅ Directly generates QR PNG buffer from crypto URI
+ * ✅ Low-level PNG buffer generator
  */
 async function generateQRBuffer(symbol, amount, address) {
   const formatted = amount.toFixed(6);
@@ -78,8 +90,8 @@ async function generateQRBuffer(symbol, amount, address) {
       )
     ]);
 
-    if (!Buffer.isBuffer(buffer) || !buffer.length) {
-      throw new Error("Invalid buffer generated");
+    if (!Buffer.isBuffer(buffer) || buffer.length < 1000) {
+      throw new Error("Generated buffer invalid or too small.");
     }
 
     return buffer;
@@ -90,7 +102,7 @@ async function generateQRBuffer(symbol, amount, address) {
 }
 
 /**
- * ✅ Message + copy button
+ * ✅ Message & Copy button for inline use
  */
 function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
   const raw = String(currency || "").trim().toLowerCase();
@@ -112,15 +124,20 @@ function generatePaymentMessageWithButton(currency, amount, overrideAddress = nu
   return {
     message,
     reply_markup: {
-      inline_keyboard: [
-        [{ text: "📋 Copy address", callback_data: `copy:${validAddr}` }]
-      ]
+      inline_keyboard: [[{ text: "📋 Copy address", callback_data: `copy:${validAddr}` }]]
     }
   };
 }
 
 /**
- * 🧼 Removes existing PNGs for a currency
+ * ✅ Basic wallet format validation
+ */
+function isValidAddress(addr) {
+  return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
+}
+
+/**
+ * 🧼 Clean old PNGs per currency symbol (optional)
  */
 function cleanOldPngs(symbol) {
   try {
@@ -132,18 +149,11 @@ function cleanOldPngs(symbol) {
     }
     console.log(`🧹 [cleanOldPngs] Removed ${filtered.length} old QR(s) for ${symbol}`);
   } catch (err) {
-    console.warn("⚠️ [cleanOldPngs] Failed:", err.message);
+    console.warn("⚠️ [cleanOldPngs]", err.message);
   }
 }
 
-/**
- * ✅ Address format checker
- */
-function isValidAddress(addr) {
-  return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
-}
-
-// ✅ FINAL EXPORTS (⬅ būtina visiems moduliam kaip qrCacheManager.js)
+// ✅ FINAL EXPORTS — used by qrCacheManager and paymentHandler
 export {
   generateQR,
   generateQRBuffer,
