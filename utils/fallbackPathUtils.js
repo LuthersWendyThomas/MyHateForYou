@@ -1,27 +1,50 @@
-// 📦 utils/fallbackPathUtils.js | IMMORTAL FINAL v1.0.0•DIAMONDLOCK•SYNC•UNIVERSAL
+// 📦 utils/fallbackPathUtils.js | IMMORTAL FINAL v2.0.0•DIAMONDLOCK•AUKSINE•SYNCED
 
 import path from "path";
+import { ALIASES } from "../config/config.js";
 
 /**
- * 📁 Fallback cache dir
+ * 📁 Absolute fallback cache directory
  */
 export const FALLBACK_DIR = path.join(process.cwd(), "qr-cache");
 
 /**
- * 💾 Standard fallback filename: SYMBOL_0.123456.png
- * @param {string} symbol - e.g. BTC
- * @param {number} amount - e.g. 0.123456
- * @returns {string} e.g. BTC_0.123456.png
+ * 🔐 Normalize currency symbol (e.g., eth → ETH)
+ * @param {string} raw
+ * @returns {string}
  */
-export function getAmountFilename(symbol, amount) {
-  return `${symbol.toUpperCase()}_${Number(amount).toFixed(6)}.png`;
+export function normalizeSymbol(raw) {
+  const key = String(raw || "").trim().toLowerCase();
+  return (ALIASES[key] || key).toUpperCase();
 }
 
 /**
- * 🗂️ Full path to fallback PNG
+ * 💵 Clean + round crypto amount (e.g., 0.12345678 → 0.123456)
+ * @param {number|string} input
+ * @returns {number}
+ */
+export function sanitizeAmount(input) {
+  const val = Number(input);
+  return Number.isFinite(val) && val > 0 ? +val.toFixed(6) : 0;
+}
+
+/**
+ * 💾 Standard fallback filename: SYMBOL_0.123456.png
+ * @param {string} symbol - e.g. "BTC" or "eth"
+ * @param {number|string} amount - e.g. 0.123456
+ * @returns {string} e.g. BTC_0.123456.png
+ */
+export function getAmountFilename(symbol, amount) {
+  const sym = normalizeSymbol(symbol);
+  const amt = sanitizeAmount(amount);
+  return `${sym}_${amt.toFixed(6)}.png`;
+}
+
+/**
+ * 📂 Full absolute path to fallback PNG file
  * @param {string} symbol
- * @param {number} amount
- * @returns {string} /.../qr-cache/BTC_0.123456.png
+ * @param {number|string} amount
+ * @returns {string} e.g. /.../qr-cache/BTC_0.123456.png
  */
 export function getFallbackPath(symbol, amount) {
   return path.join(FALLBACK_DIR, getAmountFilename(symbol, amount));
