@@ -1,5 +1,5 @@
-// 📦 helpers/keyboardConstants.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
-// SKYLOCKED SYNC • BULLETPROOF • ULTRA-SAFE • DIAMONDLOCK MAX-PERFECTION
+// 📦 helpers/keyboardConstants.js | IMMORTAL FINAL v1.0.2•99999999999999X•GODMODE•DIAMONDLOCK
+// SKYLOCKED SYNC • BULLETPROOF • AUTO-NORMALIZATION • FALLBACK SAFE
 
 import { BOT } from "../config/config.js";
 
@@ -21,7 +21,7 @@ export const MENU_BUTTONS = {
 };
 
 /**
- * ✅ Fallback keyboard for safe reserve
+ * ✅ Default fallback main keyboard (admin-safe)
  */
 export const MAIN_KEYBOARD = {
   reply_markup: createKeyboard([
@@ -32,8 +32,8 @@ export const MAIN_KEYBOARD = {
 };
 
 /**
- * ✅ Builds the main menu, adding admin buttons if needed
- * @param {string|number} id — Telegram user ID
+ * ✅ Dynamically generates main menu with admin buttons if applicable
+ * @param {string|number} id - Telegram UID
  * @returns {{ reply_markup: object }}
  */
 export function getMainMenu(id) {
@@ -57,9 +57,9 @@ export function getMainMenu(id) {
 }
 
 /**
- * ✅ Creates a Telegram keyboard object
+ * ✅ Creates a Telegram keyboard object with full normalization
  * @param {Array<Array<{ text: string, callback_data?: string }>>} rows
- * @returns {object} — Telegram reply_markup.keyboard
+ * @returns {{ keyboard: Array<Array<{ text: string }>>, resize_keyboard: boolean }}
  */
 export function createKeyboard(rows) {
   const keyboard = normalizeKeyboard(rows);
@@ -72,24 +72,27 @@ export function createKeyboard(rows) {
 }
 
 /**
- * ✅ Ensures each row/button is valid and strips extra props
+ * ✅ Safe keyboard normalization
  * @param {Array} keyboard
- * @returns {Array<Array<{ text: string, callback_data?: string }>>}
+ * @returns {Array<Array<{ text: string }>>}
  */
 export function normalizeKeyboard(keyboard) {
   if (!Array.isArray(keyboard)) {
     logError("normalizeKeyboard", new Error("Keyboard must be an array"));
     return [[{ text: "❌ Invalid Keyboard" }]];
   }
+
   return keyboard.map((row, rIdx) => {
     if (!Array.isArray(row)) {
-      logError("normalizeKeyboard", new Error(`Row ${rIdx} not an array`));
+      logError("normalizeKeyboard", new Error(`Row ${rIdx} is not an array`));
       row = [ row ];
     }
+
     return row.map((btn, cIdx) => {
       if (typeof btn === "string") {
         return { text: btn.trim() };
       }
+
       if (btn && typeof btn.text === "string") {
         const cleaned = { text: btn.text.trim() };
         if (btn.callback_data) {
@@ -97,6 +100,7 @@ export function normalizeKeyboard(keyboard) {
         }
         return cleaned;
       }
+
       logError("normalizeKeyboard", new Error(`Invalid button at [${rIdx},${cIdx}]`));
       return { text: "❌ Invalid Button" };
     });
@@ -104,7 +108,7 @@ export function normalizeKeyboard(keyboard) {
 }
 
 /**
- * ✅ Fallback single-help keyboard
+ * ✅ Fallback HELP-only keyboard (minimal fail-safe)
  * @returns {{ reply_markup: object }}
  */
 export function getFallbackKeyboard() {
