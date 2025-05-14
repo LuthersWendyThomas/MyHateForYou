@@ -348,6 +348,11 @@ async function handleProduct(bot, uid, input, session, userMessages) {
 }
 
 async function handleQuantity(bot, uid, input, session, userMessages) {
+  // 🛡️ Saugiklis – jei nėra produkto (bug arba skip)
+  if (!session.product || !session.product.prices) {
+    return renderStep(bot, uid, 4, userMessages); // ⬅️ Grįžtam į produktų sąrašą
+  }
+
   const qty   = input.match(/^[^\s(]+/)?.[0];
   const price = session.product?.prices?.[qty];
   if (!isFinite(price)) return renderStep(bot, uid, 5, userMessages);
