@@ -18,6 +18,7 @@ import {
 } from "../../state/userState.js";
 import { BOT, ALIASES } from "../../config/config.js";
 import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
+import { sanitize } from "../../utils/qrCacheManager.js";
 
 const TIMEOUT_MS = 30 * 60 * 1000;
 
