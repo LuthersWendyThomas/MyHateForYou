@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1.1.2•DIAMONDLOCK•QRSAFE•SANITIZEDSYNC•FALLBACKHIT100%
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1.1.3•DIAMONDLOCK•QRSAFE•SANITIZEDSYNC•FALLBACKHIT100%+DELIVERYFIX
 
 import { getCachedQR, sanitize } from "../../utils/qrCacheManager.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -62,7 +62,10 @@ export async function handlePayment(bot, id, userMsgs) {
   session.paymentInProgress = true;
 
   try {
-    const usd = Number(session.totalPrice);
+    const productUSD = Number(session.totalPrice);
+    const deliveryUSD = Number(session.deliveryFee || 0);
+    const usd = productUSD + deliveryUSD;
+
     if (
       !session.wallet || !session.currency || !session.product?.name ||
       !session.quantity || !isFinite(usd)
@@ -75,7 +78,6 @@ export async function handlePayment(bot, id, userMsgs) {
     session.expectedAmount = amount;
     session.step = 9;
 
-    // ✅ Unified: sanitize name BEFORE fallback lookup (sync with generation logic)
     const sanitizedProduct = sanitize(session.product.name);
     const qrBuffer = await getCachedQR(
       symbol,
