@@ -1,26 +1,30 @@
-// 📦 core/handlers/finalHandler.js | FINAL IMMORTAL v999999999.∞+DIAMONDLOCK+SYNCFIX+SAFERESET
-// MAIN MENU GREETING • SESSION RESET • DELIVERY FINISHER • 24/7 STABILITY
+// 📦 core/handlers/finalHandler.js | IMMORTAL FINAL v9999999999999.∞+SYNC+DIAMONDLOCK
+// 24/7 FSM SAFE • MAIN MENU GREETING • DELIVERY FINISH • FULL SESSION RESET • BULLETPROOF
 
 import fs from "fs/promises";
 import path from "path";
 
 import { sendAndTrack, sendPhotoAndTrack } from "../../helpers/messageUtils.js";
 import { getMainMenu } from "../../helpers/menu.js";
-import { fullResetUserState } from "../sessionManager.js"; // ✅ central reset
+import { fullResetUserState } from "../sessionManager.js";
 import { userSessions, activeUsers } from "../../state/userState.js";
 import { simulateDelivery } from "./deliveryHandler.js";
 
+/**
+ * 🚀 Safely start bot: reset session + render greeting
+ */
 export async function safeStart(bot, id) {
   const uid = sanitizeId(id);
   if (!bot?.sendMessage || !uid) return;
 
   try {
-    await fullResetUserState(uid); // ✅ centralized reset
+    await fullResetUserState(uid);
 
     userSessions[uid] = { step: 1, createdAt: Date.now() };
     activeUsers.add(uid);
 
     await bot.sendChatAction(uid, "typing").catch(() => {});
+
     const menu = getMainMenu(uid);
     const imgPath = path.join(process.cwd(), "assets", "greeting.jpg");
 
@@ -31,10 +35,10 @@ export async function safeStart(bot, id) {
       buffer = null;
     }
 
-    const count = activeUsers?.size || 1;
+    const count = activeUsers?.count || activeUsers?.list?.size || 1;
 
     if (buffer?.byteLength > 10) {
-      return sendPhotoAndTrack(
+      return await sendPhotoAndTrack(
         bot,
         uid,
         buffer,
@@ -45,7 +49,7 @@ export async function safeStart(bot, id) {
         }
       );
     } else {
-      return sendAndTrack(
+      return await sendAndTrack(
         bot,
         uid,
         fallbackText(count, uid),
@@ -58,7 +62,7 @@ export async function safeStart(bot, id) {
   } catch (err) {
     console.error("❌ [safeStart error]:", err);
     const menu = getMainMenu(uid);
-    return sendAndTrack(
+    return await sendAndTrack(
       bot,
       uid,
       "⚠️ Failed to start. Please try again.",
@@ -70,6 +74,9 @@ export async function safeStart(bot, id) {
   }
 }
 
+/**
+ * ✅ Finalize delivery flow and return to menu
+ */
 export async function finishOrder(bot, id) {
   const uid = sanitizeId(id);
   if (!bot?.sendMessage || !uid) return;
@@ -81,10 +88,10 @@ export async function finishOrder(bot, id) {
     await simulateDelivery(bot, uid, session.deliveryMethod);
     await resetSession(uid);
 
-    const menu = getMainMenu(uid);
     await bot.sendChatAction(uid, "typing").catch(() => {});
+    const menu = getMainMenu(uid);
 
-    return sendAndTrack(
+    return await sendAndTrack(
       bot,
       uid,
       "✅ Order confirmed!\n🚚 Delivery started...\n\nMain menu:",
@@ -96,7 +103,7 @@ export async function finishOrder(bot, id) {
   } catch (err) {
     console.error("❌ [finishOrder error]:", err);
     const menu = getMainMenu(uid);
-    return sendAndTrack(
+    return await sendAndTrack(
       bot,
       uid,
       "❗️ Delivery error. Try again or use /start.",
@@ -108,27 +115,18 @@ export async function finishOrder(bot, id) {
   }
 }
 
+/**
+ * 🧼 Force-clean user state and restart session
+ */
 export async function resetSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
 
-  await fullResetUserState(uid); // ✅ centralized reset
+  await fullResetUserState(uid);
   userSessions[uid] = { step: 1, createdAt: Date.now() };
 }
 
-// ———————————————————————
-// Helpers
-// ———————————————————————
-
-function sanitizeId(id) {
-  const s = String(id ?? "").trim();
-  return s && s !== "undefined" && s !== "null" ? s : null;
-}
-
-function isAdmin(uid) {
-  const adminId = process.env.ADMIN_ID || process.env.BOT_ADMIN_ID;
-  return uid?.toString() === adminId?.toString();
-}
+// ——— Text blocks ———
 
 function greetingText(count, uid) {
   const activeLine = isAdmin(uid) ? `\n👥 Active users: *${count}*` : "";
@@ -161,4 +159,16 @@ function fallbackText(count, uid) {
 💵 Anonymous crypto payments  
 ${activeLine}
 `.trim();
+}
+
+// ——— Helpers ———
+
+function sanitizeId(id) {
+  const s = String(id ?? "").trim();
+  return s && s !== "undefined" && s !== "null" ? s : null;
+}
+
+function isAdmin(uid) {
+  const adminId = process.env.ADMIN_ID || process.env.BOT_ADMIN_ID;
+  return uid?.toString() === adminId?.toString();
 }
