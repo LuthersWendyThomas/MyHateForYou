@@ -1,3 +1,6 @@
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v3.0.0•DIAMONDLOCK•FULLSYNC
+// AMOUNT-BASED QR SYSTEM • BULLETPROOF FALLBACK • 24/7 CACHED + LIVE
+
 import { getCachedQR } from "../../utils/qrCacheManager.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice, NETWORKS } from "../../utils/fetchCryptoPrice.js";
@@ -19,38 +22,56 @@ import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 
 const TIMEOUT_MS = 30 * 60 * 1000;
 
+/**
+ * 💤 Sleep util (used for rate-limit backoff)
+ */
 function wait(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
-function normalizeCurrency(raw) {
-  const key = raw.trim().toLowerCase();
+/**
+ * 🔁 Normalizes currency input to full uppercase symbol
+ */
+function normalizeSymbol(raw) {
+  const key = String(raw || "").trim().toLowerCase();
   return (ALIASES[key] || key).toUpperCase();
 }
 
+/**
+ * 📈 Fetches live crypto rate
+ */
 async function getSafeRate(currency) {
-  const symbol = normalizeCurrency(currency);
+  const symbol = normalizeSymbol(currency);
   if (!NETWORKS[symbol]) throw new Error(`Unsupported currency: ${symbol}`);
   const rate = await fetchCryptoPrice(symbol);
   if (!Number.isFinite(rate) || rate <= 0) throw new Error(`Invalid rate for ${symbol}`);
   return { rate, symbol };
 }
 
+/**
+ * 🔁 Executes Telegram API calls with retry logic (3x)
+ */
 async function safeSend(fn, ...args) {
   for (let i = 0; i < 3; i++) {
     try {
       return await fn(...args);
     } catch (err) {
-      if (String(err.message).includes("429")) {
+      const isRateLimit = String(err.message).includes("429");
+      if (isRateLimit) {
         const backoff = 500 + i * 600;
         console.warn(`⏳ Rate limit (${i + 1}) – retrying in ${backoff}ms`);
         await wait(backoff);
-      } else break;
+      } else {
+        break;
+      }
     }
   }
   return null;
 }
 
+/**
+ * 💸 Payment flow entrypoint (step 7 → 9)
+ */
 export async function handlePayment(bot, id, userMsgs) {
   const session = userSessions[id];
   if (!session || session.step !== 7 || session.paymentInProgress) {
@@ -76,7 +97,7 @@ export async function handlePayment(bot, id, userMsgs) {
     session.expectedAmount = amount;
     session.step = 9;
 
-    // ✅ Get cached QR (amount-based fallback)
+    // ✅ Get fallback or live QR via amount-based file
     const qrBuffer = await getCachedQR(symbol, amount);
     if (!qrBuffer || !Buffer.isBuffer(qrBuffer)) {
       throw new Error("QR fallback failed (both cache and live)");
@@ -101,6 +122,7 @@ export async function handlePayment(bot, id, userMsgs) {
       parse_mode: "Markdown"
     }, userMsgs);
 
+    // ⏳ Start payment timer
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
     const timer = setTimeout(() => {
       console.warn(`⌛️ [payment timeout] User ${id}`);
@@ -124,6 +146,9 @@ export async function handlePayment(bot, id, userMsgs) {
   }
 }
 
+/**
+ * ❌ Cancels payment step
+ */
 export async function handlePaymentCancel(bot, id, userMsgs) {
   const session = userSessions[id];
   if (!session || session.step !== 9 || !session.paymentInProgress) {
@@ -138,6 +163,9 @@ export async function handlePaymentCancel(bot, id, userMsgs) {
   return safeStart(bot, id);
 }
 
+/**
+ * ✅ Verifies blockchain payment
+ */
 export async function handlePaymentConfirmation(bot, id, userMsgs) {
   const session = userSessions[id];
   if (
@@ -150,7 +178,7 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
   try {
     await sendAndTrack(bot, id, "⏳ Verifying payment on blockchain...", {}, userMsgs);
 
-    const symbol = normalizeCurrency(session.currency);
+    const symbol = normalizeSymbol(session.currency);
     const paid = await checkPayment(session.wallet, symbol, session.expectedAmount);
 
     if (!paid) {
@@ -187,6 +215,9 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
   }
 }
 
+/**
+ * 🧼 Cleans session/timer on error
+ */
 function cleanupOnError(id) {
   const session = userSessions[id];
   if (!session) return;
@@ -198,6 +229,9 @@ function cleanupOnError(id) {
   }
 }
 
+/**
+ * 🔔 Sends admin message (Markdown)
+ */
 export async function sendAdminPing(msg) {
   try {
     const adminId = process.env.ADMIN_ID;
