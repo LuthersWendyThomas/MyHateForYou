@@ -1,5 +1,5 @@
-// 📦 core/sessionManager.js | IMMORTAL FINAL v1.1.0•999999X•SYNC•GODMODE•SKYLOCK
-// TITANLOCK+PROJECT-SYNC • AUTO-EXPIRE • ZOMBIE SLAYER • 24/7 BULLETPROOF
+// 📦 core/sessionManager.js | IMMORTAL FINAL v1.1.1•999999X•ULTRASYNC•GODMODE•SKYLOCK
+// TITANLOCK+PROJECT-SYNC • AUTO-EXPIRE • FULL SESSION RESET • 24/7 BULLETPROOF
 
 import {
   activeTimers,
@@ -10,14 +10,17 @@ import {
   antiSpam,
   bannedUntil,
   userMessages,
-  activeUsers
+  activeUsers,
+  userOrders
 } from "../state/userState.js";
+
+import { clearTimers, clearUserMessages, resetUser } from "./stateManager.js";
 
 const lastSeenAt = new Map();
 
 // ⏱ Timeout configs
-const STEP_TIMEOUT_MS = 60 * 60_000;   // 1h = zombie
-const IDLE_TIMEOUT_MS = 45 * 60_000;   // 45m = idle
+const STEP_TIMEOUT_MS = 60 * 60_000;
+const IDLE_TIMEOUT_MS = 45 * 60_000;
 
 /** ✅ Mark user as active + timestamp */
 export function markUserActive(id) {
@@ -28,7 +31,7 @@ export function markUserActive(id) {
   logAction("✅ [markUserActive]", "User marked active", uid);
 }
 
-/** ⏱ Clear session timeout */
+/** ⏱ Clear session timer */
 export function clearUserTimer(id) {
   const uid = sanitizeId(id);
   if (uid && activeTimers[uid]) {
@@ -48,7 +51,7 @@ export function clearPaymentTimer(id) {
   }
 }
 
-/** 🔄 Fully wipe session (but keep order history) */
+/** 🔄 Legacy partial reset */
 export function resetSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
@@ -69,17 +72,45 @@ export function resetSession(id) {
   }
 }
 
-/** ⏳ Auto-expire stale/zombie sessions */
+/** 🔥 FULL RESET — deletes session + messages + payment + timers + FSM data */
+export async function fullResetUserState(uid) {
+  uid = sanitizeId(uid);
+  if (!uid) return;
+  try {
+    await clearTimers(uid);
+    await clearUserMessages(uid);
+    await resetUser(uid);
+
+    [ userOrders, userMessages, paymentTimers ].forEach(store => delete store[uid]);
+
+    if (userSessions[uid]) {
+      Object.keys(userSessions[uid]).forEach(k => (userSessions[uid][k] = null));
+      delete userSessions[uid];
+    }
+
+    lastSeenAt.delete(uid);
+    if (typeof activeUsers.remove === "function") {
+      activeUsers.remove(uid);
+    } else {
+      activeUsers.delete(uid);
+    }
+
+    logAction("🔥 [fullResetUserState]", "Total wipe complete", uid);
+  } catch (err) {
+    logError("❌ [fullResetUserState error]", err, uid);
+  }
+}
+
+/** ⏳ Expire idle or zombie sessions */
 export function autoExpireSessions(threshold = IDLE_TIMEOUT_MS) {
   const now = Date.now();
   for (const [uid, last] of lastSeenAt.entries()) {
     try {
-      const session  = userSessions[uid];
-      const idleTime = now - last;
-      const zombie   = session?.step >= 1 && idleTime > STEP_TIMEOUT_MS;
-      const idle     = idleTime > threshold;
+      const session = userSessions[uid];
+      const idle = now - last > threshold;
+      const zombie = session?.step >= 1 && now - last > STEP_TIMEOUT_MS;
 
-      if (zombie || idle) {
+      if (idle || zombie) {
         resetSession(uid);
         logAction("⏳ [autoExpireSessions]", `Expired (${zombie ? "ZOMBIE" : "IDLE"})`, uid);
       }
@@ -89,14 +120,14 @@ export function autoExpireSessions(threshold = IDLE_TIMEOUT_MS) {
   }
 }
 
-/** 📊 Get live active count */
+/** 📊 Get live count */
 export function getActiveUsersCount() {
   const count = activeUsers.count || activeUsers.size || 0;
   logAction("📊 [getActiveUsersCount]", `=${count}`);
   return count;
 }
 
-/** 🔥 Wipe all user sessions (admin only!) */
+/** 🧽 Wipe all sessions (admin) */
 export function wipeAllSessions() {
   try {
     for (const uid of Object.keys(userSessions)) {
@@ -108,7 +139,7 @@ export function wipeAllSessions() {
   }
 }
 
-/** 🧽 Cleanup payment timers not tied to active payments */
+/** 💳 Remove orphaned timers */
 export function cleanStalePaymentTimers() {
   for (const uid in paymentTimers) {
     try {
@@ -123,14 +154,14 @@ export function cleanStalePaymentTimers() {
   }
 }
 
-/** 🧪 Debug log of live sessions */
+/** 🧪 Print session debug */
 export function printSessionSummary() {
   const now = Date.now();
   const entries = Object.entries(userSessions);
   logAction("📊 [printSessionSummary]", `Count=${entries.length}`);
   for (const [uid, sess] of entries) {
     const seen = lastSeenAt.get(uid);
-    const ago  = seen ? `${Math.floor((now - seen) / 1000)}s ago` : "unknown";
+    const ago = seen ? `${Math.floor((now - seen) / 1000)}s ago` : "unknown";
     console.log(`• ${uid} | Step: ${sess?.step ?? "?"} | LastSeen: ${ago}`);
   }
 }
