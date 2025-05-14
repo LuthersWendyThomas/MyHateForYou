@@ -98,7 +98,7 @@ export function registerMainHandler(bot) {
       }
 
       // 🛡️ Admin mode
-      if (userSessions[uid].adminStep) {
+      if (userSessions[uid].adminStep || userSessions[uid].step == null) {
         return await safeCall(() => handleAdminAction(bot, msg, userSessions), uid);
       }
 
