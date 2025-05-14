@@ -1,4 +1,4 @@
-// 📦 utils/floodHandler.js | IMMORTAL FINAL v999999999x•LIGHTSPEED•DIAMONDLOCK
+// 📦 utils/floodHandler.js | IMMORTAL FINAL v999999999.∞+SPAMNOTICE+SAFEDEBOUNCE
 import {
   antiSpam,
   antiFlood,
@@ -11,6 +11,22 @@ import { sendAndTrack } from "../helpers/messageUtils.js";
 import { REGION_MAP } from "../config/regions.js";
 import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { deliveryMethods } from "../config/features.js";
+
+/**
+ * ⏳ Detect fast duplicate actions (for safeStart redirection warning)
+ */
+export function isDoubleAction(uid, ctx = {}) {
+  try {
+    const now = Date.now();
+    ctx.session = ctx.session || {};
+    const last = ctx.session.lastActionTimestamp || 0;
+    ctx.session.lastActionTimestamp = now;
+    return now - last < 2000;
+  } catch (err) {
+    console.error("❌ [isDoubleAction error]:", err.message);
+    return false;
+  }
+}
 
 export function isSpamming(id, ctx = {}) {
   try {
