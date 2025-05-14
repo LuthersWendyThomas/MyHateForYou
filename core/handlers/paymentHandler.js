@@ -1,3 +1,5 @@
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v4.0.0•DIAMONDLOCK•ULTRASYNC+INSTANTQR
+
 import { getCachedQR } from "../../utils/qrCacheManager.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice, NETWORKS } from "../../utils/fetchCryptoPrice.js";
@@ -47,7 +49,7 @@ async function safeSend(fn, ...args) {
     } catch (err) {
       const isRateLimit = String(err.message).includes("429");
       if (isRateLimit) {
-        const backoff = 500 + i * 600;
+        const backoff = 500 + i * 700;
         console.warn(`⏳ Rate limit (${i + 1}) – retrying in ${backoff}ms`);
         await wait(backoff);
       } else {
@@ -86,7 +88,7 @@ export async function handlePayment(bot, id, userMsgs) {
 
     const qrBuffer = await getCachedQR(symbol, amount);
     if (!qrBuffer || !Buffer.isBuffer(qrBuffer) || qrBuffer.length < 1000) {
-      throw new Error("QR fallback failed (both cache and live)");
+      throw new Error("QR fallback failed (cache and live failed)");
     }
 
     const summary = `
