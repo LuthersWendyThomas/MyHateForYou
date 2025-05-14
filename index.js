@@ -1,5 +1,5 @@
-// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.0.5•GODMODE+TITANLOCK+QRREADY+PERSIST
-// 24/7 BULLETPROOF • ADMIN NOTIFY • NEW USER TRACKING • QR CACHE SYSTEM • DIAMONDLOCK SYSTEM
+// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.0.6•GODMODE+DIAMONDLOCK+QRFALLBACKFIX
+// 24/7 BULLETPROOF • ADMIN NOTIFY • JOIN TRACKING • QR SYSTEM READY • FULL PERSISTENCE
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -11,6 +11,7 @@ import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions, cleanStalePaymentTimers } from "./core/sessionManager.js";
 import { sendAdminPing } from "./core/handlers/paymentHandler.js";
 import { startQrCacheRefresher } from "./jobs/refreshQrCache.js";
+import { initQrCacheDir } from "./utils/qrCacheManager.js"; // ✅ Ensures fallback dir is ready on boot
 import "./config/discountSync.js";
 
 // ✅ Persistent set of joined users
@@ -26,7 +27,7 @@ try {
 }
 
 /**
- * 🔔 Crash + rejection notifier (no admin notifications)
+ * 🔔 Crash + rejection notifier
  */
 async function notifyCrash(source, err) {
   console.error(`💥 [CRASH during ${source}]:`, err);
@@ -36,6 +37,9 @@ async function notifyCrash(source, err) {
 (async () => {
   try {
     initBotInstance();
+
+    // ✅ QR fallback cache dir created on boot (bulletproof)
+    await initQrCacheDir();
 
     // ✅ JOIN TRACKING (ADMIN SKIP, persistent memory)
     BOT.INSTANCE.on("message", async (msg) => {
@@ -69,7 +73,7 @@ async function notifyCrash(source, err) {
       }
     }, 10 * 60 * 1000);
 
-    // 🧹 Clean up any stale payment timers every 5 minutes
+    // 🧹 Clean up stale payment timers every 5 minutes
     setInterval(() => {
       try {
         cleanStalePaymentTimers();
@@ -78,10 +82,10 @@ async function notifyCrash(source, err) {
       }
     }, 5 * 60 * 1000);
 
-    // ✅ Start QR fallback refresher job
+    // ✅ Start fallback QR refresher (immediate + hourly)
     startQrCacheRefresher();
 
-    // 🚀 Startup check + logging
+    // 🚀 Final startup banner
     const me = await BOT.INSTANCE.getMe();
     const pkg = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"));
     const version = pkg.version || "1.0.0";
@@ -98,7 +102,7 @@ async function notifyCrash(source, err) {
 
     await sendAdminPing(`✅ Bot started successfully\nVersion: *v${version}*\n🕒 ${now}`);
 
-    // ✅ Delayed memory-ready alert (12min RAM warmup)
+    // ✅ Final "memory warmed" ping after 12 min
     setTimeout(() => {
       sendAdminPing("✅ Bot fully ready (RAM warmed up, timers running, FSM live).");
     }, 12 * 60 * 1000);
