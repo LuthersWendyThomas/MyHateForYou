@@ -385,6 +385,8 @@ async function handleOrderConfirm(bot, uid, input, session, userMessages) {
   if (input !== MENU_BUTTONS.CONFIRM.text.toLowerCase()) {
     return renderStep(bot, uid, 7, userMessages);
   }
+
+  session.step = 8; // ✅ [IMMORTAL PATCH] Set correct FSM step before payment
   return handlePayment(bot, uid, userMessages);
 }
 
