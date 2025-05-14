@@ -1,5 +1,5 @@
-// 📦 state/timers.js | IMMORTAL FINAL v1.1.0•99999999X•SYNC•DIAMONDLOCK
-// MAX OPTIMIZATION • CLEAN EXIT • AUTO-CLEANUP • 24/7 TIMER GUARD
+// 📦 state/timers.js | IMMORTAL FINAL v1.1.1•99999999X•SYNC•DIAMONDLOCK+SAFESET
+// MAX OPTIMIZATION • SAFE SET/RESET • TIMER SUMMARY • FULLY SYNCHRONIZED
 
 import { activeTimers, paymentTimers } from "./userState.js";
 
@@ -56,7 +56,7 @@ export function clearTimersForUser(id) {
   try {
     if (activeTimers[uid]) clearSingleTimer(activeTimers[uid], uid, "active");
     if (paymentTimers[uid]) clearSingleTimer(paymentTimers[uid], uid, "payment");
-    logAction("🕒 [clearTimersForUser]", "User timers cleared", uid);
+    logAction("🧼 [clearTimersForUser]", "User timers cleared", uid);
   } catch (err) {
     logError("❌ [clearTimersForUser error]", err, uid);
   }
