@@ -1,36 +1,34 @@
-// 📦 core/handlers/deliveryHandler.js | IMMORTAL FINAL v1.1.0•DIAMONDLOCK•GODMODE•SYNCED
-// AUTO-STAGED DELIVERY • FSM CLEANUP • AUTO-BAN • AUTO-DELETE • 24/7 IMMORTAL ENGINE
+// 📦 core/handlers/deliveryHandler.js | IMMORTAL FINAL v2.0.0•99999999999999X•DIAMONDLOCK•SYNCED
+// AUTO-STAGED DELIVERY • FSM CLEANUP • AUTODELETE + AUTOBAN • 24/7 IMMORTAL ENGINE
 
 import { banUser } from "../../utils/bans.js";
 import { autobanEnabled, autodeleteEnabled } from "../../config/features.js";
 import { sendAndTrack } from "../../helpers/messageUtils.js";
 import { userSessions, userMessages, activeTimers } from "../../state/userState.js";
 import { BOT } from "../../config/config.js";
-import { sendAdminPing } from "./paymentHandler.js"; // ✅ ADMIN PING IMPORT
+import { sendAdminPing } from "./paymentHandler.js";
 
-/** Delay before final cleanup (27min) */
 const FINAL_CLEANUP_DELAY = 27 * 60 * 1000;
 
-/** Delivery message sequence [text, delay] */
 const DELIVERY_STEPS = {
   courier: [
-    ["✅ Order confirmed!\n⏳ Preparing shipment...",         0],
-    ["🚚 Courier en route! ETA ~20min.",                     5 * 60_000],
-    ["📍 Courier nearby! ⚠️ Await exact location...",       10 * 60_000],
-    ["📬 Delivery in progress... Stand by.",                18 * 60_000],
-    ["✅ *Package delivered successfully.* Stay safe.",      null]
+    ["✅ Order confirmed!\n⏳ Preparing shipment...", 0],
+    ["🚚 Courier en route! ETA ~20min.", 5 * 60_000],
+    ["📍 Courier nearby! ⚠️ Await exact location...", 10 * 60_000],
+    ["📬 Delivery in progress... Stand by.", 18 * 60_000],
+    ["✅ *Package delivered successfully.* Stay safe.", null]
   ],
   drop: [
-    ["✅ Order confirmed!\n⏳ Drop point is being prepared...",  0],
-    ["📦 Drop en route! ETA ~20min.",                          5 * 60_000],
-    ["📍 Drop almost placed! ⚠️ Await coordinates.",          14 * 60_000],
-    ["📬 Drop placed! Follow instructions.",                  19 * 60_000],
-    ["✅ *Package delivered successfully.* Stay safe.",        null]
+    ["✅ Order confirmed!\n⏳ Drop point is being prepared...", 0],
+    ["📦 Drop en route! ETA ~20min.", 5 * 60_000],
+    ["📍 Drop almost placed! ⚠️ Await coordinates.", 14 * 60_000],
+    ["📬 Drop placed! Follow instructions.", 19 * 60_000],
+    ["✅ *Package delivered successfully.* Stay safe.", null]
   ]
 };
 
 /**
- * 🚚 Start delivery sequence (auto-staged)
+ * 🚚 Initiate delivery flow
  */
 export function simulateDelivery(bot, id, method = "drop") {
   const uid = sanitizeId(id);
@@ -58,28 +56,20 @@ export function simulateDelivery(bot, id, method = "drop") {
   }, FINAL_CLEANUP_DELAY);
 }
 
-/**
- * Send intermediate step (silent)
- */
 async function sendStep(bot, uid, text) {
   await safeSend(bot, uid, text, true);
 }
 
-/**
- * Send final step + trigger cleanup
- */
 async function sendFinalStep(bot, uid, text) {
   await safeSend(bot, uid, text, false);
   setTimeout(() => triggerCleanup(bot, uid), 7_000);
 }
 
-/**
- * 👻 Typing → send → optional autodelete
- */
 async function safeSend(bot, uid, text, silent) {
   try {
     await bot.sendChatAction(uid, "typing").catch(() => {});
     await wait(500);
+
     const msg = await sendAndTrack(
       bot,
       uid,
@@ -105,9 +95,6 @@ async function safeSend(bot, uid, text, silent) {
   }
 }
 
-/**
- * 🧼 Trigger cleanup: auto-ban + autodelete + session reset
- */
 async function triggerCleanup(bot, uid) {
   const session = userSessions[uid];
   if (!session || session.cleanupScheduled) {
@@ -118,6 +105,7 @@ async function triggerCleanup(bot, uid) {
   session.cleanupScheduled = true;
   const isAdminUser = isAdmin(uid);
 
+  // 🔥 Delete all messages
   if (autodeleteEnabled.status && !isAdminUser && Array.isArray(userMessages[uid])) {
     for (const msgId of userMessages[uid]) {
       bot.deleteMessage(uid, msgId).catch(() => {});
@@ -125,6 +113,7 @@ async function triggerCleanup(bot, uid) {
     delete userMessages[uid];
   }
 
+  // ⛔ Autoban
   if (autobanEnabled.status && !isAdminUser) {
     try {
       await sendAndTrack(
@@ -139,7 +128,6 @@ async function triggerCleanup(bot, uid) {
     await banUser(uid);
     console.warn(`⛔️ Auto-banned user ${uid}`);
 
-    // ✅ ADMIN PING
     await sendAdminPing(
       `⛔️ *Auto-ban/delete completed*\n` +
       `👤 UID: \`${uid}\`\n` +
@@ -153,9 +141,6 @@ async function triggerCleanup(bot, uid) {
   debug(`✅ Cleanup complete: ${uid}`);
 }
 
-/**
- * 🔁 Kill timer + wipe session
- */
 function cleanupSession(uid) {
   if (activeTimers[uid]) {
     clearTimeout(activeTimers[uid]);
@@ -164,38 +149,26 @@ function cleanupSession(uid) {
 
   const session = userSessions[uid];
   if (session) {
-    session.deliveryInProgress = false; // optional safety
+    session.deliveryInProgress = false;
   }
 
   delete userSessions[uid];
 }
 
-/**
- * ✅ Admin check
- */
 function isAdmin(uid) {
   return String(uid) === String(BOT.ADMIN_ID);
 }
 
-/**
- * ⏳ Safe delay
- */
 function wait(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
-/**
- * 💡 Debug logger (controlled by env)
- */
 function debug(...args) {
   if (process.env.DEBUG_MESSAGES === "true") {
     console.log(...args);
   }
 }
 
-/**
- * 🧼 ID normalizer
- */
 function sanitizeId(id) {
   const s = String(id || "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
