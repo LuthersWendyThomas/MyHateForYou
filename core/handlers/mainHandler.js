@@ -1,5 +1,5 @@
-// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v9999999999.∞•GODMODE+DIAMONDLOCK
-// FULL FSM INTEGRATION • FLOOD SHIELD • CALLBACK + TEXT SAFE • ZERO LAG UX • STEP9 SYNCED
+// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v999999999999.∞+SYNC+DIAMONDLOCK
+// 100% FSM SAFE • CALLBACK/TEXT BULLETPROOF • FLOOD+SPAM+MUTE SHIELD • STEP9-READY
 
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages } from "../../state/userState.js";
@@ -26,7 +26,7 @@ export function registerMainHandler(bot) {
 
   // ✅ CALLBACK HANDLER
   bot.on("callback_query", async (query) => {
-    const uid  = sanitizeId(query?.message?.chat?.id);
+    const uid = sanitizeId(query?.message?.chat?.id);
     const data = query?.data;
     if (!uid || !data) return;
 
@@ -46,14 +46,10 @@ export function registerMainHandler(bot) {
         case MENU_BUTTONS.HELP.callback_data:
           return await safeCall(() => sendHelp(bot, uid, userMessages), uid);
         case MENU_BUTTONS.STATS.callback_data:
-          if (isAdmin(uid)) {
-            return await safeCall(() => sendStats(bot, uid, userMessages), uid);
-          }
+          if (isAdmin(uid)) return await safeCall(() => sendStats(bot, uid, userMessages), uid);
           break;
         case MENU_BUTTONS.ADMIN.callback_data:
-          if (isAdmin(uid)) {
-            return await safeCall(() => openAdminPanel(bot, uid), uid);
-          }
+          if (isAdmin(uid)) return await safeCall(() => openAdminPanel(bot, uid), uid);
           break;
         default:
           console.warn(`⚠️ Unknown callback: ${data}`);
@@ -71,8 +67,8 @@ export function registerMainHandler(bot) {
 
   // ✅ MESSAGE HANDLER
   bot.on("message", async (msg) => {
-    const uid  = sanitizeId(msg?.chat?.id);
-    const raw  = msg?.text;
+    const uid = sanitizeId(msg?.chat?.id);
+    const raw = msg?.text;
     if (!uid || !raw) return;
 
     const text = normalizeText(raw);
@@ -102,7 +98,7 @@ export function registerMainHandler(bot) {
         return await safeCall(() => handleAdminAction(bot, msg, userSessions), uid);
       }
 
-      // 🛒 Main menu buttons
+      // 🛒 Menu buttons
       if (isMatch(text, MENU_BUTTONS.BUY))     return await safeCall(() => startOrder(bot, uid, userMessages), uid);
       if (isMatch(text, MENU_BUTTONS.PROFILE)) return await safeCall(() => sendProfile(bot, uid, userMessages), uid);
       if (isMatch(text, MENU_BUTTONS.ORDERS))  return await safeCall(() => sendOrders(bot, uid, userMessages), uid);
@@ -110,7 +106,7 @@ export function registerMainHandler(bot) {
       if (isMatch(text, MENU_BUTTONS.STATS) && isAdmin(uid)) return await safeCall(() => sendStats(bot, uid, userMessages), uid);
       if (isMatch(text, MENU_BUTTONS.ADMIN) && isAdmin(uid)) return await safeCall(() => openAdminPanel(bot, uid), uid);
 
-      // 🧠 FSM Step Handler – supports step 1...9
+      // 🧠 FSM flow (step 1–9)
       return await safeCall(() => handleStep(bot, uid, raw, userMessages, msg), uid);
     } catch (err) {
       console.error("❌ [message error]:", err);
