@@ -1,5 +1,5 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.2.0•GODMODE•CACHELOCK•BULLETPROOF
-// QR PNG FALLBACK SYSTEM • PRODUCT + QTY + SYMBOL • AUTO REFRESH + CLEAN
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.3.0•DIAMONDLOCK•BULLETPROOF+FALLBACKSAFE
+// 24/7 CACHED+LIVE QR ENGINE • PNG FALLBACK SYSTEM • SELF-HEAL • AUTO-SAVE
 
 import fs from "fs/promises";
 import path from "path";
@@ -21,13 +21,13 @@ export async function initQrCacheDir() {
   }
 }
 
-// ✅ Get file path
+// ✅ Resolve PNG path
 function getQrPath(productName, qty, symbol) {
   const fileName = `${sanitize(productName)}_${qty}_${symbol}.png`;
   return path.join(CACHE_DIR, fileName);
 }
 
-// ✅ Generate and save QR PNG to disk
+// ✅ Generate and save QR PNG
 export async function generateAndSaveQr(productName, qty, symbol, usdPrice, walletAddress) {
   try {
     const rate = await fetchCryptoPrice(symbol);
@@ -43,7 +43,7 @@ export async function generateAndSaveQr(productName, qty, symbol, usdPrice, wall
   }
 }
 
-// ✅ Main full QR cache generation (run every hour)
+// ✅ Generate all fallback PNGs (hourly)
 export async function generateFullQrCache() {
   try {
     await initQrCacheDir();
@@ -64,61 +64,69 @@ export async function generateFullQrCache() {
       }
     }
 
-    console.log("✅ [generateFullQrCache] QR cache fully rebuilt.");
+    console.log("✅ [generateFullQrCache] All QR fallbacks cached.");
   } catch (err) {
     console.error("❌ [generateFullQrCache]", err.message);
   }
 }
 
-// ✅ Clean out all cached PNGs before refresh
+// ✅ Delete all PNGs before regeneration
 export async function cleanQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) return;
     const files = await fs.readdir(CACHE_DIR);
     let deleted = 0;
-
     for (const file of files) {
       if (file.endsWith(".png")) {
         await fs.unlink(path.join(CACHE_DIR, file));
         deleted++;
       }
     }
-
-    console.log(`🧹 [cleanQrCacheDir] Deleted ${deleted} old PNGs.`);
+    console.log(`🧹 [cleanQrCacheDir] Removed ${deleted} old PNGs.`);
   } catch (err) {
-    console.warn("⚠️ [cleanQrCacheDir] Failed:", err.message);
+    console.warn("⚠️ [cleanQrCacheDir]", err.message);
   }
 }
 
-// ✅ Hourly QR refresher entry point
+// ✅ Hourly QR fallback rebuild
 export async function refreshQrCache() {
   console.log("♻️ [refreshQrCache] Refresh started...");
   await generateFullQrCache();
 }
 
-// ✅ PNG fallback fetcher from disk (used by handlePayment)
+// ✅ Main fallback retriever for paymentHandler (auto live fallback)
 export async function getCachedQR(symbol, amount, wallet, productName, qty) {
-  try {
-    const fileName = `${sanitize(productName)}_${qty}_${symbol}.png`;
-    const filePath = path.join(CACHE_DIR, fileName);
+  const fileName = `${sanitize(productName)}_${qty}_${symbol}.png`;
+  const filePath = path.join(CACHE_DIR, fileName);
 
+  try {
+    // ✅ Try reading from cache
     if (existsSync(filePath)) {
       const buffer = await fs.readFile(filePath);
       if (buffer?.length > 1000) {
         if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`📦 [getCachedQR] Fallback hit: ${fileName}`);
+          console.log(`📦 [getCachedQR] Cache hit: ${fileName}`);
         }
         return buffer;
       } else {
         console.warn(`⚠️ [getCachedQR] PNG too small: ${fileName}`);
       }
-    } else {
-      console.warn(`❌ [getCachedQR] PNG fallback not found: ${fileName}`);
     }
 
-    return null;
+    // ❌ If not found or invalid → generate live and store
+    console.warn(`❌ [getCachedQR] Cache miss: ${fileName} → generating live fallback...`);
+    const buffer = await generateQRBuffer(symbol, amount, wallet);
+    if (!buffer || buffer.length < 1000) {
+      throw new Error("Live QR generation failed or buffer invalid");
+    }
+
+    // 🧠 Save as fallback for next time
+    await fs.writeFile(filePath, buffer);
+    console.log(`💾 [getCachedQR] Live fallback saved: ${fileName}`);
+    return buffer;
+
   } catch (err) {
-    console.error("❌ [getCachedQR]", err.message);
+    console.error("❌ [getCachedQR fallback error]", err.message);
     return null;
   }
 }
