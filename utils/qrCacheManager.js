@@ -1,10 +1,10 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v5.0.0•GODMODE•GENERATOR-DRIVEN•520x-AUTO
-// QR AUTO-PREHEAT ENGINE • 520x VARIATION COVERAGE • SYNCED WITH generateQR()
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v6.0.0•GODMODE•SYNCFIXED•AI-PATCHED
+// QR AUTO-PREHEAT ENGINE • 520x VARIATION COVERAGE • FULL SYMBOL NORMALIZATION
 
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateQR } from "./generateQR.js";
+import { generateQR, normalizeSymbol } from "./generateQR.js";
 import { products } from "../config/products.js";
 import { deliveryMethods } from "../config/features.js";
 import { sanitizeAmount } from "./fallbackPathUtils.js";
@@ -58,33 +58,34 @@ export async function generateFullQrCache() {
         for (const fee of deliveryFees) {
           const totalUSD = usd + fee;
 
-          for (const symbol of symbols) {
+          for (const rawSymbol of symbols) {
             total++;
 
             try {
-              await rateLimiter(symbol);
-              const rate = await fetchCryptoPrice(symbol);
+              await rateLimiter(rawSymbol);
+              const rate = await fetchCryptoPrice(rawSymbol);
               if (!rate || rate <= 0) throw new Error("Invalid rate");
 
+              const normalized = normalizeSymbol(rawSymbol);
               const amount = sanitizeAmount(totalUSD / rate);
-              const key = `${symbol}_${amount}`;
+              const key = `${normalized}_${amount}`;
               if (seenAmounts.has(key)) {
                 done++;
                 continue;
               }
 
-              const buffer = await generateQR(symbol, amount);
+              const buffer = await generateQR(normalized, amount);
               if (buffer && Buffer.isBuffer(buffer) && buffer.length > 1000) {
                 seenAmounts.add(key);
                 done++;
-                console.log(`✅ [QR Fallback] ${symbol} $${totalUSD} → ${amount.toFixed(6)} (${done}/${total})`);
+                console.log(`✅ [QR Fallback] ${normalized} $${totalUSD} → ${amount.toFixed(6)} (${done}/${total})`);
               } else {
                 throw new Error("QR generation failed");
               }
 
             } catch (err) {
-              skipped.push({ symbol, totalUSD });
-              console.warn(`⚠️ [QR Skip] ${symbol} $${totalUSD} → ${err.message}`);
+              skipped.push({ symbol: rawSymbol, totalUSD });
+              console.warn(`⚠️ [QR Skip] ${rawSymbol} $${totalUSD} → ${err.message}`);
             }
           }
         }
@@ -95,18 +96,20 @@ export async function generateFullQrCache() {
   // Final retry pass for skips
   if (skipped.length > 0) {
     console.log(`🔁 Retrying ${skipped.length} skipped fallbacks...`);
-    for (const { symbol, totalUSD } of skipped) {
+    for (const { symbol: rawSymbol, totalUSD } of skipped) {
       try {
-        await rateLimiter(symbol);
-        const rate = await fetchCryptoPrice(symbol);
+        await rateLimiter(rawSymbol);
+        const rate = await fetchCryptoPrice(rawSymbol);
         if (!rate || rate <= 0) continue;
+
+        const normalized = normalizeSymbol(rawSymbol);
         const amount = sanitizeAmount(totalUSD / rate);
-        const buffer = await generateQR(symbol, amount);
+        const buffer = await generateQR(normalized, amount);
         if (buffer) {
-          console.log(`✅ [QR Retry] ${symbol} $${totalUSD} → ${amount.toFixed(6)}`);
+          console.log(`✅ [QR Retry] ${normalized} $${totalUSD} → ${amount.toFixed(6)}`);
         }
       } catch (err) {
-        console.warn(`❌ [Retry Fail] ${symbol} $${totalUSD} → ${err.message}`);
+        console.warn(`❌ [Retry Fail] ${rawSymbol} $${totalUSD} → ${err.message}`);
       }
     }
   }
