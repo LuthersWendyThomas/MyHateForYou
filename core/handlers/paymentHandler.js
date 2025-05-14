@@ -1,6 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1.1.3•DIAMONDLOCK•QRSAFE•SANITIZEDSYNC•FALLBACKHIT100%+DELIVERYFIX
-
-import { getCachedQR, sanitize } from "../../utils/qrCacheManager.js";
+import { getCachedQR } from "../../utils/qrCacheManager.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice, NETWORKS } from "../../utils/fetchCryptoPrice.js";
 import { saveOrder } from "../../utils/saveOrder.js";
@@ -78,15 +76,8 @@ export async function handlePayment(bot, id, userMsgs) {
     session.expectedAmount = amount;
     session.step = 9;
 
-    const sanitizedProduct = sanitize(session.product.name);
-    const qrBuffer = await getCachedQR(
-      symbol,
-      amount,
-      session.wallet,
-      sanitizedProduct,
-      session.quantity
-    );
-
+    // ✅ Get cached QR (amount-based fallback)
+    const qrBuffer = await getCachedQR(symbol, amount);
     if (!qrBuffer || !Buffer.isBuffer(qrBuffer)) {
       throw new Error("QR fallback failed (both cache and live)");
     }
