@@ -1,5 +1,5 @@
-// 🛡️ core/security.js | IMMORTAL FINAL v1.1.0•999999999x•SYNCED•BULLETPROOF
-// PERFECT FLOODHANDLER SYNC • ULTRA-SAFE • FSM-FRIENDLY • UX BOOSTED
+// 🛡️ core/security.js | IMMORTAL FINAL v1.2.0•999999999x•SYNCED•GODMODE•SKYLOCK
+// PERFECT FLOODHANDLER SYNC • ULTRA-SAFE • FSM-FRIENDLY • UX BULLETPROOF
 
 import { isBanned } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
@@ -7,40 +7,24 @@ import { antiSpam, antiFlood, bannedUntil, userSessions } from "../state/userSta
 import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { BOT } from "../config/config.js";
 
-// ⛔ Synced Limits (optimized to match floodHandler.js UX)
-const SPAM_INTERVAL_MS    = 1400;          // 🟢 ~1.4s input interval
-const FLOOD_LIMIT         = 9;             // 🟢 up to 9 hits
-const FLOOD_WINDOW_MS     = 9000;          // 🟢 reset after 9s
-const TEMP_MUTE_MS        = 90 * 1000;     // 🟢 1.5min mute duration
+// 🛡️ Limits
+const SPAM_INTERVAL_MS    = 1400;
+const FLOOD_LIMIT         = 9;
+const FLOOD_WINDOW_MS     = 9000;
+const TEMP_MUTE_MS        = 90 * 1000;
 const MAX_MESSAGE_LENGTH  = 600;
 const MAX_INPUT_FREQUENCY = 6;
 const MAX_DISTINCT_INPUTS = 20;
 
-// 🔠 Cached lowercase buttons
+// 🔠 Cache valid buttons
 const BUTTON_TEXTS = Object.values(MENU_BUTTONS)
   .map(btn => String(btn?.text || "").trim().toLowerCase())
   .filter(Boolean);
 
+// 🧠 Cache per-user distinct texts
 const recentTexts = new Map();
 
-function sanitizeId(id) {
-  const s = String(id ?? "").trim();
-  return s && s !== "undefined" && s !== "null" ? s : null;
-}
-
-function logAction(label, msg, uid = "") {
-  console.log(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
-}
-
-function logError(label, err, uid = "") {
-  console.error(`${new Date().toISOString()} ${label} → ${err?.message || err}${uid ? ` (UID: ${uid})` : ""}`);
-}
-
-function isAdmin(uid) {
-  return String(uid) === String(BOT.ADMIN_ID);
-}
-
-// ——— SPAM GUARD ———
+// ——— Core Guards ———
 
 export function isSpamming(id) {
   const uid = sanitizeId(id);
@@ -54,8 +38,6 @@ export function isSpamming(id) {
   if (tooFast) logAction("⚠️ [isSpamming]", "Too rapid input", uid);
   return tooFast;
 }
-
-// ——— FLOOD GUARD ———
 
 export async function handleFlood(id, bot) {
   const uid = sanitizeId(id);
@@ -98,13 +80,14 @@ export function isMuted(id) {
   if (!until) return false;
 
   const muted = Date.now() < until;
-  if (muted) logAction("🔇 [isMuted]", "User is muted", uid);
-  else delete bannedUntil[uid];
+  if (!muted) {
+    delete bannedUntil[uid];
+    recentTexts.delete(uid); // 🧽 cleanup
+  }
 
+  if (muted) logAction("🔇 [isMuted]", "User is muted", uid);
   return muted;
 }
-
-// ——— DANGER CHECK ———
 
 function isMessageDangerous(id, rawText) {
   const uid = sanitizeId(id);
@@ -118,6 +101,8 @@ function isMessageDangerous(id, rawText) {
     }
 
     let history = recentTexts.get(uid) || [];
+    if (!Array.isArray(history)) history = [];
+
     if (history.length >= MAX_DISTINCT_INPUTS) history.shift();
     history.push(text);
     recentTexts.set(uid, history);
@@ -135,7 +120,7 @@ function isMessageDangerous(id, rawText) {
   }
 }
 
-// ——— MASTER GATEKEEPER ———
+// ——— Main Gatekeeper ———
 
 export async function canProceed(id, bot, text = "") {
   const uid = sanitizeId(id);
@@ -143,7 +128,7 @@ export async function canProceed(id, bot, text = "") {
   if (isAdmin(uid)) return true;
 
   const session = userSessions[uid];
-  const input   = String(text || "").trim().toLowerCase();
+  const input = String(text || "").trim().toLowerCase();
 
   if (BUTTON_TEXTS.includes(input)) return true;
 
@@ -163,6 +148,7 @@ export async function canProceed(id, bot, text = "") {
       logAction("⛔ [canProceed]", "User permanently banned", uid);
       return false;
     }
+
     return true;
   } catch (err) {
     logError("❌ [canProceed error]", err, uid);
@@ -170,18 +156,42 @@ export async function canProceed(id, bot, text = "") {
   }
 }
 
-// ——— MUTE ALERT ———
+// ——— Mute Alert ———
 
 async function notifyUserMuted(bot, id) {
   const uid = sanitizeId(id);
   if (!uid) return;
 
   try {
-    await sendAndTrack(bot, uid,
-      "⛔ *Too many requests!*\nYou've been temporarily *muted for 1.5 minutes*.",
-      { parse_mode: "Markdown" }
-    );
+    const session = userSessions[uid];
+    if (!session?.mutedNotified) {
+      await sendAndTrack(bot, uid,
+        "⛔ *Too many requests!*\nYou've been temporarily *muted for 1.5 minutes*.",
+        { parse_mode: "Markdown" }
+      );
+      if (session) session.mutedNotified = true;
+    }
   } catch (err) {
     logError("❌ [notifyUserMuted]", err, uid);
   }
+}
+
+// ——— Helpers ———
+
+function sanitizeId(id) {
+  const s = String(id ?? "").trim();
+  return s && s !== "undefined" && s !== "null" ? s : null;
+}
+
+function logAction(label, msg, uid = "") {
+  console.log(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
+}
+
+function logError(label, err, uid = "") {
+  const msg = err?.message || err;
+  console.error(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
+}
+
+function isAdmin(uid) {
+  return String(uid) === String(BOT.ADMIN_ID);
 }
