@@ -1,8 +1,9 @@
-// 📦 core/handlers/paymentHandler.js | FINAL IMMORTAL v5.0.0•DIAMONDLOCK•SYNCED
+// 📦 core/handlers/paymentHandler.js | FINAL IMMORTAL v999999999.∞+DIAMONDLOCK+SYNCFIXED
+// FULL AI-DRIVEN QR LOGIC • STEP-SAFE • SESSION-SYNC • DIAMONDLOCK BULLETPROOF
 
-import { getCachedQR } from "../../utils/qrCacheManager.js";
+import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
-import { fetchCryptoPrice, NETWORKS } from "../../utils/fetchCryptoPrice.js";
+import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
 import { saveOrder } from "../../utils/saveOrder.js";
 import {
   sendAndTrack,
@@ -37,7 +38,6 @@ function isValidAddress(addr) {
 
 async function getSafeRate(currency) {
   const symbol = normalizeSymbol(currency);
-  if (!NETWORKS[symbol]) throw new Error(`Unsupported currency: ${symbol}`);
   const rate = await fetchCryptoPrice(symbol);
   if (!Number.isFinite(rate) || rate <= 0) throw new Error(`Invalid rate for ${symbol}`);
   return { rate, symbol };
@@ -50,7 +50,7 @@ async function safeSend(fn, ...args) {
     } catch (err) {
       if (String(err.message).includes("429")) {
         const delay = 500 + i * 700;
-        console.warn(`⏳ Rate limit (${i + 1}) – retry in ${delay}ms`);
+        console.warn(`⏳ Rate limit (${i + 1}) → retry in ${delay}ms`);
         await wait(delay);
       } else {
         break;
@@ -69,30 +69,30 @@ export async function handlePayment(bot, id, userMsgs) {
   session.paymentInProgress = true;
 
   try {
-    const productUSD = Number(session.totalPrice);
-    const deliveryUSD = Number(session.deliveryFee || 0);
-    const usd = productUSD + deliveryUSD;
+    const usdProduct = Number(session.totalPrice);
+    const usdDelivery = Number(session.deliveryFee || 0);
+    const usd = usdProduct + usdDelivery;
 
     if (
       !session.wallet || !isValidAddress(session.wallet) ||
       !session.currency || !session.product?.name ||
       !session.quantity || !Number.isFinite(usd)
-    ) throw new Error("Incomplete or invalid order data");
+    ) throw new Error("Missing or invalid order details");
 
     const { rate, symbol } = await getSafeRate(session.currency);
-    const rawAmount = usd / rate;
-    const amount = sanitizeAmount(rawAmount);
+    const amountRaw = usd / rate;
+    const amount = sanitizeAmount(amountRaw);
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      throw new Error("Calculated crypto amount invalid");
+      throw new Error("Calculated crypto amount is invalid");
     }
 
     session.expectedAmount = amount;
     session.step = 9;
 
-    const qrBuffer = await getCachedQR(symbol, amount);
+    const qrBuffer = await generateQR(symbol, amount, session.wallet);
     if (!qrBuffer || !Buffer.isBuffer(qrBuffer) || qrBuffer.length < 1000) {
-      throw new Error("QR fallback failed (both cache and live failed)");
+      throw new Error("QR generation failed");
     }
 
     const summary = `
@@ -131,7 +131,7 @@ export async function handlePayment(bot, id, userMsgs) {
 
   } catch (err) {
     console.error("❌ [handlePayment error]:", err.message || err);
-    cleanupOnError(id);
+    cleanupPaymentSession(id);
     return sendAndTrack(bot, id, `❗️ Payment failed:\n*${err.message}*`, {
       parse_mode: "Markdown"
     }, userMsgs);
@@ -201,7 +201,7 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
   }
 }
 
-function cleanupOnError(id) {
+function cleanupPaymentSession(id) {
   const session = userSessions[id];
   if (!session) return;
   delete session.paymentInProgress;
