@@ -1,15 +1,15 @@
-// 📦 utils/generateQR.js | IMMORTAL FINAL v5.1•DIAMONDLOCK+CACHE+CLEANER
-// QR FALLBACK CACHE + BUFFER EXPORT + PNG TRIMMER • ZERO DELAY SYSTEM
+// 📦 utils/generateQR.js | IMMORTAL FINAL v5.2•DIAMONDLOCK+CACHE+FALLBACK+EXPORT
+// QR FALLBACK SYSTEM • LOCAL PNG CACHE • BUFFER EXPORT • AUTO CLEAN • 0s LATENCY
 
 import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 import { WALLETS, ALIASES } from "../config/config.js";
 
-const CACHE_DIR = "./qr_cache";
+const CACHE_DIR = "./qr-cache"; // ⚠️ MATCH with qrCacheManager
 
 /**
- * ✅ Generates or retrieves cached QR PNG for network+amount
+ * ✅ Retrieves or generates and caches QR buffer (based on currency + amount)
  */
 export async function generateQR(currency, amount, overrideAddress = null) {
   const raw          = String(currency || "").trim().toLowerCase();
@@ -29,6 +29,7 @@ export async function generateQR(currency, amount, overrideAddress = null) {
   }
 
   try {
+    // ✅ Return from cache if exists
     if (fs.existsSync(filepath)) {
       const buffer = fs.readFileSync(filepath);
       if (buffer?.length > 0) {
@@ -39,18 +40,16 @@ export async function generateQR(currency, amount, overrideAddress = null) {
       }
     }
 
+    // ❌ Generate fresh if not cached
     const buffer = await generateQRBuffer(normalized, parsedAmount, address);
     if (!buffer) return null;
 
-    try {
-      if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR);
-      cleanOldPngs(normalized); // 🧼 Clean old PNGs before saving new
-      fs.writeFileSync(filepath, buffer);
-      console.log(`✅ [generateQR] Cached new QR: ${filename}`);
-    } catch (e) {
-      console.warn("⚠️ [generateQR] Failed to save PNG", e.message);
-    }
+    // 🧼 Ensure dir exists + cleanup previous for this symbol
+    if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR);
+    cleanOldPngs(normalized);
 
+    fs.writeFileSync(filepath, buffer);
+    console.log(`✅ [generateQR] New QR cached: ${filename}`);
     return buffer;
 
   } catch (err) {
@@ -60,7 +59,7 @@ export async function generateQR(currency, amount, overrideAddress = null) {
 }
 
 /**
- * ✅ Generates QR buffer directly from URI
+ * ✅ Directly generates QR PNG buffer for given crypto URI
  */
 export async function generateQRBuffer(symbol, amount, address) {
   const formatted = amount.toFixed(6);
@@ -78,8 +77,14 @@ export async function generateQRBuffer(symbol, amount, address) {
         errorCorrectionLevel: "H",
         color: { dark: "#000000", light: "#FFFFFF" }
       }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("QR timeout")), 4000))
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("QR generation timeout")), 4000)
+      )
     ]);
+
+    if (!Buffer.isBuffer(buffer) || !buffer.length) {
+      throw new Error("Invalid buffer generated");
+    }
 
     return buffer;
   } catch (err) {
@@ -89,7 +94,7 @@ export async function generateQRBuffer(symbol, amount, address) {
 }
 
 /**
- * ✅ Generates inline payment message + copy button
+ * ✅ Generates message + button for payment with address
  */
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
   const raw       = String(currency || "").trim().toLowerCase();
@@ -119,7 +124,7 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
 }
 
 /**
- * 🧼 Remove all PNGs for same currency
+ * 🧼 Deletes existing cached PNGs for a specific currency
  */
 function cleanOldPngs(symbol) {
   try {
@@ -129,14 +134,14 @@ function cleanOldPngs(symbol) {
     for (const file of filtered) {
       fs.unlinkSync(path.join(CACHE_DIR, file));
     }
-    console.log(`🧹 [cleanOldPngs] Cleared ${filtered.length} file(s) for ${symbol}`);
+    console.log(`🧹 [cleanOldPngs] Removed ${filtered.length} old QR(s) for ${symbol}`);
   } catch (err) {
     console.warn("⚠️ [cleanOldPngs] Failed:", err.message);
   }
 }
 
 /**
- * ✅ Basic wallet format check (8+ alphanumeric)
+ * ✅ Address validity checker
  */
 function isValidAddress(addr) {
   return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
