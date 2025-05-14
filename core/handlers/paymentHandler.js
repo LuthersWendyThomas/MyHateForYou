@@ -1,178 +1,224 @@
-// 📦 utils/generateQR.js | IMMORTAL FINAL v9.0.0•DIAMONDLOCK•ULTRASYNC+INSTANTSEND
-// MAXIMUM SPEED • CACHE+LIVE FALLBACK • BULLETPROOF BUFFER VALIDATION • PERFECT SYNC
+import { getCachedQR } from "../../utils/qrCacheManager.js";
+import { checkPayment } from "../../utils/cryptoChecker.js";
+import { fetchCryptoPrice, NETWORKS } from "../../utils/fetchCryptoPrice.js";
+import { saveOrder } from "../../utils/saveOrder.js";
+import {
+sendAndTrack,
+sendPhotoAndTrack,
+sendKeyboard
+} from "../../helpers/messageUtils.js";
+import { simulateDelivery } from "./deliveryHandler.js";
+import { safeStart } from "./finalHandler.js";
+import {
+userSessions,
+userOrders,
+paymentTimers
+} from "../../state/userState.js";
+import { BOT, ALIASES } from "../../config/config.js";
+import { MENU\_BUTTONS } from "../../helpers/keyboardConstants.js";
 
-import QRCode from "qrcode";
-import fs from "fs";
-import path from "path";
-import { WALLETS, ALIASES } from "../config/config.js";
+const TIMEOUT\_MS = 30 \* 60 \* 1000;
 
-const CACHE_DIR = path.join(process.cwd(), "qr-cache");
-
-/**
- * 🔐 Normalize + validate symbol
- */
-function normalizeSymbol(symbol) {
-  const raw = String(symbol || "").trim().toLowerCase();
-  return ALIASES[raw] || raw.toUpperCase();
+function wait(ms) {
+return new Promise(res => setTimeout(res, ms));
 }
 
-/**
- * 🏦 Resolve wallet address (fallback-safe)
- */
-function resolveAddress(symbol, overrideAddress) {
-  return String(overrideAddress || WALLETS[symbol] || "").trim();
+function normalizeSymbol(raw) {
+const key = String(raw || "").trim().toLowerCase();
+return (ALIASES\[key] || key).toUpperCase();
 }
 
-/**
- * 💵 Fallback file path
- */
-function getFallbackPath(symbol, amount) {
-  return path.join(CACHE_DIR, `${symbol}_${Number(amount).toFixed(6)}.png`);
-}
-
-/**
- * 🛡️ Validate address format
- */
 function isValidAddress(addr) {
-  return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
+return typeof addr === "string" && /^\[a-zA-Z0-9]{8,}\$/.test(addr);
 }
 
-/**
- * 🧪 Validate PNG buffer integrity
- */
-function isValidBuffer(buffer) {
-  return Buffer.isBuffer(buffer) && buffer.length > 1000;
+async function getSafeRate(currency) {
+const symbol = normalizeSymbol(currency);
+if (!NETWORKS\[symbol]) throw new Error(Unsupported currency: ${symbol});
+const rate = await fetchCryptoPrice(symbol);
+if (!Number.isFinite(rate) || rate <= 0) throw new Error(Invalid rate for ${symbol});
+return { rate, symbol };
 }
 
-/**
- * ⚡ Generates QR buffer with timeout
- */
-async function generateQRBuffer(symbol, amount, address) {
-  const formatted = amount.toFixed(6);
-  const uri = `${symbol.toLowerCase()}:${address}?amount=${formatted}&label=${encodeURIComponent("BalticPharmacyBot")}&message=${encodeURIComponent("Order")}`;
-
-  try {
-    const buffer = await Promise.race([
-      QRCode.toBuffer(uri, {
-        type: "png",
-        width: 300,
-        margin: 3,
-        errorCorrectionLevel: "H",
-        color: { dark: "#000000", light: "#FFFFFF" }
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("QR timeout")), 4000))
-    ]);
-
-    if (!isValidBuffer(buffer)) {
-      throw new Error("Invalid or too small QR buffer");
-    }
-
-    return buffer;
-
-  } catch (err) {
-    console.error("❌ [generateQRBuffer]", err.message);
-    return null;
-  }
+async function safeSend(fn, ...args) {
+for (let i = 0; i < 3; i++) {
+try {
+return await fn(...args);
+} catch (err) {
+const isRateLimit = String(err.message).includes("429");
+if (isRateLimit) {
+const backoff = 500 + i \* 600;
+console.warn(⏳ Rate limit (${i + 1}) – retrying in ${backoff}ms);
+await wait(backoff);
+} else {
+break;
+}
+}
+}
+return null;
 }
 
-/**
- * 🚀 Main QR fallback generator (cache-first + live fallback)
- */
-export async function generateQR(currency, amount, overrideAddress = null) {
-  const symbol = normalizeSymbol(currency);
-  const parsedAmount = Number(amount);
-  const address = resolveAddress(symbol, overrideAddress);
-  const filePath = getFallbackPath(symbol, parsedAmount);
-
-  if (!isValidAddress(address)) {
-    console.warn(`⚠️ [generateQR] Invalid address for ${symbol}: "${address}"`);
-    return null;
-  }
-
-  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-    console.warn(`⚠️ [generateQR] Invalid amount: ${amount}`);
-    return null;
-  }
-
-  try {
-    // 🧊 Try fallback PNG first
-    if (fs.existsSync(filePath)) {
-      const buffer = fs.readFileSync(filePath);
-      if (isValidBuffer(buffer)) {
-        if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`📦 [generateQR] Fallback hit: ${path.basename(filePath)}`);
-        }
-        return buffer;
-      } else {
-        console.warn(`⚠️ [generateQR] Fallback PNG corrupt: ${path.basename(filePath)}`);
-      }
-    }
-
-    // ⚡ Generate live buffer + store as fallback
-    console.warn(`❌ [generateQR] Cache miss → generating live: ${symbol} ${parsedAmount}`);
-    const buffer = await generateQRBuffer(symbol, parsedAmount, address);
-    if (!buffer) return null;
-
-    if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
-    fs.writeFileSync(filePath, buffer);
-    console.log(`💾 [generateQR] Live fallback saved: ${path.basename(filePath)}`);
-    return buffer;
-
-  } catch (err) {
-    console.error("❌ [generateQR error]", err.message);
-    return null;
-  }
+export async function handlePayment(bot, id, userMsgs) {
+const session = userSessions\[id];
+if (!session || session.step !== 7 || session.paymentInProgress) {
+return sendAndTrack(bot, id, "⚠️ Invalid or duplicate payment attempt.", {}, userMsgs);
 }
 
-/**
- * 📬 Generates payment message with inline copy button
- */
-export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
-  const symbol = normalizeSymbol(currency);
-  const val = Number(amount);
-  const display = Number.isFinite(val) ? val.toFixed(6) : "?.??????";
-  const addr = resolveAddress(symbol, overrideAddress);
-  const validAddr = isValidAddress(addr) ? addr : "[Invalid address]";
+session.paymentInProgress = true;
 
-  const message = `
-💳 *Payment details:*
-• Network: *${symbol}*
-• Amount: *${display} ${symbol}*
-• Address: \`${validAddr}\`
-⏱️ *Expected payment within 30 minutes.*
-✅ Use the QR code or copy the address.
-`.trim();
+try {
+const productUSD = Number(session.totalPrice);
+const deliveryUSD = Number(session.deliveryFee || 0);
+const usd = productUSD + deliveryUSD;
 
-  return {
-    message,
-    reply_markup: {
-      inline_keyboard: [[{ text: "📋 Copy address", callback_data: `copy:${validAddr}` }]]
-    }
-  };
+if (
+  !session.wallet || !isValidAddress(session.wallet) ||
+  !session.currency || !session.product?.name ||
+  !session.quantity || !Number.isFinite(usd)
+) throw new Error("Incomplete or invalid order data");
+
+const { rate, symbol } = await getSafeRate(session.currency);
+const amount = +(usd / rate).toFixed(6);
+if (!Number.isFinite(amount) || amount <= 0) throw new Error("Calculated crypto amount invalid");
+
+session.expectedAmount = amount;
+session.step = 9;
+
+const qrBuffer = await getCachedQR(symbol, amount);
+if (!qrBuffer || !Buffer.isBuffer(qrBuffer) || qrBuffer.length < 1000) {
+  throw new Error("QR fallback failed (both cache and live)");
 }
 
-/**
- * 🧹 Delete old PNG fallbacks for symbol
- */
-export function cleanOldPngs(symbol) {
-  try {
-    const files = fs.readdirSync(CACHE_DIR);
-    const regex = new RegExp(`^${symbol}_[\\d.]+\\.png$`);
-    const targets = files.filter(f => regex.test(f));
+const summary = `
 
-    for (const file of targets) {
-      fs.unlinkSync(path.join(CACHE_DIR, file));
-    }
 
-    console.log(`🧹 [cleanOldPngs] Removed ${targets.length} QR(s) for ${symbol}`);
-  } catch (err) {
-    console.warn("⚠️ [cleanOldPngs] Failed:", err.message);
-  }
+
+💸 *Payment summary:*
+• Product: *\${session.product.name}*
+• Quantity: *\${session.quantity}*
+• Delivery: *\${session.deliveryMethod}* (\${session.deliveryFee}\$)
+• City: *\${session.city}*
+
+💰 *\${usd.toFixed(2)}* USD ≈ *\${amount} \${symbol}*
+🏦 Wallet: \\${session.wallet}\
+
+⏱ ETA: \~30 minutes
+✅ Scan QR or copy address\.trim();
+
+await safeSend(() => bot.sendChatAction(id, "upload_photo"));
+await sendPhotoAndTrack(bot, id, qrBuffer, {
+  caption: summary,
+  parse_mode: "Markdown"
+}, userMsgs);
+
+if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
+const timer = setTimeout(() => {
+  console.warn(`⌛️ [payment timeout] User ${id}`);
+  delete paymentTimers[id];
+  delete userSessions[id];
+}, TIMEOUT_MS);
+
+session.paymentTimer = timer;
+paymentTimers[id] = timer;
+
+return sendKeyboard(bot, id, "❓ *Has the payment completed?*", [
+  [{ text: MENU_BUTTONS.CONFIRM.text }],
+  [{ text: MENU_BUTTONS.CANCEL.text }]
+], userMsgs, { parse_mode: "Markdown" });
+
+
+
+} catch (err) {
+console.error("❌ \[handlePayment error]:", err.message || err);
+cleanupOnError(id);
+return sendAndTrack(bot, id, ❗️ Payment failed:\n*${err.message}*, {
+parse\_mode: "Markdown"
+}, userMsgs);
+}
 }
 
-// 🔄 Utility exports
-export {
-  normalizeSymbol,
-  resolveAddress,
-  getFallbackPath
-};
+export async function handlePaymentCancel(bot, id, userMsgs) {
+const session = userSessions\[id];
+if (!session || session.step !== 9 || !session.paymentInProgress) {
+return sendAndTrack(bot, id, "⚠️ No active payment to cancel.", {}, userMsgs);
+}
+
+clearTimeout(session.paymentTimer);
+delete paymentTimers\[id];
+delete userSessions\[id];
+
+await sendAndTrack(bot, id, "❌ Payment canceled. Returning to main menu...", {}, userMsgs);
+return safeStart(bot, id);
+}
+
+export async function handlePaymentConfirmation(bot, id, userMsgs) {
+const session = userSessions\[id];
+if (
+!session || session.step !== 9 || !isValidAddress(session.wallet) ||
+!session.currency || !Number.isFinite(session.expectedAmount)
+) {
+return sendAndTrack(bot, id, "⚠️ Session expired or invalid. Use /start to retry.", {}, userMsgs);
+}
+
+try {
+await sendAndTrack(bot, id, "⏳ Verifying payment on blockchain...", {}, userMsgs);
+
+const symbol = normalizeSymbol(session.currency);
+const paid = await checkPayment(session.wallet, symbol, session.expectedAmount);
+
+if (!paid) {
+  return sendKeyboard(bot, id, "❌ Payment not found. Try again:", [
+    [{ text: MENU_BUTTONS.CONFIRM.text }],
+    [{ text: MENU_BUTTONS.CANCEL.text }]
+  ], userMsgs, { parse_mode: "Markdown" });
+}
+
+clearTimeout(session.paymentTimer);
+delete paymentTimers[id];
+delete session.paymentInProgress;
+delete session.expectedAmount;
+
+userOrders[id] = (userOrders[id] || 0) + 1;
+saveOrder(id, session.city, session.product.name, session.totalPrice)
+  .catch(e => console.warn("⚠️ [saveOrder failed]", e.message));
+
+await sendAdminPing(
+  `💸 *Payment confirmed* from UID \`${id}\`\n` +
+  `📦 Product: *${session.product?.name}*\n` +
+  `🔢 Qty: *${session.quantity}* • 💵 $${session.totalPrice}\n` +
+  `🔗 Currency: *${session.currency}*`
+);
+
+session.deliveryInProgress = true;
+
+await sendAndTrack(bot, id, "✅ Payment confirmed!\n🚚 Delivery starting...", {}, userMsgs);
+return simulateDelivery(bot, id, session.deliveryMethod, userMsgs);
+
+
+
+} catch (err) {
+console.error("❌ \[handlePaymentConfirmation error]:", err.message || err);
+return sendAndTrack(bot, id, "❗️ Verification failed. Please try again later.", {}, userMsgs);
+}
+}
+
+function cleanupOnError(id) {
+const session = userSessions\[id];
+if (!session) return;
+delete session.paymentInProgress;
+delete session.expectedAmount;
+if (paymentTimers\[id]) {
+clearTimeout(paymentTimers\[id]);
+delete paymentTimers\[id];
+}
+}
+
+export async function sendAdminPing(msg) {
+try {
+const adminId = process.env.ADMIN\_ID;
+if (!adminId) return;
+await BOT.INSTANCE.sendMessage(adminId, msg, { parse\_mode: "Markdown" });
+} catch (e) {
+console.warn("⚠️ \[sendAdminPing failed]", e.message);
+}
+}
