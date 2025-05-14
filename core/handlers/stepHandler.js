@@ -1,6 +1,7 @@
 // 📦 core/handlers/stepHandler.js | IMMORTAL FINAL v1.0.9•99999999X•ULTIMATE•GODMODE•DIAMONDLOCK
 // 24/7 BULLETPROOF • FSM SAFE ENGINE • FLOOD RESISTANT • FULL USD SUPPORT • PERFECT SYNC
 
+import { getAmountFilename, getFallbackPath } from "../../utils/fallbackPathUtils.js";
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
 import { products } from "../../config/products.js";
