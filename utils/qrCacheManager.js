@@ -124,6 +124,5 @@ export {
   generateFullQrCache,
   refreshQrCache,
   getCachedQR,
-  generateAndSaveQr,
-  initQrCacheDir
+  generateAndSaveQr
 };
