@@ -3,12 +3,10 @@
 
 import {
   userSessions,
-  userMessages,
-  userOrders,
-  paymentTimers
+  userMessages
 } from "../state/userState.js";
 
-import { clearTimers, clearUserMessages } from "../state/stateManager.js";
+import { fullResetUserState } from "../core/sessionManager.js"; // ✅ NEW SYNCED RESET
 import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { sendKeyboard } from "../helpers/messageUtils.js";
 import { getRegionKeyboard } from "../config/regions.js";
@@ -25,7 +23,7 @@ export async function startOrder(bot, id, msgs = userMessages) {
 
   try {
     // 🧼 1. Clean all user state (timers, messages, sessions)
-    await fullResetUserState(uid);
+    await fullResetUserState(uid); // ✅ USE SYNCED MASTER RESET
 
     // 🌀 2. Init fresh session
     userSessions[uid] = {
@@ -59,32 +57,6 @@ export async function startOrder(bot, id, msgs = userMessages) {
       msgs,
       { parse_mode: "Markdown" }
     );
-  }
-}
-
-// ———————————————————————
-// 🧼 Bulletproof state cleaner
-// ———————————————————————
-
-async function fullResetUserState(uid) {
-  try {
-    await Promise.all([
-      clearTimers(uid),
-      clearUserMessages(uid)
-    ]);
-
-    [userOrders, userMessages, paymentTimers].forEach(store => delete store[uid]);
-
-    if (userSessions[uid]) {
-      Object.keys(userSessions[uid]).forEach(k => (userSessions[uid][k] = null));
-      delete userSessions[uid];
-    }
-
-    if (process.env.DEBUG_MESSAGES === "true") {
-      console.debug(`🧼 [fullResetUserState] State cleared (UID: ${uid})`);
-    }
-  } catch (err) {
-    console.warn(`⚠️ [fullResetUserState warn] → ${err.message} (UID: ${uid})`);
   }
 }
 
