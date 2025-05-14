@@ -1,10 +1,11 @@
-// 📦 state/stateManager.js | IMMORTAL FINAL v1.1.0•999999999X•GODMODE•DIAMONDLOCK+SYNC
-// ZOMBIE SAFE • FSM CLEANUP • TIMER+STATE RESET • 24/7 IMMORTAL BULLETPROOF
+// 📦 state/stateManager.js | IMMORTAL FINAL v1.1.1•999999999X•GODMODE•DIAMONDLOCK+SYNC
+// FULL WALLET SUPPORT • FSM SAFE • CLEANUP RESILIENT • 24/7 BULLETPROOF ENGINE
 
 import {
   userSessions,
   userOrders,
   userMessages,
+  userWallets, // ✅ NEW
   activeTimers,
   paymentTimers,
   failedAttempts,
@@ -15,7 +16,7 @@ import {
 } from "./userState.js";
 
 /**
- * 🧼 Full user reset: session + flags + messages + timers + orders
+ * 🧼 Full user reset: session + flags + messages + timers + orders + wallets
  */
 export function resetUser(id) {
   const uid = sanitizeId(id);
@@ -28,6 +29,7 @@ export function resetUser(id) {
       userSessions,
       userOrders,
       userMessages,
+      userWallets, // ✅ also clear wallets
       failedAttempts,
       antiSpam,
       bannedUntil,
@@ -109,7 +111,7 @@ export function clearTimers(id) {
 }
 
 /**
- * 🚫 Fully unregister user — full wipe incl. orders
+ * 🚫 Fully unregister user — full wipe incl. orders + wallets
  */
 export function unregisterUser(id) {
   const uid = sanitizeId(id);
