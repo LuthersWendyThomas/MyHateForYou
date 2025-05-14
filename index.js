@@ -1,5 +1,5 @@
-// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.0.4•GODMODE+TITANLOCK+JOINTRACK+PERSIST
-// 24/7 BULLETPROOF • ADMIN NOTIFY • NEW USER TRACKING • SAFE DISK CACHE • DIAMONDLOCK SYSTEM
+// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.0.5•GODMODE+TITANLOCK+QRREADY+PERSIST
+// 24/7 BULLETPROOF • ADMIN NOTIFY • NEW USER TRACKING • QR CACHE SYSTEM • DIAMONDLOCK SYSTEM
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -10,6 +10,7 @@ import { initBotInstance, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions, cleanStalePaymentTimers } from "./core/sessionManager.js";
 import { sendAdminPing } from "./core/handlers/paymentHandler.js";
+import { startQrCacheRefresher } from "./jobs/refreshQrCache.js";
 import "./config/discountSync.js";
 
 // ✅ Persistent set of joined users
@@ -77,6 +78,9 @@ async function notifyCrash(source, err) {
       }
     }, 5 * 60 * 1000);
 
+    // ✅ Start QR fallback refresher job
+    startQrCacheRefresher();
+
     // 🚀 Startup check + logging
     const me = await BOT.INSTANCE.getMe();
     const pkg = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"));
@@ -97,9 +101,8 @@ async function notifyCrash(source, err) {
     // ✅ Delayed memory-ready alert (12min RAM warmup)
     setTimeout(() => {
       sendAdminPing("✅ Bot fully ready (RAM warmed up, timers running, FSM live).");
-    }, 12 * 60 * 1000); // 12 minutes
+    }, 12 * 60 * 1000);
 
-    
   } catch (err) {
     console.error("💥 [BOOT ERROR]:", err);
     await sendAdminPing(`❌ Bot failed to start:\n\`\`\`\n${err.message}\n\`\`\``);
