@@ -1,4 +1,5 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v4.0.0•DIAMONDLOCK•MAXSYNC•FILENAME-SYNCED
+
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v4.1.0•DIAMONDLOCK•MAXSYNC•SANITIZED•FILENAME-PERFECT
 
 import fs from "fs/promises";
 import { existsSync } from "fs";
@@ -9,6 +10,7 @@ import { products } from "../config/products.js";
 import { rateLimiter } from "./rateLimiter.js";
 import { getAmountFilename, getFallbackPath, FALLBACK_DIR } from "./fallbackPathUtils.js";
 
+// ✅ Init fallback dir
 export async function initQrCacheDir() {
   try {
     if (!existsSync(FALLBACK_DIR)) await fs.mkdir(FALLBACK_DIR, { recursive: true });
@@ -17,6 +19,7 @@ export async function initQrCacheDir() {
   }
 }
 
+// 🧼 Cleanup old fallbacks
 export async function cleanQrCacheDir() {
   try {
     if (!existsSync(FALLBACK_DIR)) return;
@@ -34,6 +37,7 @@ export async function cleanQrCacheDir() {
   }
 }
 
+// ✅ Retrieve or generate QR buffer + write fallback if needed
 export async function getCachedQR(symbol, amount) {
   const filePath = getFallbackPath(symbol, amount);
   try {
@@ -56,6 +60,7 @@ export async function getCachedQR(symbol, amount) {
   }
 }
 
+// 🔁 Full fallback generator (520 scenarios)
 export async function generateFullQrCache() {
   try {
     await initQrCacheDir();
@@ -112,6 +117,7 @@ export async function generateFullQrCache() {
       }
     }
 
+    // 🔁 Retry skipped
     if (skipped.length > 0) {
       console.log(`🔁 Retrying ${skipped.length} skipped fallbacks...`);
       for (const { symbol, totalUSD } of skipped) {
@@ -141,6 +147,7 @@ export async function generateFullQrCache() {
   }
 }
 
+// ♻️ Trigger refresh manually
 export async function refreshQrCache() {
   console.log("♻️ [refreshQrCache] Refresh started...");
   await generateFullQrCache();
