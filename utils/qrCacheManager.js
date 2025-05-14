@@ -123,6 +123,5 @@ function sanitize(str) {
 export {
   generateFullQrCache,
   refreshQrCache,
-  getCachedQR,
-  generateAndSaveQr
+  getCachedQR
 };
