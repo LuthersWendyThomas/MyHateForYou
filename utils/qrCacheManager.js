@@ -1,36 +1,39 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v3.3.1•DIAMONDLOCK•MAXSYNC•FILENAME-EXPORTED
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v4.0.0•DIAMONDLOCK•MAXSYNC•FILENAME-SYNCED
 
 import fs from "fs/promises";
-import path from "path";
 import { existsSync } from "fs";
-import { generateQR, getFallbackPath } from "./generateQR.js";
+import path from "path";
+import { generateQR } from "./generateQR.js";
 import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js";
 import { products } from "../config/products.js";
 import { rateLimiter } from "./rateLimiter.js";
+import { getAmountFilename, getFallbackPath, FALLBACK_DIR } from "./fallbackPathUtils.js";
 
-const CACHE_DIR = path.join(process.cwd(), "qr-cache");
-
-/**
- * 💾 Standard fallback filename: SYMBOL_0.123456.png
- */
-export function getAmountFilename(symbol, amount) {
-  return `${symbol.toUpperCase()}_${Number(amount).toFixed(6)}.png`;
-}
-
-/**
- * ✅ Create fallback cache dir
- */
 export async function initQrCacheDir() {
   try {
-    if (!existsSync(CACHE_DIR)) await fs.mkdir(CACHE_DIR, { recursive: true });
+    if (!existsSync(FALLBACK_DIR)) await fs.mkdir(FALLBACK_DIR, { recursive: true });
   } catch (err) {
     console.error("❌ [initQrCacheDir]", err.message);
   }
 }
 
-/**
- * ✅ Get fallback buffer or generate+save it live
- */
+export async function cleanQrCacheDir() {
+  try {
+    if (!existsSync(FALLBACK_DIR)) return;
+    const files = await fs.readdir(FALLBACK_DIR);
+    let deleted = 0;
+    for (const file of files) {
+      if (file.endsWith(".png")) {
+        await fs.unlink(path.join(FALLBACK_DIR, file));
+        deleted++;
+      }
+    }
+    console.log(`🧹 [cleanQrCacheDir] Deleted ${deleted} PNGs.`);
+  } catch (err) {
+    console.warn("⚠️ [cleanQrCacheDir] Failed:", err.message);
+  }
+}
+
 export async function getCachedQR(symbol, amount) {
   const filePath = getFallbackPath(symbol, amount);
   try {
@@ -53,35 +56,12 @@ export async function getCachedQR(symbol, amount) {
   }
 }
 
-/**
- * 🧼 Cleanup old fallback PNGs
- */
-export async function cleanQrCacheDir() {
-  try {
-    if (!existsSync(CACHE_DIR)) return;
-    const files = await fs.readdir(CACHE_DIR);
-    let deleted = 0;
-    for (const file of files) {
-      if (file.endsWith(".png")) {
-        await fs.unlink(path.join(CACHE_DIR, file));
-        deleted++;
-      }
-    }
-    console.log(`🧹 [cleanQrCacheDir] Deleted ${deleted} PNGs.`);
-  } catch (err) {
-    console.warn("⚠️ [cleanQrCacheDir] Failed:", err.message);
-  }
-}
-
-/**
- * 🔁 Full fallback QR generator — all variants
- */
 export async function generateFullQrCache() {
   try {
     await initQrCacheDir();
     await cleanQrCacheDir();
 
-    const deliveryFees = [5, 10]; // Fixed options
+    const deliveryFees = [5, 10];
     const skipped = [];
 
     let total = 0;
@@ -111,7 +91,7 @@ export async function generateFullQrCache() {
 
                 if (!existsSync(filePath)) {
                   const buffer = await generateQR(symbol, amount);
-                  if (buffer) {
+                  if (buffer && buffer.length > 1000) {
                     await fs.writeFile(filePath, buffer);
                     generated++;
                     console.log(`✅ Cached: ${path.basename(filePath)} (${generated}/${total})`);
@@ -132,7 +112,6 @@ export async function generateFullQrCache() {
       }
     }
 
-    // 🔁 Retry skipped
     if (skipped.length > 0) {
       console.log(`🔁 Retrying ${skipped.length} skipped fallbacks...`);
       for (const { symbol, totalUSD } of skipped) {
@@ -144,7 +123,7 @@ export async function generateFullQrCache() {
           const filePath = getFallbackPath(symbol, amount);
           if (!existsSync(filePath)) {
             const buffer = await generateQR(symbol, amount);
-            if (buffer) {
+            if (buffer && buffer.length > 1000) {
               await fs.writeFile(filePath, buffer);
               console.log(`✅ Retried: ${path.basename(filePath)}`);
             }
@@ -162,9 +141,6 @@ export async function generateFullQrCache() {
   }
 }
 
-/**
- * ♻️ Manual fallback QR rebuild
- */
 export async function refreshQrCache() {
   console.log("♻️ [refreshQrCache] Refresh started...");
   await generateFullQrCache();
