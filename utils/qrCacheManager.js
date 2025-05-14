@@ -9,6 +9,7 @@ import { DELIVERY_METHODS } from "../config/features.js";
 
 const CACHE_DIR = path.join(process.cwd(), "qr-cache");
 
+// ✅ Create folder if missing
 export async function initQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) {
@@ -19,12 +20,12 @@ export async function initQrCacheDir() {
   }
 }
 
-// ✅ Amount-based fallback filename generator
+// ✅ File naming: SYMBOL_0.123456.png
 function getAmountFilename(symbol, amount) {
   return `${symbol}_${Number(amount).toFixed(6)}.png`;
 }
 
-// ✅ Get cached QR or fallback to live generation
+// ✅ Read from cache or generate live if missing
 export async function getCachedQR(symbol, amount) {
   const fileName = getAmountFilename(symbol, amount);
   const filePath = path.join(CACHE_DIR, fileName);
@@ -40,10 +41,11 @@ export async function getCachedQR(symbol, amount) {
       }
     }
 
-    console.warn(`❌ [getCachedQR] Miss: ${fileName} → generating live...`);
+    // ❌ Miss → Generate live
+    console.warn(`❌ [getCachedQR] Missed: ${fileName} → generating live...`);
     const buffer = await generateQR(symbol, amount);
     if (!buffer || buffer.length < 1000) {
-      throw new Error("Live QR generation failed or invalid.");
+      throw new Error("Live QR generation failed or invalid");
     }
 
     await fs.writeFile(filePath, buffer);
@@ -56,7 +58,7 @@ export async function getCachedQR(symbol, amount) {
   }
 }
 
-// ✅ Clean all old PNGs
+// ✅ Clean up all PNGs
 export async function cleanQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) return;
@@ -76,7 +78,7 @@ export async function cleanQrCacheDir() {
   }
 }
 
-// ✅ Full fallback cache generator (all product + qty + fee combos)
+// ✅ Pre-generate all fallback QR codes (hourly)
 export async function generateFullQrCache() {
   try {
     await initQrCacheDir();
@@ -123,7 +125,7 @@ export async function generateFullQrCache() {
   }
 }
 
-// ✅ Refresh cache manually or hourly
+// ✅ Trigger manually or from refresher job
 export async function refreshQrCache() {
   console.log("♻️ [refreshQrCache] Refresh started...");
   await generateFullQrCache();
