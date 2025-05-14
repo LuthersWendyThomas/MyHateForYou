@@ -4,7 +4,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateQR as generateQRBuffer } from "./generateQR.js"; // ✅ FIXED IMPORT
+import { generateQRBuffer } from "./generateQR.js"; // ✅ uses buffer-only export
 import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js";
 import { products } from "../config/products.js";
 
@@ -27,12 +27,14 @@ function getQrPath(productName, qty, symbol) {
   return path.join(CACHE_DIR, fileName);
 }
 
-// ✅ Return PNG path if exists, or null
-export async function getCachedQrPath(productName, qty, symbol) {
-  const filePath = getQrPath(productName, qty, symbol);
+// ✅ Return PNG buffer if exists, or null
+export async function getCachedQR(productName, qty, symbol) {
   try {
+    const filePath = getQrPath(productName, qty, symbol);
     await fs.access(filePath);
-    return filePath;
+    const buffer = await fs.readFile(filePath);
+    if (buffer?.length > 0) return buffer;
+    return null;
   } catch {
     return null;
   }
@@ -44,6 +46,7 @@ export async function generateAndSaveQr(productName, qty, symbol, usdPrice, wall
     const rate = await fetchCryptoPrice(symbol);
     const amount = +(usdPrice / rate).toFixed(6);
     const buffer = await generateQRBuffer(symbol, amount, walletAddress);
+    if (!buffer) throw new Error("Empty buffer from generateQRBuffer");
     const filePath = getQrPath(productName, qty, symbol);
     await fs.writeFile(filePath, buffer);
     console.log(`✅ [generateAndSaveQr] Cached: ${filePath}`);
@@ -80,7 +83,7 @@ export async function generateFullQrCache() {
 }
 
 // ✅ Delete old cached PNGs
-async function cleanQrCacheDir() {
+export async function cleanQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) return;
     const files = await fs.readdir(CACHE_DIR);
@@ -99,6 +102,12 @@ async function cleanQrCacheDir() {
   }
 }
 
+// ✅ Main hourly cache refresher
+export async function refreshQrCache() {
+  console.log("♻️ [refreshQrCache] Starting QR cache refresh...");
+  await generateFullQrCache();
+}
+
 // ——— Helpers ———
 
 function sanitize(str) {
@@ -107,3 +116,12 @@ function sanitize(str) {
     .replace(/[^a-z0-9]/gi, "_")
     .replace(/_+/g, "_");
 }
+
+// ✅ Final export for all modules needing fallback
+export {
+  generateFullQrCache,
+  refreshQrCache,
+  getCachedQR,
+  generateAndSaveQr,
+  initQrCacheDir
+};
