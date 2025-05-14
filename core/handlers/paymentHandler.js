@@ -1,5 +1,5 @@
-// 📦 core/handlers/paymentHandler.js | FINAL IMMORTAL v999999999.∞+DIAMONDLOCK+SYNCFIXED
-// FULL AI-DRIVEN QR LOGIC • STEP-SAFE • SESSION-SYNC • DIAMONDLOCK BULLETPROOF
+// 📦 core/handlers/paymentHandler.js | FINAL IMMORTAL v999999999.∞+DIAMONDLOCK+SYNCFIXED+FULLCLEAN
+// FULL AI-DRIVEN QR LOGIC • STEP-SAFE • SESSION-SYNC • BULLETPROOF • FULLRESET INTEGRATED
 
 import { generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
@@ -11,12 +11,13 @@ import {
   sendKeyboard
 } from "../../helpers/messageUtils.js";
 import { simulateDelivery } from "./deliveryHandler.js";
-import { safeStart } from "./finalHandler.js";
+import { safeStart, resetSession } from "./finalHandler.js";
 import {
   userSessions,
   userOrders,
   paymentTimers
 } from "../../state/userState.js";
+import { fullResetUserState } from "../sessionManager.js";
 import { BOT, ALIASES } from "../../config/config.js";
 import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 import { sanitizeAmount } from "../../utils/fallbackPathUtils.js";
@@ -52,9 +53,7 @@ async function safeSend(fn, ...args) {
         const delay = 500 + i * 700;
         console.warn(`⏳ Rate limit (${i + 1}) → retry in ${delay}ms`);
         await wait(delay);
-      } else {
-        break;
-      }
+      } else break;
     }
   }
   return null;
@@ -63,21 +62,19 @@ async function safeSend(fn, ...args) {
 export async function handlePayment(bot, id, userMsgs) {
   const session = userSessions[id];
   if (!session || session.step !== 7 || session.paymentInProgress) {
-    return sendAndTrack(bot, id, "⚠️ Invalid or duplicate payment attempt.", {}, userMsgs);
+    return safeStart(bot, id); // ✅ saugiau grąžinti
   }
 
   session.paymentInProgress = true;
 
   try {
-    const usdProduct = Number(session.totalPrice);
-    const usdDelivery = Number(session.deliveryFee || 0);
-    const usd = usdProduct + usdDelivery;
-
-    if (
-      !session.wallet || !isValidAddress(session.wallet) ||
-      !session.currency || !session.product?.name ||
-      !session.quantity || !Number.isFinite(usd)
-    ) throw new Error("Missing or invalid order details");
+    const usd = Number(session.totalPrice) + Number(session.deliveryFee || 0);
+    if (!session.wallet || !isValidAddress(session.wallet)) {
+      throw new Error("❌ Invalid wallet. Please restart with /start.");
+    }
+    if (!session.currency || !session.product?.name || !session.quantity || !Number.isFinite(usd)) {
+      throw new Error("Missing or invalid order details");
+    }
 
     const { rate, symbol } = await getSafeRate(session.currency);
     const amountRaw = usd / rate;
@@ -93,6 +90,10 @@ export async function handlePayment(bot, id, userMsgs) {
     const qrBuffer = await generateQR(symbol, amount, session.wallet);
     if (!qrBuffer || !Buffer.isBuffer(qrBuffer) || qrBuffer.length < 1000) {
       throw new Error("QR generation failed");
+    }
+
+    if (process.env.DEBUG_MESSAGES === "true") {
+      console.debug(`[handlePayment] UID=${id} AMOUNT=${amount} ${symbol}`);
     }
 
     const summary = `
@@ -115,10 +116,10 @@ export async function handlePayment(bot, id, userMsgs) {
     }, userMsgs);
 
     if (paymentTimers[id]) clearTimeout(paymentTimers[id]);
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       console.warn(`⌛️ [payment timeout] User ${id}`);
       delete paymentTimers[id];
-      delete userSessions[id];
+      await fullResetUserState(id); // ✅ central cleanup
     }, TIMEOUT_MS);
 
     session.paymentTimer = timer;
@@ -131,7 +132,7 @@ export async function handlePayment(bot, id, userMsgs) {
 
   } catch (err) {
     console.error("❌ [handlePayment error]:", err.message || err);
-    cleanupPaymentSession(id);
+    await fullResetUserState(id); // ✅ saugiai išvalome
     return sendAndTrack(bot, id, `❗️ Payment failed:\n*${err.message}*`, {
       parse_mode: "Markdown"
     }, userMsgs);
@@ -146,9 +147,9 @@ export async function handlePaymentCancel(bot, id, userMsgs) {
 
   clearTimeout(session.paymentTimer);
   delete paymentTimers[id];
-  delete userSessions[id];
 
   await sendAndTrack(bot, id, "❌ Payment canceled. Returning to main menu...", {}, userMsgs);
+  await fullResetUserState(id); // ✅ saugiai
   return safeStart(bot, id);
 }
 
@@ -193,22 +194,11 @@ export async function handlePaymentConfirmation(bot, id, userMsgs) {
     session.deliveryInProgress = true;
 
     await sendAndTrack(bot, id, "✅ Payment confirmed!\n🚚 Delivery starting...", {}, userMsgs);
-    return simulateDelivery(bot, id, session.deliveryMethod, userMsgs);
+    return await simulateDelivery(bot, id, session.deliveryMethod, userMsgs); // ✅ await pridėtas
 
   } catch (err) {
     console.error("❌ [handlePaymentConfirmation error]:", err.message || err);
     return sendAndTrack(bot, id, "❗️ Verification failed. Please try again later.", {}, userMsgs);
-  }
-}
-
-function cleanupPaymentSession(id) {
-  const session = userSessions[id];
-  if (!session) return;
-  delete session.paymentInProgress;
-  delete session.expectedAmount;
-  if (paymentTimers[id]) {
-    clearTimeout(paymentTimers[id]);
-    delete paymentTimers[id];
   }
 }
 
