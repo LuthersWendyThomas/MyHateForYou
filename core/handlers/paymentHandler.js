@@ -1,6 +1,6 @@
-// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1.1.0•DIAMONDLOCK•QRSAFE•CACHEFALLBACK
+// 📦 core/handlers/paymentHandler.js | IMMORTAL FINAL v1.1.2•DIAMONDLOCK•QRSAFE•SANITIZEDSYNC•FALLBACKHIT100%
 
-import { getCachedQR } from "../../utils/qrCacheManager.js";
+import { getCachedQR, sanitize } from "../../utils/qrCacheManager.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice, NETWORKS } from "../../utils/fetchCryptoPrice.js";
 import { saveOrder } from "../../utils/saveOrder.js";
@@ -18,7 +18,6 @@ import {
 } from "../../state/userState.js";
 import { BOT, ALIASES } from "../../config/config.js";
 import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
-import { sanitize } from "../../utils/qrCacheManager.js";
 
 const TIMEOUT_MS = 30 * 60 * 1000;
 
@@ -76,13 +75,13 @@ export async function handlePayment(bot, id, userMsgs) {
     session.expectedAmount = amount;
     session.step = 9;
 
-    // ✅ Try cached fallback QR (or auto-generate if missing)
-    const sanitizedName = sanitize(session.product.name);
+    // ✅ Unified: sanitize name BEFORE fallback lookup (sync with generation logic)
+    const sanitizedProduct = sanitize(session.product.name);
     const qrBuffer = await getCachedQR(
       symbol,
       amount,
       session.wallet,
-      sanitizedName,
+      sanitizedProduct,
       session.quantity
     );
 
@@ -206,7 +205,6 @@ function cleanupOnError(id) {
   }
 }
 
-// ✅ Admin ping util
 export async function sendAdminPing(msg) {
   try {
     const adminId = process.env.ADMIN_ID;
