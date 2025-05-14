@@ -386,7 +386,6 @@ async function handleOrderConfirm(bot, uid, input, session, userMessages) {
     return renderStep(bot, uid, 7, userMessages);
   }
 
-  session.step = 8; // ✅ [IMMORTAL PATCH] Set correct FSM step before payment
   return handlePayment(bot, uid, userMessages);
 }
 
