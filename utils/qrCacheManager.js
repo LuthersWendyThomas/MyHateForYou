@@ -117,3 +117,27 @@ function sanitize(str) {
     .replace(/[^a-z0-9]/gi, "_")
     .replace(/_+/g, "_");
 }
+
+// ✅ Full fallback for paymentHandler
+export async function getCachedQR(symbol, amount, wallet, productName, qty) {
+  try {
+    const filename = `${sanitize(productName)}_${qty}_${symbol}.png`;
+    const filepath = path.join(CACHE_DIR, filename);
+
+    if (fs.existsSync(filepath)) {
+      const buffer = await fs.readFile(filepath);
+      if (buffer?.length > 1000) {
+        return buffer;
+      } else {
+        console.warn(`⚠️ [getCachedQR] PNG too small: ${filename}`);
+      }
+    } else {
+      console.warn(`❌ [getCachedQR] PNG fallback not found: ${filename}`);
+    }
+
+    return null;
+  } catch (err) {
+    console.error("❌ [getCachedQR]", err.message);
+    return null;
+  }
+}
