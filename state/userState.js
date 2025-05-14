@@ -1,17 +1,18 @@
-// 📦 state/userState.js | IMMORTAL FINAL v1.1.0•99999999X•DIAMONDLOCK•BULLETPROOF
-// MAX-SYNC • FSM-READY • ULTRA-STABLE • CLEANUP SAFE • 24/7 IMMORTAL ENGINE
+// 📦 state/userState.js | IMMORTAL FINAL v1.1.1•99999999X•DIAMONDLOCK•BULLETPROOF
+// MAX-SYNC • FSM-READY • ULTRA-STABLE • CLEANUP SAFE • WALLET+SESSION SAFE • 24/7 IMMORTAL ENGINE
 
 import fs   from "fs";
 import path from "path";
 
 // ——— Session Stores ———
-export const userSessions = {};
-export const userOrders   = {};
-export const userMessages = {};
+export const userSessions  = {};
+export const userOrders    = {};
+export const userMessages  = {};
+export const userWallets   = {}; // ✅ NEW: Wallet tracking (optional)
 
 // ——— Timers ———
-export const activeTimers  = {};
-export const paymentTimers = {};
+export const activeTimers   = {};
+export const paymentTimers  = {};
 
 // ——— Security ———
 export const failedAttempts = {};
@@ -47,14 +48,30 @@ export function clearUserSession(id) {
   if (!uid) return;
 
   clearTimersForUser(uid);
+  resetUser(uid);
 
-  [userSessions, userMessages, failedAttempts, bannedUntil, antiSpam, antiFlood]
-    .forEach(store => { if (uid in store) delete store[uid]; });
+  delete userSessions[uid];
+  delete userOrders[uid];
+  delete userWallets[uid]; // ✅ optional wallet cleanup
+
+  logAction("🧼 [clearUserSession]", "Session cleared", uid);
+}
+
+// ——— User Reset Helper (for safeStart/fullResetUserState) ———
+export function resetUser(uid) {
+  [
+    failedAttempts,
+    bannedUntil,
+    antiSpam,
+    antiFlood,
+    userMessages,
+    userWallets
+  ].forEach(store => delete store[uid]);
 
   if (activeUsers.remove) activeUsers.remove(uid);
   else activeUsers.list.delete(uid);
 
-  logAction("🧼 [clearUserSession]", "Session cleared", uid);
+  logAction("♻️ [resetUser]", "User reset complete", uid);
 }
 
 // ——— Timer Cleanup ———
@@ -67,6 +84,7 @@ export function clearTimersForUser(id) {
     delete activeTimers[uid];
     logAction("🕒 [clearTimers]", "Active cleared", uid);
   }
+
   if (paymentTimers[uid]) {
     clearTimeout(paymentTimers[uid]);
     delete paymentTimers[uid];
@@ -135,6 +153,7 @@ export function exportUserStats() {
         product:     session.product?.name ?? null,
         orders:      userOrders[id] ?? 0,
         bannedUntil: bannedUntil[id] ?? null,
+        wallet:      userWallets[id] ?? null,
         msgCount:    Array.isArray(userMessages[id]) ? userMessages[id].length : 0
       };
     }
