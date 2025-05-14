@@ -173,7 +173,7 @@ async function renderStep(bot, uid, step, userMessages) {
         ];
         return sendKeyboard(
           bot, uid,
-          "⏳ *Has the payment completed?*",
+          "⏳ *Has the payment completed?*\n\nPress ✅ *Confirm* once you've paid, or ❌ *Cancel* to abort.",
           keyboard,
           userMessages,
           { parse_mode: "Markdown" }
