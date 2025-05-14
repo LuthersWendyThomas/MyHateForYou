@@ -1,26 +1,35 @@
-// 📦 jobs/refreshQrCache.js | IMMORTAL FINAL v1.0.0•HOURLY•SYNCED
-// CRYPTO RATE SYNC • QR CACHE REFRESHER • 60min INTERVAL ENGINE
+// 📦 jobs/refreshQrCache.js | IMMORTAL FINAL v1.1.0•999999x•GODMODE•SYNCFIX
+// HOURLY CRYPTO RATE SYNC + QR CACHE REFRESH + ADMIN PING • 24/7 DIAMONDLOCK ENGINE
 
 import { generateFullQrCache } from "../utils/qrCacheManager.js";
+import { sendAdminPing } from "../core/handlers/paymentHandler.js";
 
-// ✅ Launch QR cache rebuild
-export async function startQrCacheRefresher() {
-  console.log("🕒 [refreshQrCache] QR cache refresher started — runs every 1h");
+/**
+ * 🔁 Start QR cache refresher:
+ * Runs immediately on boot, then every hour.
+ */
+export function startQrCacheRefresher() {
+  console.log("🕒 [refreshQrCache] QR refresher started — running every 60 minutes");
 
-  // Run immediately on startup
-  await tryRefresh();
+  // 🔧 Immediate refresh on startup
+  tryRefresh(true);
 
-  // Then refresh every 60 minutes
-  setInterval(tryRefresh, 60 * 60 * 1000);
+  // 🔁 Hourly refresh
+  setInterval(() => tryRefresh(false), 60 * 60 * 1000);
 }
 
-// ——— Safe refresh handler ———
-async function tryRefresh() {
+/**
+ * ♻️ Safe refresh wrapper (with admin ping + logging)
+ */
+async function tryRefresh(isStartup = false) {
+  const label = isStartup ? "🔄 QR cache atnaujintas paleidimo metu." : "🔁 QR cache atnaujintas (valandinis).";
   const ts = new Date().toLocaleTimeString("en-GB");
+
   try {
     console.log(`♻️ [refreshQrCache] Refreshing QR cache — ${ts}`);
     await generateFullQrCache();
     console.log("✅ [refreshQrCache] QR cache fully refreshed.");
+    await sendAdminPing(label);
   } catch (err) {
     console.error("❌ [refreshQrCache] Failed:", err.message);
   }
