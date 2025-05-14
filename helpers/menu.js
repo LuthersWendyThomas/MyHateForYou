@@ -1,11 +1,11 @@
-// 📦 helpers/menu.js | IMMORTAL FINAL v1.0.1•GODMODE DIAMONDLOCK
-// SKYLOCKED BULLETPROOF MENU SYSTEM — MAX SYNC • ADMIN-SAFE • INLINE-SAFE • 24/7 RELIABILITY
+// 📦 helpers/menu.js | IMMORTAL FINAL v1.0.2•9999999999999X•DIAMONDLOCK
+// SKYLOCKED BULLETPROOF MENU SYSTEM — ADMIN-SAFE • INLINE-SAFE • VALIDATION-READY
 
 import { BOT } from "../config/config.js";
 import { MENU_BUTTONS } from "./keyboardConstants.js";
 
 /**
- * ✅ Main menu generator (user/admin safe)
+ * ✅ Safe main menu generator (user/admin-specific)
  * @param {string|number} id — Telegram user ID
  * @returns {{ keyboard, resize_keyboard, one_time_keyboard, selective }}
  */
@@ -18,6 +18,7 @@ export function getMainMenu(id) {
       [ MENU_BUTTONS.BUY,     MENU_BUTTONS.HELP    ],
       [ MENU_BUTTONS.PROFILE, MENU_BUTTONS.ORDERS  ]
     ];
+
     if (isAdmin) {
       rows.push([ MENU_BUTTONS.STATS, MENU_BUTTONS.ADMIN ]);
     }
@@ -30,6 +31,7 @@ export function getMainMenu(id) {
       one_time_keyboard: false,
       selective:         true
     };
+
   } catch (err) {
     logError("getMainMenu", err, uid);
     return getFallbackKeyboard();
@@ -55,8 +57,13 @@ export function getInlineKeyboard(inlineButtons) {
       logError("getInlineKeyboard", new Error(`Row ${r} is not an array`));
       continue;
     }
+
     const validatedRow = row.map((btn, cIdx) => {
-      if (btn && typeof btn.text === "string" && typeof btn.callback_data === "string") {
+      if (
+        btn &&
+        typeof btn.text === "string" &&
+        typeof btn.callback_data === "string"
+      ) {
         return {
           text: btn.text.trim(),
           callback_data: btn.callback_data.trim()
@@ -65,6 +72,7 @@ export function getInlineKeyboard(inlineButtons) {
       logError("getInlineKeyboard", new Error(`Invalid button at [${r},${cIdx}]`));
       return { text: "❌ Invalid", callback_data: "INVALID" };
     });
+
     keyboard.push(validatedRow);
   }
 
@@ -94,7 +102,7 @@ export function validateMenuButtons(keyboard) {
 }
 
 /**
- * ✅ Safe fallback keyboard (Help only)
+ * ✅ Help-only fallback keyboard (critical error fallback)
  * @returns {{ keyboard, resize_keyboard, one_time_keyboard, selective }}
  */
 export function getFallbackKeyboard() {
@@ -109,7 +117,7 @@ export function getFallbackKeyboard() {
 }
 
 /**
- * ✅ Normalizes keyboard structure into Telegram-safe format
+ * ✅ Normalizes keyboard to Telegram-safe format
  * @param {Array<Array<{ text: string }>>} rows
  * @returns {Array<Array<{ text: string }>>}
  */
@@ -118,11 +126,13 @@ function normalizeKeyboard(rows) {
     logError("normalizeKeyboard", new Error("Rows must be an array"));
     return [];
   }
+
   return rows.map((row, rIdx) => {
     if (!Array.isArray(row)) {
       logError("normalizeKeyboard", new Error(`Row ${rIdx} not array`));
       return [];
     }
+
     return row.map((btn, cIdx) => {
       if (btn && typeof btn.text === "string") {
         return { text: btn.text.trim() };
