@@ -1,5 +1,5 @@
-// 🛡️ core/security.js | IMMORTAL FINAL v1.2.0•999999999x•SYNCED•GODMODE•SKYLOCK
-// PERFECT FLOODHANDLER SYNC • ULTRA-SAFE • FSM-FRIENDLY • UX BULLETPROOF
+// 🛡️ core/security.js | FINAL IMMORTAL v2.0.0•999999999X•DIAMONDLOCK•FULLSYNC
+// BULLETPROOF UX • FSM-SAFE • BUTTON-FRIENDLY • FLOOD+SPAM+BAN ENGINE
 
 import { isBanned } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
@@ -7,7 +7,7 @@ import { antiSpam, antiFlood, bannedUntil, userSessions } from "../state/userSta
 import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { BOT } from "../config/config.js";
 
-// 🛡️ Limits
+// ⏱️ Limits
 const SPAM_INTERVAL_MS    = 1400;
 const FLOOD_LIMIT         = 9;
 const FLOOD_WINDOW_MS     = 9000;
@@ -16,111 +16,15 @@ const MAX_MESSAGE_LENGTH  = 600;
 const MAX_INPUT_FREQUENCY = 6;
 const MAX_DISTINCT_INPUTS = 20;
 
-// 🔠 Cache valid buttons
+// ✅ Cache button texts
 const BUTTON_TEXTS = Object.values(MENU_BUTTONS)
   .map(btn => String(btn?.text || "").trim().toLowerCase())
   .filter(Boolean);
 
-// 🧠 Cache per-user distinct texts
+// 🧠 Recent inputs per user
 const recentTexts = new Map();
 
-// ——— Core Guards ———
-
-export function isSpamming(id) {
-  const uid = sanitizeId(id);
-  if (!uid || isAdmin(uid)) return false;
-
-  const now  = Date.now();
-  const last = antiSpam[uid] || 0;
-  antiSpam[uid] = now;
-
-  const tooFast = now - last < SPAM_INTERVAL_MS;
-  if (tooFast) logAction("⚠️ [isSpamming]", "Too rapid input", uid);
-  return tooFast;
-}
-
-export async function handleFlood(id, bot) {
-  const uid = sanitizeId(id);
-  if (!uid || isAdmin(uid)) return false;
-
-  try {
-    const now = Date.now();
-    let state = antiFlood[uid];
-
-    if (!state) {
-      antiFlood[uid] = { count: 1, start: now };
-      return false;
-    }
-
-    if (now - state.start <= FLOOD_WINDOW_MS) {
-      state.count++;
-      if (state.count > FLOOD_LIMIT) {
-        bannedUntil[uid] = now + TEMP_MUTE_MS;
-        delete antiFlood[uid];
-        await notifyUserMuted(bot, uid);
-        logAction("⛔ [handleFlood]", "Flood detected → muted", uid);
-        return true;
-      }
-    } else {
-      antiFlood[uid] = { count: 1, start: now };
-    }
-
-    return false;
-  } catch (err) {
-    logError("❌ [handleFlood error]", err, uid);
-    return false;
-  }
-}
-
-export function isMuted(id) {
-  const uid = sanitizeId(id);
-  if (!uid || isAdmin(uid)) return false;
-
-  const until = bannedUntil[uid];
-  if (!until) return false;
-
-  const muted = Date.now() < until;
-  if (!muted) {
-    delete bannedUntil[uid];
-    recentTexts.delete(uid); // 🧽 cleanup
-  }
-
-  if (muted) logAction("🔇 [isMuted]", "User is muted", uid);
-  return muted;
-}
-
-function isMessageDangerous(id, rawText) {
-  const uid = sanitizeId(id);
-  if (!uid || isAdmin(uid)) return false;
-
-  try {
-    const text = String(rawText || "").trim();
-    if (!text || text.length > MAX_MESSAGE_LENGTH) {
-      logAction("⚠️ [isDangerous]", "Too long or empty", uid);
-      return true;
-    }
-
-    let history = recentTexts.get(uid) || [];
-    if (!Array.isArray(history)) history = [];
-
-    if (history.length >= MAX_DISTINCT_INPUTS) history.shift();
-    history.push(text);
-    recentTexts.set(uid, history);
-
-    const sameCount = history.filter(t => t === text).length;
-    if (sameCount >= MAX_INPUT_FREQUENCY) {
-      logAction("⚠️ [isDangerous]", "Identical spam", uid);
-      return true;
-    }
-
-    return false;
-  } catch (err) {
-    logError("❌ [isDangerous error]", err, uid);
-    return true;
-  }
-}
-
-// ——— Main Gatekeeper ———
+// ——— Main FSM-Aware Filter ———
 
 export async function canProceed(id, bot, text = "") {
   const uid = sanitizeId(id);
@@ -130,8 +34,10 @@ export async function canProceed(id, bot, text = "") {
   const session = userSessions[uid];
   const input = String(text || "").trim().toLowerCase();
 
+  // ✅ Always allow known buttons
   if (BUTTON_TEXTS.includes(input)) return true;
 
+  // ✅ Allow confirm/cancel during steps 8–9
   if (session?.step >= 8) {
     if (
       input === MENU_BUTTONS.CONFIRM.text.toLowerCase() ||
@@ -148,7 +54,6 @@ export async function canProceed(id, bot, text = "") {
       logAction("⛔ [canProceed]", "User permanently banned", uid);
       return false;
     }
-
     return true;
   } catch (err) {
     logError("❌ [canProceed error]", err, uid);
@@ -156,12 +61,101 @@ export async function canProceed(id, bot, text = "") {
   }
 }
 
-// ——— Mute Alert ———
+// ——— Flood Detection ———
 
-async function notifyUserMuted(bot, id) {
+export async function handleFlood(id, bot) {
   const uid = sanitizeId(id);
-  if (!uid) return;
+  if (!uid || isAdmin(uid)) return false;
 
+  const now = Date.now();
+  let state = antiFlood[uid];
+
+  if (!state) {
+    antiFlood[uid] = { count: 1, start: now };
+    return false;
+  }
+
+  if (now - state.start <= FLOOD_WINDOW_MS) {
+    state.count++;
+    if (state.count > FLOOD_LIMIT) {
+      bannedUntil[uid] = now + TEMP_MUTE_MS;
+      delete antiFlood[uid];
+      await notifyUserMuted(bot, uid);
+      logAction("⛔ [handleFlood]", "Flood → muted", uid);
+      return true;
+    }
+  } else {
+    antiFlood[uid] = { count: 1, start: now };
+  }
+
+  return false;
+}
+
+// ——— Spam Detection ———
+
+export function isSpamming(id) {
+  const uid = sanitizeId(id);
+  if (!uid || isAdmin(uid)) return false;
+
+  const now  = Date.now();
+  const last = antiSpam[uid] || 0;
+  antiSpam[uid] = now;
+
+  const tooFast = now - last < SPAM_INTERVAL_MS;
+  if (tooFast) logAction("⚠️ [isSpamming]", "Too rapid", uid);
+  return tooFast;
+}
+
+// ——— Dangerous Input (length + repetition) ———
+
+function isMessageDangerous(id, rawText) {
+  const uid = sanitizeId(id);
+  if (!uid || isAdmin(uid)) return false;
+
+  const text = String(rawText || "").trim();
+  if (!text || text.length > MAX_MESSAGE_LENGTH) {
+    logAction("⚠️ [isDangerous]", "Empty or too long", uid);
+    return true;
+  }
+
+  let history = recentTexts.get(uid) || [];
+  if (!Array.isArray(history)) history = [];
+
+  if (history.length >= MAX_DISTINCT_INPUTS) history.shift();
+  history.push(text);
+  recentTexts.set(uid, history);
+
+  const sameCount = history.filter(t => t === text).length;
+  if (sameCount >= MAX_INPUT_FREQUENCY) {
+    logAction("⚠️ [isDangerous]", "Repeated spam", uid);
+    return true;
+  }
+
+  return false;
+}
+
+// ——— Mute Status ———
+
+export function isMuted(id) {
+  const uid = sanitizeId(id);
+  if (!uid || isAdmin(uid)) return false;
+
+  const until = bannedUntil[uid];
+  if (!until) return false;
+
+  const muted = Date.now() < until;
+  if (!muted) {
+    delete bannedUntil[uid];
+    recentTexts.delete(uid);
+  }
+
+  if (muted) logAction("🔇 [isMuted]", "User muted", uid);
+  return muted;
+}
+
+// ——— Mute Notification ———
+
+async function notifyUserMuted(bot, uid) {
   try {
     const session = userSessions[uid];
     if (!session?.mutedNotified) {
@@ -183,6 +177,10 @@ function sanitizeId(id) {
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
 
+function isAdmin(uid) {
+  return String(uid) === String(BOT.ADMIN_ID);
+}
+
 function logAction(label, msg, uid = "") {
   console.log(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
 }
@@ -190,8 +188,4 @@ function logAction(label, msg, uid = "") {
 function logError(label, err, uid = "") {
   const msg = err?.message || err;
   console.error(`${new Date().toISOString()} ${label} → ${msg}${uid ? ` (UID: ${uid})` : ""}`);
-}
-
-function isAdmin(uid) {
-  return String(uid) === String(BOT.ADMIN_ID);
 }
