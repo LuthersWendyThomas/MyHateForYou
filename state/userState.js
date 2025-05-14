@@ -1,20 +1,20 @@
-// 📦 state/userState.js | IMMORTAL FINAL v1.1.1•99999999X•DIAMONDLOCK•BULLETPROOF
-// MAX-SYNC • FSM-READY • ULTRA-STABLE • CLEANUP SAFE • WALLET+SESSION SAFE • 24/7 IMMORTAL ENGINE
+// 📦 state/userState.js | IMMORTAL FINAL v2.0.0•99999999999X•SYNCED•GODMODE
+// MAX-ENGINE • SESSION IMMORTALITY • BULLETPROOF SYNC • QR/PAYMENT READY • FLOOD-RESISTANT
 
-import fs   from "fs";
+import fs from "fs";
 import path from "path";
 
-// ——— Session Stores ———
+// ——— In-Memory State Stores ———
 export const userSessions  = {};
 export const userOrders    = {};
 export const userMessages  = {};
-export const userWallets   = {}; // ✅ NEW: Wallet tracking (optional)
+export const userWallets   = {}; // 💳 Track user wallet address if needed
 
 // ——— Timers ———
-export const activeTimers   = {};
-export const paymentTimers  = {};
+export const activeTimers  = {};
+export const paymentTimers = {};
 
-// ——— Security ———
+// ——— Anti-Spam/Abuse ———
 export const failedAttempts = {};
 export const bannedUntil    = {};
 export const antiSpam       = {};
@@ -42,7 +42,7 @@ export const activeUsers = {
   }
 };
 
-// ——— Full Session Wipe ———
+// ——— Full Session Reset ———
 export function clearUserSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
@@ -52,12 +52,12 @@ export function clearUserSession(id) {
 
   delete userSessions[uid];
   delete userOrders[uid];
-  delete userWallets[uid]; // ✅ optional wallet cleanup
+  delete userWallets[uid];
 
   logAction("🧼 [clearUserSession]", "Session cleared", uid);
 }
 
-// ——— User Reset Helper (for safeStart/fullResetUserState) ———
+// ——— Deep User Reset (used in /start or fatal error) ———
 export function resetUser(uid) {
   [
     failedAttempts,
@@ -74,7 +74,7 @@ export function resetUser(uid) {
   logAction("♻️ [resetUser]", "User reset complete", uid);
 }
 
-// ——— Timer Cleanup ———
+// ——— Kill Timers (active or payment) ———
 export function clearTimersForUser(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
@@ -92,7 +92,7 @@ export function clearTimersForUser(id) {
   }
 }
 
-// ——— Session Start ———
+// ——— Safe Session Starter ———
 export function safeStartSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
@@ -102,7 +102,7 @@ export function safeStartSession(id) {
   logAction("✅ [safeStartSession]", "Session started", uid);
 }
 
-// ——— Fail Tracking ———
+// ——— Fail + Ban Counter ———
 export function trackFailedAttempts(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
@@ -111,29 +111,30 @@ export function trackFailedAttempts(id) {
   logAction("⚠️ [trackFailedAttempts]", `Count=${failedAttempts[uid]}`, uid);
 
   if (failedAttempts[uid] >= 5) {
-    bannedUntil[uid] = Date.now() + 15 * 60_000;
+    bannedUntil[uid] = Date.now() + 15 * 60_000; // 15 min ban
     logAction("⛔ [trackFailedAttempts]", "Auto-banned", uid);
   }
 }
 
-// ——— Step Validation ———
+// ——— Session Step Verifier (used by FSM) ———
 export function verifySessionStep(id) {
   const uid = sanitizeId(id);
   if (!uid) return 1;
 
   const session = userSessions[uid] ||= { step: 1, createdAt: Date.now() };
   if (!isValidStep(session.step)) {
-    logAction("⚠️ [verifySessionStep]", `Reset step=${session.step}`, uid);
     session.step = 1;
+    logAction("⚠️ [verifySessionStep]", "Invalid step reset", uid);
   }
   return session.step;
 }
 
+// ——— Valid Steps (FSM step 1–9) ———
 export function isValidStep(step) {
   return typeof step === "number" && step >= 1 && step <= 9;
 }
 
-// ——— Export Snapshot ———
+// ——— Export Snapshot (JSON dump for admin audit/logs) ———
 export function exportUserStats() {
   try {
     const now = new Date();
@@ -145,15 +146,15 @@ export function exportUserStats() {
     for (const uid of Object.keys(userSessions)) {
       const id = sanitizeId(uid);
       if (!id) continue;
+      const s = userSessions[id] || {};
 
-      const session = userSessions[id] || {};
       data[id] = {
-        step:        session.step ?? null,
-        city:        session.city ?? null,
-        product:     session.product?.name ?? null,
+        step:        s.step ?? null,
+        city:        s.city ?? null,
+        product:     s.product?.name ?? null,
         orders:      userOrders[id] ?? 0,
-        bannedUntil: bannedUntil[id] ?? null,
         wallet:      userWallets[id] ?? null,
+        bannedUntil: bannedUntil[id] ?? null,
         msgCount:    Array.isArray(userMessages[id]) ? userMessages[id].length : 0
       };
     }
