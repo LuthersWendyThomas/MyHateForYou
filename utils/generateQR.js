@@ -23,7 +23,8 @@ export function normalizeSymbol(symbol) {
  * 🏦 Resolve wallet address (override > config)
  */
 export function resolveAddress(symbol, overrideAddress) {
-  return String(overrideAddress || WALLETS[symbol] || "").trim();
+  const normalized = normalizeSymbol(symbol); // ← būtina!
+  return String(overrideAddress || WALLETS[normalized] || "").trim();
 }
 
 /**
