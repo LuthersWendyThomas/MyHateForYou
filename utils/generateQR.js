@@ -1,23 +1,23 @@
-// 📦 utils/generateQR.js | IMMORTAL FINAL v5.2•DIAMONDLOCK+CACHE+FALLBACK+EXPORT
-// QR FALLBACK SYSTEM • LOCAL PNG CACHE • BUFFER EXPORT • AUTO CLEAN • 0s LATENCY
+// 📦 utils/generateQR.js | IMMORTAL FINAL v5.3•GODMODE•EXPORTLOCK•SYNC
+// QR FALLBACK SYSTEM • PNG BUFFER EXPORT • LOCAL CACHE • BULLETPROOF INTEGRATION
 
 import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 import { WALLETS, ALIASES } from "../config/config.js";
 
-const CACHE_DIR = "./qr-cache"; // ⚠️ MATCH with qrCacheManager
+const CACHE_DIR = "./qr-cache";
 
 /**
  * ✅ Retrieves or generates and caches QR buffer (based on currency + amount)
  */
-export async function generateQR(currency, amount, overrideAddress = null) {
-  const raw          = String(currency || "").trim().toLowerCase();
-  const normalized   = ALIASES[raw] || raw.toUpperCase();
-  const address      = String(overrideAddress || WALLETS[normalized] || "").trim();
+async function generateQR(currency, amount, overrideAddress = null) {
+  const raw = String(currency || "").trim().toLowerCase();
+  const normalized = ALIASES[raw] || raw.toUpperCase();
+  const address = String(overrideAddress || WALLETS[normalized] || "").trim();
   const parsedAmount = Number(amount);
-  const filename     = `${normalized}_${parsedAmount.toFixed(6)}.png`;
-  const filepath     = path.join(CACHE_DIR, filename);
+  const filename = `${normalized}_${parsedAmount.toFixed(6)}.png`;
+  const filepath = path.join(CACHE_DIR, filename);
 
   if (!isValidAddress(address)) {
     console.warn(`⚠️ [generateQR] Invalid address for ${normalized}: "${address}"`);
@@ -29,7 +29,6 @@ export async function generateQR(currency, amount, overrideAddress = null) {
   }
 
   try {
-    // ✅ Return from cache if exists
     if (fs.existsSync(filepath)) {
       const buffer = fs.readFileSync(filepath);
       if (buffer?.length > 0) {
@@ -40,14 +39,11 @@ export async function generateQR(currency, amount, overrideAddress = null) {
       }
     }
 
-    // ❌ Generate fresh if not cached
     const buffer = await generateQRBuffer(normalized, parsedAmount, address);
     if (!buffer) return null;
 
-    // 🧼 Ensure dir exists + cleanup previous for this symbol
     if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR);
     cleanOldPngs(normalized);
-
     fs.writeFileSync(filepath, buffer);
     console.log(`✅ [generateQR] New QR cached: ${filename}`);
     return buffer;
@@ -59,14 +55,14 @@ export async function generateQR(currency, amount, overrideAddress = null) {
 }
 
 /**
- * ✅ Directly generates QR PNG buffer for given crypto URI
+ * ✅ Directly generates QR PNG buffer from crypto URI
  */
-export async function generateQRBuffer(symbol, amount, address) {
+async function generateQRBuffer(symbol, amount, address) {
   const formatted = amount.toFixed(6);
-  const scheme    = symbol.toLowerCase();
-  const label     = encodeURIComponent("BalticPharmacyBot");
-  const msg       = encodeURIComponent("Order");
-  const uri       = `${scheme}:${address}?amount=${formatted}&label=${label}&message=${msg}`;
+  const scheme = symbol.toLowerCase();
+  const label = encodeURIComponent("BalticPharmacyBot");
+  const msg = encodeURIComponent("Order");
+  const uri = `${scheme}:${address}?amount=${formatted}&label=${label}&message=${msg}`;
 
   try {
     const buffer = await Promise.race([
@@ -94,14 +90,14 @@ export async function generateQRBuffer(symbol, amount, address) {
 }
 
 /**
- * ✅ Generates message + button for payment with address
+ * ✅ Message + copy button
  */
-export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
-  const raw       = String(currency || "").trim().toLowerCase();
+function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
+  const raw = String(currency || "").trim().toLowerCase();
   const normalized = ALIASES[raw] || raw.toUpperCase();
-  const val       = Number(amount);
-  const display   = Number.isFinite(val) ? val.toFixed(6) : "?.??????";
-  const addr      = String(overrideAddress || WALLETS[normalized] || "").trim();
+  const val = Number(amount);
+  const display = Number.isFinite(val) ? val.toFixed(6) : "?.??????";
+  const addr = String(overrideAddress || WALLETS[normalized] || "").trim();
   const validAddr = isValidAddress(addr) ? addr : "[Invalid address]";
 
   const message = `
@@ -124,7 +120,7 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
 }
 
 /**
- * 🧼 Deletes existing cached PNGs for a specific currency
+ * 🧼 Removes existing PNGs for a currency
  */
 function cleanOldPngs(symbol) {
   try {
@@ -141,8 +137,15 @@ function cleanOldPngs(symbol) {
 }
 
 /**
- * ✅ Address validity checker
+ * ✅ Address format checker
  */
 function isValidAddress(addr) {
   return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
 }
+
+// ✅ FINAL EXPORTS (⬅ būtina visiems moduliam kaip qrCacheManager.js)
+export {
+  generateQR,
+  generateQRBuffer,
+  generatePaymentMessageWithButton
+};
