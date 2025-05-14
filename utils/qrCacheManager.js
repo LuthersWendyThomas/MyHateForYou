@@ -1,16 +1,25 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v3.3.0•DIAMONDLOCK•ULTRASYNC•FALLBACKFIXED
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v3.3.1•DIAMONDLOCK•MAXSYNC•FILENAME-EXPORTED
 
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateQR, getFallbackPath, getAmountFilename } from "./generateQR.js";
+import { generateQR, getFallbackPath } from "./generateQR.js";
 import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js";
 import { products } from "../config/products.js";
 import { rateLimiter } from "./rateLimiter.js";
 
 const CACHE_DIR = path.join(process.cwd(), "qr-cache");
 
-// ✅ Create fallback dir
+/**
+ * 💾 Standard fallback filename: SYMBOL_0.123456.png
+ */
+export function getAmountFilename(symbol, amount) {
+  return `${symbol.toUpperCase()}_${Number(amount).toFixed(6)}.png`;
+}
+
+/**
+ * ✅ Create fallback cache dir
+ */
 export async function initQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) await fs.mkdir(CACHE_DIR, { recursive: true });
@@ -19,7 +28,9 @@ export async function initQrCacheDir() {
   }
 }
 
-// ✅ Use unified fallback system (same as menu/click/live)
+/**
+ * ✅ Get fallback buffer or generate+save it live
+ */
 export async function getCachedQR(symbol, amount) {
   const filePath = getFallbackPath(symbol, amount);
   try {
@@ -42,7 +53,9 @@ export async function getCachedQR(symbol, amount) {
   }
 }
 
-// ✅ Cleanup old PNGs
+/**
+ * 🧼 Cleanup old fallback PNGs
+ */
 export async function cleanQrCacheDir() {
   try {
     if (!existsSync(CACHE_DIR)) return;
@@ -60,13 +73,15 @@ export async function cleanQrCacheDir() {
   }
 }
 
-// ✅ Generate full fallback QR set
+/**
+ * 🔁 Full fallback QR generator — all variants
+ */
 export async function generateFullQrCache() {
   try {
     await initQrCacheDir();
     await cleanQrCacheDir();
 
-    const deliveryFees = [5, 10]; // fixed fees
+    const deliveryFees = [5, 10]; // Fixed options
     const skipped = [];
 
     let total = 0;
@@ -117,13 +132,14 @@ export async function generateFullQrCache() {
       }
     }
 
-    // 🔁 Retry any skipped ones
+    // 🔁 Retry skipped
     if (skipped.length > 0) {
       console.log(`🔁 Retrying ${skipped.length} skipped fallbacks...`);
       for (const { symbol, totalUSD } of skipped) {
         try {
           await rateLimiter(symbol);
           const rate = await fetchCryptoPrice(symbol);
+          if (!rate || rate <= 0) continue;
           const amount = +(totalUSD / rate).toFixed(6);
           const filePath = getFallbackPath(symbol, amount);
           if (!existsSync(filePath)) {
@@ -146,6 +162,9 @@ export async function generateFullQrCache() {
   }
 }
 
+/**
+ * ♻️ Manual fallback QR rebuild
+ */
 export async function refreshQrCache() {
   console.log("♻️ [refreshQrCache] Refresh started...");
   await generateFullQrCache();
