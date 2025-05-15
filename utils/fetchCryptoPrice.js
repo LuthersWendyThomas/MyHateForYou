@@ -1,4 +1,4 @@
-// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v3.1.9•DIAMONDLOCK+ULTRAFAST
+// 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v3.1.9•DIAMONDLOCK+ULTRAFAST+QRFALLBACKSAFE
 import fetch from 'node-fetch';
 import { rateLimiter } from './rateLimiter.js';
 import { ALIASES }     from '../config/config.js';
@@ -111,14 +111,17 @@ async function fetchAndCache(sym, providers) {
     }
   }
 
-  // ⛑ Fallback: jei turim neseną cache – grąžink ją, kad QR nekabėtų
   const fallback = cache.get(sym);
   if (fallback && now - fallback.ts < MICRO_FALLBACK) {
     console.warn(`⏪ Using recent fallback for ${sym}`);
     return fallback.rate;
   }
 
-  throw new Error(`❌ All providers failed for "${sym}": ${err?.message}`);
+  const reason = Array.isArray(err?.errors)
+    ? err.errors.map(e => e?.message).join(' | ')
+    : err?.message || 'Unknown error';
+
+  throw new Error(`❌ All providers failed for "${sym}": ${reason}`);
 }
 
 async function tryUrls(provider, name) {
@@ -165,7 +168,7 @@ async function retry(fn, retries = 3, base = 300) {
       const delay = e instanceof RateLimitError
         ? e.retryAfterMs
         : base * 2 ** i + Math.random() * 150;
-      await new Promise(res => setTimeout(res, delay));
+      await new Promise(res => setTimeout(res, delay + 300)); // 🔁 Add buffer delay to avoid cascading
     }
   }
   throw err;
