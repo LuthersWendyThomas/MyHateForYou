@@ -1,9 +1,9 @@
-// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v999999999.∞•CLEAN+REFRESH•SKYLOCK
+// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v999999999.∞•ULTRASYNC•GODMODE•DIAMONDLOCK
 
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateFullQrCache } from "../utils/qrCacheManager.js";
+import { generateFullQrCache, initQrCacheDir } from "../utils/qrCacheManager.js";
 import { sendAdminPing } from "../core/handlers/paymentHandler.js";
 
 const CACHE_DIR = "qr-cache";
@@ -23,10 +23,13 @@ async function tryMaintain(isStartup = false) {
     : "♻️ QR fallback cache auto-maintained (every 4h).";
 
   try {
-    console.log(`🧹 [qrCacheMaintainer] Cleaning expired QR files...`);
+    console.log(`🧹 [qrCacheMaintainer] Ensuring cache dir + cleaning expired PNGs...`);
+    await initQrCacheDir();
     await cleanExpiredQRCodes();
-    console.log(`🚀 [qrCacheMaintainer] Refreshing fallback cache at ${now}...`);
+
+    console.log(`🚀 [qrCacheMaintainer] Regenerating full QR fallback cache at ${now}...`);
     await generateFullQrCache();
+
     await sendAdminPing(`✅ ${label}`);
   } catch (err) {
     console.error(`❌ [qrCacheMaintainer] Error:`, err.message);
