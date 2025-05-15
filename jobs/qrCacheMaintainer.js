@@ -1,4 +1,4 @@
-// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v1.0.3•GODMODE•DIAMONDLOCK•SYNCED•NO-BOOT•TABLEVIEW
+// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v1.0.4•GODMODE•DIAMONDLOCK•SYNCED•MATCHED•NO-BOOT
 
 import fs from "fs/promises";
 import path from "path";
@@ -12,10 +12,6 @@ const INTERVAL_HOURS = 4;
 
 let isRunning = false;
 
-/**
- * 🛠️ Start QR fallback cache maintenance (but skip full regen on boot).
- * Full regen now handled in index.js after 3min delay.
- */
 export function startQrCacheMaintenance() {
   console.log(`🛠️ [qrCacheMaintainer] QR fallback maintenance scheduled every ${INTERVAL_HOURS}h`);
   setTimeout(() => scheduleMaintenance(false), INTERVAL_HOURS * 60 * 60 * 1000);
@@ -50,10 +46,10 @@ async function tryMaintain(isStartup = false) {
     const deletedCount = await cleanExpiredQRCodes();
 
     console.log(`🚀 [qrCacheMaintainer] Regenerating full QR fallback cache at ${now}...`);
-    const count = await generateFullQrCache(true);
+    await generateFullQrCache(true); // no count returned
 
     console.log(`✅ [qrCacheMaintainer] All fallback QRs reloaded.`);
-    await sendAdminPing(`✅ ${label}\n🗑️ Expired cleaned: *${deletedCount}*\n📦 Total regenerated: *${count}*`);
+    await sendAdminPing(`✅ ${label}\n🗑️ Expired cleaned: *${deletedCount}*\n📦 QR cache refreshed successfully.`);
   } catch (err) {
     console.error(`❌ [qrCacheMaintainer] Error:`, err.message);
     try {
