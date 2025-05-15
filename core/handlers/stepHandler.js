@@ -400,6 +400,47 @@ async function handleCurrency(bot, uid, input, session, userMessages) {
 
 async function handleOrderConfirm(bot, uid, input, session, userMessages) {
   if (input !== MENU_BUTTONS.CONFIRM.text.toLowerCase()) {
+    await sendAndTrack(bot, uid, "❗️ Please press *Confirm* to proceed.", { parse_mode: "Markdown" }, userMessages);
+    return;
+  }
+
+  // ⏳ Inform the user we're loading payment info
+  await sendAndTrack(bot, uid, "⏳ Loading payment info...", {}, userMessages);
+
+  // ✅ Get current crypto rate
+  const { rate, symbol } = await getSafeRate(session.currency);
+  const usd = session.totalPrice;
+  const amountRaw = usd / rate;
+  const amount = sanitizeAmount(amountRaw);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Calculated crypto amount is invalid");
+  }
+
+  session.expectedAmount = amount;
+  session.step = 9;
+
+  // 🧠 QR Generation with timeout logic
+  const qrPromise = generateQR(symbol, amount, session.wallet);
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('⏱️ [QR Delay]')), 5000)
+  );
+
+  let qrBuffer;
+  try {
+    qrBuffer = await Promise.race([qrPromise, timeout]);
+  } catch (err) {
+    console.warn(err.message);
+    await sendAndTrack(bot, uid, "Still generating QR...", {}, userMessages);
+    qrBuffer = await qrPromise; // continue waiting
+  }
+
+  if (!qrBuffer || !Buffer.isBuffer(qrBuffer) || qrBuffer.length < 1000) {
+    throw new Error("QR generation failed");
+  }
+
+  if (process.env.DEBUG_MESSAGES === "true") {
+    console.debug(`[handlePayment] UID=${uid} AMOUNT=${amount} ${symbol}`);
   }
 
   return handlePayment(bot, uid, userMessages);
