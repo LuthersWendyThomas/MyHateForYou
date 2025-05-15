@@ -213,7 +213,7 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
   const now = Date.now();
   if (!session.lastActionTimestamp) session.lastActionTimestamp = 0;
   if (now - session.lastActionTimestamp < 5000) {
-    await resetSession(uid);
+    await fullResetUserState(uid);
     return sendAndTrack(bot, uid, "⚠️ Auto SPAM system is moving you back to START!", {}, userMessages);
   }
   session.lastActionTimestamp = now;
@@ -244,7 +244,7 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
   // BACK pressed?
   if (input === MENU_BUTTONS.BACK.text.toLowerCase()) {
     if (session.step === 1.2) {
-      await resetSession(uid);
+      await fullResetUserState(uid);
       return safeStart(bot, uid);
     }
     return handleBackButton(bot, uid, session, userMessages);
@@ -265,12 +265,12 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
       case 8:   return handleConfirmOrCancel(bot, uid, input, session, userMessages);
       case 9:   return handleFinalConfirmation(bot, uid, input, session, userMessages);
       default:
-        await resetSession(uid);
+        await fullResetUserState(uid);
         return safeStart(bot, uid);
     }
   } catch (err) {
     console.error("❌ [handleStep fatal]:", err);
-    await resetSession(uid);
+    await fullResetUserState(uid);
     return safeStart(bot, uid);
   }
 }
@@ -478,7 +478,8 @@ async function handleConfirmOrCancel(bot, uid, input, session, userMessages) {
       { parse_mode: "Markdown" }, // <-- SKIRTUMAS ŠITAS: Markdown palaikymas
       userMessages
     );
-    await resetSession(uid);
+    await clearPaymentInfo(uid);
+    await fullResetUserState(uid);
     return safeStart(bot, uid);
   }
 
@@ -496,7 +497,7 @@ async function handleBackButton(bot, uid, session, userMessages) {
 
   // jei grįžtam iš regiono pasirinkimo → į safeStart
   if (session.step === 1) {
-    await resetSession(uid);
+    await fullResetUserState(uid);
     return safeStart(bot, uid);
   }
 
@@ -520,7 +521,8 @@ async function handleFinalConfirmation(bot, uid, input, session, userMessages) {
       { parse_mode: "Markdown" },
       userMessages
     );
-    await resetSession(uid); // iš finalHandler.js
+    await clearPaymentInfo(uid);
+    await fullResetUserState(uid);
     return safeStart(bot, uid);
   }
 
