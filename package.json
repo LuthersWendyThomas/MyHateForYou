@@ -36,7 +36,7 @@
     "node-telegram-bot-api": "^0.66.0",
     "ps-tree": "^1.2.0",
     "qrcode": "^1.5.4",
-    "p-queue": "^7.3.3"
+    "p-queue": "^7.3.4"
   },
   "optionalDependencies": {},
   "overrides": {},
