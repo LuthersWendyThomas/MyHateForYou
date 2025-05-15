@@ -53,10 +53,10 @@ export async function generateQRBuffer(symbol, amount, address) {
 }
 
 export async function generateQR(currency, amount, overrideAddress = null) {
-  const symbol = normalizeSymbol(currency);
-  const sanitizedAmount = sanitizeAmount(amount);
-  const address = resolveAddress(symbol, overrideAddress);
-  const filePath = getFallbackPath(symbol, sanitizedAmount);
+const sanitizedAmount = sanitizeAmount(amount);
+const symbol = normalizeSymbol(currency);
+const address = resolveAddress(symbol, overrideAddress);
+const filePath = getFallbackPath(symbol, sanitizedAmount);
 
   if (!isValidAddress(address)) {
     console.warn(`⚠️ [generateQR] Invalid wallet for ${symbol}: "${address}"`);
