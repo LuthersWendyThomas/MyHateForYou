@@ -1,5 +1,3 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.0.1•DIAMONDLOCK•520xGUARANTEED•FULLSYNC•TABLEMODE
-
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
@@ -60,7 +58,8 @@ export async function generateFullQrCache(forceComplete = true) {
     }
   }
 
-  console.log(`🚀 [QR Cache] Generating *${allTasks.length}* fallback QR scenarios...`);
+  const totalCount = allTasks.length;
+  console.log(`🚀 [QR Cache] Generating *${totalCount}* fallback QR scenarios...`);
 
   const successful = new Set();
   let pending = [...allTasks];
@@ -75,8 +74,9 @@ export async function generateFullQrCache(forceComplete = true) {
 
     for (let i = 0; i < pending.length; i++) {
       const task = pending[i];
+      const index = totalCount - pending.length + i + 1;
       queue.add(() =>
-        attemptGenerate(task, i + 1, pending.length, successful, failed).catch(err => {
+        attemptGenerate({ ...task, index, totalCount }, successful, failed).catch(err => {
           console.warn(`❌ [queueTaskFailed] ${task.normalized} $${task.totalUSD}: ${err.message}`);
           failed.push(task);
         })
@@ -100,15 +100,15 @@ export async function generateFullQrCache(forceComplete = true) {
     console.log(`...and ${successList.length - 10} more.`);
   }
 
-  console.log(`🎯 [DONE] QR fallback generation: ${successful.size}/${allTasks.length}`);
-  if (successful.size < allTasks.length) {
-    console.warn(`⚠️ Still missing: ${allTasks.length - successful.size} PNGs.`);
+  console.log(`🎯 [DONE] QR fallback generation: ${successful.size}/${totalCount}`);
+  if (successful.size < totalCount) {
+    console.warn(`⚠️ Still missing: ${totalCount - successful.size} PNGs.`);
   } else {
-    console.log(`💎 All 520 fallback QR codes successfully generated!`);
+    console.log(`💎 All ${totalCount} fallback QR codes successfully generated!`);
   }
 }
 
-async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total, successful, failed) {
+async function attemptGenerate({ rawSymbol, totalUSD, normalized, index, totalCount }, successful, failed) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       const rate = await fetchCryptoPrice(rawSymbol);
@@ -122,13 +122,14 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
 
       if (existsSync(absPath)) {
         const buffer = await fs.readFile(absPath);
-        if (buffer.length >= 1000) {
-          console.log(`⏭️ [${index}/${total}] Already exists: ${fileName}`);
+        if (Buffer.isBuffer(buffer) && buffer.length >= 1000) {
+          console.log(`⏭️ [${index}/${totalCount}] Already exists: ${fileName}`);
           successful.add(fileName);
           return;
+        } else {
+          await fs.unlink(absPath);
+          console.warn(`♻️ [${index}/${totalCount}] Rewriting invalid: ${normalized} $${totalUSD} → ${amount}`);
         }
-        await fs.unlink(absPath);
-        console.warn(`♻️ [${index}/${total}] Rewriting invalid: ${normalized} $${totalUSD} → ${amount}`);
       }
 
       const buffer = await generateQR(normalized, amount);
@@ -138,12 +139,12 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
 
       await fs.writeFile(absPath, buffer);
       successful.add(fileName);
-      console.log(`✅ [${index}/${total}] ${normalized} $${totalUSD} → ${amount}`);
+      console.log(`✅ [${index}/${totalCount}] ${normalized} $${totalUSD} → ${amount}`);
       return;
 
     } catch (err) {
       const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${normalized} $${totalUSD} → ${err.message}`);
+      console.warn(`⏳ [${index}/${totalCount}] Retry #${attempt + 1} → ${normalized} $${totalUSD} → ${err.message}`);
       await sleep(delay);
     }
   }
@@ -151,7 +152,6 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
   failed.push({ rawSymbol, totalUSD, normalized });
 }
 
-// ✅ DRY-RUN VALIDATOR + AUTO-RECOVERY
 export async function validateQrFallbacks(autoFix = true) {
   try {
     const dir = "qr-cache";
