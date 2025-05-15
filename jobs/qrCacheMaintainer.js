@@ -1,4 +1,4 @@
-// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v999999999.∞•ULTRASYNC•GODMODE•DIAMONDLOCK
+// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v999999999.∞•FULLSYNC•REQUEUE•SAFEBOOT
 
 import fs from "fs/promises";
 import path from "path";
@@ -7,7 +7,7 @@ import { generateFullQrCache, initQrCacheDir } from "../utils/qrCacheManager.js"
 import { sendAdminPing } from "../core/handlers/paymentHandler.js";
 
 const CACHE_DIR = "qr-cache";
-const MAX_AGE_MS = 60 * 60 * 1000; // 1h
+const MAX_AGE_MS = 60 * 60 * 1000; // 1h = 60min
 const INTERVAL_HOURS = 4;
 
 let isRunning = false;
@@ -23,10 +23,15 @@ function scheduleMaintenance(isStartup = false) {
     console.log("⏳ [qrCacheMaintainer] Skipping: previous maintenance still in progress.");
     return;
   }
+
   isRunning = true;
-  tryMaintain(isStartup).finally(() => {
-    isRunning = false;
-  });
+  tryMaintain(isStartup)
+    .catch(err => {
+      console.error(`❌ [qrCacheMaintainer] Maintenance failure: ${err.message}`);
+    })
+    .finally(() => {
+      isRunning = false;
+    });
 }
 
 async function tryMaintain(isStartup = false) {
@@ -41,7 +46,7 @@ async function tryMaintain(isStartup = false) {
     await cleanExpiredQRCodes();
 
     console.log(`🚀 [qrCacheMaintainer] Regenerating full QR fallback cache at ${now}...`);
-    await generateFullQrCache(); // DROŽIA VISUS 520
+    await generateFullQrCache(); // guarantees all 520 regenerated with requeue logic
 
     console.log(`✅ [qrCacheMaintainer] All fallback QRs reloaded.`);
     await sendAdminPing(`✅ ${label}`);
@@ -62,7 +67,6 @@ async function cleanExpiredQRCodes() {
     const targets = files.filter(f => f.endsWith(".png"));
 
     let deleted = 0;
-
     for (const file of targets) {
       const fullPath = path.join(CACHE_DIR, file);
       const stats = await fs.stat(fullPath);
