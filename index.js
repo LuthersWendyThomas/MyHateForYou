@@ -1,4 +1,4 @@
-// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.0.6•GODMODE+DIAMONDLOCK+QRFALLBACKFIX
+// 📦 index.js | BalticPharmacyBot — FINAL IMMORTAL v1.0.7•DIAMONDLOCK•QRFALLBACKFIX
 // 24/7 BULLETPROOF • ADMIN NOTIFY • JOIN TRACKING • QR SYSTEM READY • FULL PERSISTENCE
 
 import dotenv from "dotenv";
@@ -14,34 +14,31 @@ import { startQrCacheMaintenance } from "./jobs/qrCacheMaintainer.js";
 import { initQrCacheDir } from "./utils/qrCacheManager.js";
 import "./config/discountSync.js";
 
-// ✅ Persistent set of joined users
+// ✅ Persistent user tracker
 const NEW_USERS_FILE = "./.newusers.json";
 let newUserSet = new Set();
-
 try {
   const raw = fs.existsSync(NEW_USERS_FILE) ? fs.readFileSync(NEW_USERS_FILE, "utf8") : "[]";
   const parsed = JSON.parse(raw);
   if (Array.isArray(parsed)) newUserSet = new Set(parsed);
 } catch (err) {
-  console.warn("⚠️ Failed to read .newusers.json", err.message);
+  console.warn("⚠️ Failed to read .newusers.json:", err.message);
 }
 
-/**
- * 🔔 Crash + rejection notifier
- */
 async function notifyCrash(source, err) {
-  console.error(`💥 [CRASH during ${source}]:`, err);
+  const msg = typeof err === "object" && err !== null ? err.message || JSON.stringify(err) : String(err);
+  console.error(`💥 [CRASH during ${source}]:`, msg);
+  try {
+    await sendAdminPing(`❌ *${source.toUpperCase()} CRASH:*\n\`\`\`\n${msg}\n\`\`\``);
+  } catch {}
 }
 
-// 🔧 Init & main logic boot
 (async () => {
   try {
     initBotInstance();
 
-    // ✅ QR fallback cache dir created on boot (bulletproof)
     await initQrCacheDir();
 
-    // ✅ JOIN TRACKING (ADMIN SKIP, persistent memory)
     BOT.INSTANCE.on("message", async (msg) => {
       const uid = msg?.from?.id;
       const adminId = process.env.ADMIN_ID || process.env.BOT_ADMIN_ID;
@@ -51,41 +48,33 @@ async function notifyCrash(source, err) {
       try {
         await writeFile(NEW_USERS_FILE, JSON.stringify([...newUserSet]), "utf8");
       } catch (err) {
-        console.warn("⚠️ Failed to save .newusers.json", err.message);
+        console.warn("⚠️ Failed to save .newusers.json:", err.message);
       }
 
       const timestamp = new Date().toLocaleString("en-GB");
-      await sendAdminPing(
-        `🆕 *New user joined*\n` +
-        `👤 UID: \`${uid}\`\n` +
-        `🕒 Joined: ${timestamp}`
-      );
+      await sendAdminPing(`🆕 *New user joined*\n👤 UID: \`${uid}\`\n🕒 Joined: ${timestamp}`);
     });
 
     registerMainHandler(BOT.INSTANCE);
 
-    // ♻️ Auto-expire zombie/idle sessions every 10 minutes
     setInterval(() => {
       try {
         autoExpireSessions();
       } catch (err) {
-        console.error("❌ [autoExpireSessions crash]", err);
+        console.error("❌ [autoExpireSessions crash]:", err);
       }
     }, 10 * 60 * 1000);
 
-    // 🧹 Clean up stale payment timers every 5 minutes
     setInterval(() => {
       try {
         cleanStalePaymentTimers();
       } catch (err) {
-        console.error("❌ [cleanStalePaymentTimers crash]", err);
+        console.error("❌ [cleanStalePaymentTimers crash]:", err);
       }
     }, 5 * 60 * 1000);
 
-    // ✅ Start fallback QR refresher (immediate + hourly)
     startQrCacheMaintenance();
 
-    // 🚀 Final startup banner
     const me = await BOT.INSTANCE.getMe();
     const pkg = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"));
     const version = pkg.version || "1.0.0";
@@ -102,35 +91,32 @@ async function notifyCrash(source, err) {
 
     await sendAdminPing(`✅ Bot started successfully\nVersion: *v${version}*\n🕒 ${now}`);
 
-    // ✅ Final "memory warmed" ping after 12 min
     setTimeout(() => {
       sendAdminPing("✅ Bot fully ready (RAM warmed up, timers running, FSM live).");
     }, 12 * 60 * 1000);
 
   } catch (err) {
-    console.error("💥 [BOOT ERROR]:", err);
-    await sendAdminPing(`❌ Bot failed to start:\n\`\`\`\n${err.message}\n\`\`\``);
     await notifyCrash("boot", err);
     process.exit(1);
   }
 })();
 
-// 🛡️ Global error catchers
+// 🛡️ Global failsafes
 process.on("uncaughtException", async (err) => {
-  console.error("❌ [UNCAUGHT EXCEPTION]", err);
   await notifyCrash("uncaughtException", err);
   process.exit(1);
 });
 
 process.on("unhandledRejection", async (reason) => {
-  console.error("💥 [UNHANDLED REJECTION]:", reason);
-  try {
-    await sendAdminPing(`❌ *UNHANDLED REJECTION:*\n\`${reason?.message || reason}\``);
-  } catch (e) {}
+  const error =
+    reason instanceof AggregateError
+      ? reason.errors?.map(e => e?.message || String(e)).join(" | ")
+      : reason?.message || String(reason);
+  await notifyCrash("unhandledRejection", error);
+  process.exit(1);
 });
 
-// 🛑 Graceful shutdowns
-["SIGINT", "SIGTERM", "SIGQUIT"].forEach((sig) =>
+["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig =>
   process.on(sig, async () => {
     console.log(`\n🛑 Signal received (${sig}) → stopping bot...`);
     try {
