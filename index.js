@@ -121,7 +121,7 @@ async function notifyCrash(source, err) {
       try {
         await initQrCacheDir();
         await generateFullQrCache();
-        await validateQrFallbacks();
+        await validateQrFallbacks(true);
         console.log("✅ Delayed QR fallback generation complete and validated.");
         await sendAdminPing("📦 Delayed QR fallback generation completed successfully (post-boot).");
       } catch (err) {
