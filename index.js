@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import fs from "fs";
+import express from "express";
 import { readFile, writeFile } from "fs/promises";
 import { initBotInstance, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
@@ -13,6 +14,11 @@ import { sendAdminPing } from "./core/handlers/paymentHandler.js";
 import { startQrCacheMaintenance } from "./jobs/qrCacheMaintainer.js";
 import { initQrCacheDir } from "./utils/qrCacheManager.js";
 import "./config/discountSync.js";
+
+// ✅ Healthcheck for Render
+const app = express();
+app.get("/healthz", (_, res) => res.send("OK"));
+app.listen(3000, () => console.log("✅ Healthcheck ready on :3000"));
 
 // ✅ Persistent user tracker
 const NEW_USERS_FILE = "./.newusers.json";
