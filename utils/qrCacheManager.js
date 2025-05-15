@@ -1,3 +1,5 @@
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.0.2•GODMODE•DIAMONDLOCK•FULLSYNC•520xVALIDATED
+
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
@@ -71,12 +73,13 @@ export async function generateFullQrCache(forceComplete = true) {
 
     const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
     const failed = [];
+    const offset = totalCount - pending.length;
 
     for (let i = 0; i < pending.length; i++) {
       const task = pending[i];
-      const index = totalCount - pending.length + i + 1;
+      const index = offset + i + 1;
       queue.add(() =>
-        attemptGenerate({ ...task, index, totalCount }, successful, failed).catch(err => {
+        attemptGenerate({ ...task, index, total: totalCount }, successful, failed).catch(err => {
           console.warn(`❌ [queueTaskFailed] ${task.normalized} $${task.totalUSD}: ${err.message}`);
           failed.push(task);
         })
@@ -108,7 +111,7 @@ export async function generateFullQrCache(forceComplete = true) {
   }
 }
 
-async function attemptGenerate({ rawSymbol, totalUSD, normalized, index, totalCount }, successful, failed) {
+async function attemptGenerate({ rawSymbol, totalUSD, normalized, index, total }, successful, failed) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       const rate = await fetchCryptoPrice(rawSymbol);
@@ -122,14 +125,13 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized, index, totalCo
 
       if (existsSync(absPath)) {
         const buffer = await fs.readFile(absPath);
-        if (Buffer.isBuffer(buffer) && buffer.length >= 1000) {
-          console.log(`⏭️ [${index}/${totalCount}] Already exists: ${fileName}`);
+        if (buffer.length >= 1000) {
+          console.log(`⏭️ [${index}/${total}] Already exists: ${fileName}`);
           successful.add(fileName);
           return;
-        } else {
-          await fs.unlink(absPath);
-          console.warn(`♻️ [${index}/${totalCount}] Rewriting invalid: ${normalized} $${totalUSD} → ${amount}`);
         }
+        await fs.unlink(absPath);
+        console.warn(`♻️ [${index}/${total}] Rewriting invalid: ${normalized} $${totalUSD} → ${amount}`);
       }
 
       const buffer = await generateQR(normalized, amount);
@@ -139,12 +141,12 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized, index, totalCo
 
       await fs.writeFile(absPath, buffer);
       successful.add(fileName);
-      console.log(`✅ [${index}/${totalCount}] ${normalized} $${totalUSD} → ${amount}`);
+      console.log(`✅ [${index}/${total}] ${normalized} $${totalUSD} → ${amount}`);
       return;
 
     } catch (err) {
       const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-      console.warn(`⏳ [${index}/${totalCount}] Retry #${attempt + 1} → ${normalized} $${totalUSD} → ${err.message}`);
+      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${normalized} $${totalUSD} → ${err.message}`);
       await sleep(delay);
     }
   }
