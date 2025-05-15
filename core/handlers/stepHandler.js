@@ -214,7 +214,7 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
   if (!session.lastActionTimestamp) session.lastActionTimestamp = 0;
   if (now - session.lastActionTimestamp < 5000) {
     await fullResetUserState(uid);
-    return sendAndTrack(bot, uid, "⚠️ Auto SPAM system is moving you back to START!", {}, userMessages);
+    await sendAndTrack(bot, uid, "⚠️ Auto SPAM system is moving you back to START!", {}, userMessages);
     return safeStart(bot, uid);
   }
   session.lastActionTimestamp = now;
