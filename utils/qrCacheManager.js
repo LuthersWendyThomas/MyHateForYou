@@ -1,4 +1,5 @@
-// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v999999999.∞•ULTIMATE•REALITYLOCK•FIXED
+// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v999999999.∞•GODMODE•REQUEUE•FULLSYNC•SANITYFIXED
+
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
@@ -15,7 +16,7 @@ const MAX_RETRIES = 7;
 const BASE_DELAY_MS = 2000;
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(res => setTimeout(res, ms));
 }
 
 export async function initQrCacheDir() {
@@ -74,7 +75,10 @@ export async function generateFullQrCache() {
     for (let i = 0; i < pending.length; i++) {
       const task = pending[i];
       queue.add(() =>
-        attemptGenerate(task, i + 1, pending.length, successful, failed)
+        attemptGenerate(task, i + 1, pending.length, successful, failed).catch(err => {
+          console.warn(`❌ [queueTaskFailed] ${task.normalized} $${task.totalUSD}: ${err.message}`);
+          failed.push(task);
+        })
       );
     }
 
@@ -97,28 +101,27 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
       if (!rate || rate <= 0) throw new Error(`Invalid rate: ${rate}`);
 
       const amount = sanitizeAmount(totalUSD / rate);
+      if (!amount || amount <= 0) throw new Error(`Invalid sanitized amount: ${amount}`);
+
       const fileName = `qr-cache/${normalized}_${amount.toFixed(6)}.png`;
-      const key = `${normalized}_${amount.toFixed(6)}`;
+      const absPath = path.resolve(fileName);
 
-      let alreadyValid = false;
-      try {
-        const stats = await fs.stat(fileName);
-        alreadyValid = stats.isFile() && stats.size > 1000;
-      } catch {}
-
-      if (alreadyValid) {
-        successful.add(key);
+      if (existsSync(absPath)) {
+        successful.add(fileName);
         console.log(`🟦 [${index}/${total}] Exists: ${normalized} $${totalUSD} → ${amount}`);
         return;
       }
 
       const buffer = await generateQR(normalized, amount);
-      if (!buffer || buffer.length < 1000) throw new Error("Invalid QR buffer");
+      if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 1000) {
+        throw new Error("Invalid QR buffer");
+      }
 
-      await fs.writeFile(fileName, buffer);
-      successful.add(key);
+      await fs.writeFile(absPath, buffer);
+      successful.add(fileName);
       console.log(`✅ [${index}/${total}] ${normalized} $${totalUSD} → ${amount}`);
       return;
+
     } catch (err) {
       const delay = BASE_DELAY_MS * Math.pow(2, attempt);
       console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} after ${delay}ms → ${normalized} $${totalUSD} → ${err.message}`);
