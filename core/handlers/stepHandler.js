@@ -206,8 +206,14 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
   const input = normalizeText(text);
 
   // 🛡️ Anti-flood/spam filter (context-aware: ignores buttons + /start + ANTISPAM)
-  if (!userSessions[uid]) userSessions[uid] = { step: 1, createdAt: Date.now() };
-  const session = userSessions[uid];
+  if (!userSessions[uid]) {
+    userSessions[uid] = { step: 1, createdAt: Date.now() };
+  }
+  if (!isValidStep(userSessions[uid].step)) {
+    userSessions[uid].step = 1;
+  }
+
+  const session = userSessions[uid]; // ✅ Deklaruojamas tik vieną kartą
 
   // 🧠 Per-user paspaudimų debounceris
   const now = Date.now();
