@@ -123,9 +123,10 @@ process.on("uncaughtException", async (err) => {
 });
 
 process.on("unhandledRejection", async (reason) => {
-  console.error("❌ [UNHANDLED REJECTION]", reason);
-  await notifyCrash("unhandledRejection", reason);
-  process.exit(1);
+  console.error("💥 [UNHANDLED REJECTION]:", reason);
+  try {
+    await sendAdminPing(`❌ *UNHANDLED REJECTION:*\n\`${reason?.message || reason}\``);
+  } catch (e) {}
 });
 
 // 🛑 Graceful shutdowns
