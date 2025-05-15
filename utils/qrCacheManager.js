@@ -43,7 +43,7 @@ export async function generateFullQrCache() {
 
   for (const category in products) {
     for (const product of products[category]) {
-      if (!product.active || !product.prices) continue;
+      if (!product.prices) continue; // INCLUDE ALL PRODUCTS, even if inactive
       for (const [qty, price] of Object.entries(product.prices)) {
         const usd = Number(price);
         if (!usd || usd <= 0) continue;
