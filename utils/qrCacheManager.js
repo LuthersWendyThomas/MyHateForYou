@@ -1,4 +1,4 @@
-// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v999999999.∞•GODMODE•REQUEUE•FULLSYNC•SANITYFIXED
+// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v999999999.∞•GODMODE•REQUEUE•FULLSYNC•VALIDATIONLOCK
 
 import fs from "fs/promises";
 import path from "path";
@@ -16,7 +16,7 @@ const MAX_RETRIES = 7;
 const BASE_DELAY_MS = 2000;
 
 function sleep(ms) {
-  return new Promise(res => setTimeout(res, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export async function initQrCacheDir() {
@@ -130,4 +130,41 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
   }
 
   failed.push({ rawSymbol, totalUSD, normalized });
+}
+
+// ✅ DRY-RUN VALIDATOR: Check all PNGs for actual buffer integrity
+export async function validateQrFallbacks() {
+  try {
+    const dir = "qr-cache";
+    const files = await fs.readdir(dir);
+    const pngs = files.filter(f => f.endsWith(".png"));
+    let validCount = 0;
+    let corruptCount = 0;
+
+    for (const file of pngs) {
+      const fullPath = path.join(dir, file);
+      try {
+        const buffer = await fs.readFile(fullPath);
+        if (Buffer.isBuffer(buffer) && buffer.length > 1000) {
+          validCount++;
+        } else {
+          corruptCount++;
+          console.warn(`⚠️ Corrupt QR fallback: ${file}`);
+        }
+      } catch (err) {
+        corruptCount++;
+        console.warn(`⚠️ Failed to read QR fallback: ${file} — ${err.message}`);
+      }
+    }
+
+    console.log(`📊 Fallback QR validation: ${validCount} valid / ${pngs.length} total`);
+    if (corruptCount > 0) {
+      console.warn(`❌ Detected ${corruptCount} corrupt or unreadable PNGs in fallback cache.`);
+    } else {
+      console.log(`✅ All fallback QR files are valid.`);
+    }
+
+  } catch (err) {
+    console.error(`❌ Failed to validate fallback QR cache: ${err.message}`);
+  }
 }
