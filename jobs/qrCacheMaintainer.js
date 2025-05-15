@@ -10,10 +10,23 @@ const CACHE_DIR = "qr-cache";
 const MAX_AGE_MS = 60 * 60 * 1000; // 1h
 const INTERVAL_HOURS = 4;
 
+let isRunning = false;
+
 export function startQrCacheMaintenance() {
   console.log(`🛠️ [qrCacheMaintainer] Starting QR fallback maintenance every ${INTERVAL_HOURS}h`);
-  tryMaintain(true);
-  setInterval(() => tryMaintain(false), INTERVAL_HOURS * 60 * 60 * 1000);
+  scheduleMaintenance(true);
+  setInterval(() => scheduleMaintenance(false), INTERVAL_HOURS * 60 * 60 * 1000);
+}
+
+function scheduleMaintenance(isStartup = false) {
+  if (isRunning) {
+    console.log("⏳ [qrCacheMaintainer] Skipping: previous maintenance still in progress.");
+    return;
+  }
+  isRunning = true;
+  tryMaintain(isStartup).finally(() => {
+    isRunning = false;
+  });
 }
 
 async function tryMaintain(isStartup = false) {
@@ -28,8 +41,9 @@ async function tryMaintain(isStartup = false) {
     await cleanExpiredQRCodes();
 
     console.log(`🚀 [qrCacheMaintainer] Regenerating full QR fallback cache at ${now}...`);
-    await generateFullQrCache();
+    await generateFullQrCache(); // DROŽIA VISUS 520
 
+    console.log(`✅ [qrCacheMaintainer] All fallback QRs reloaded.`);
     await sendAdminPing(`✅ ${label}`);
   } catch (err) {
     console.error(`❌ [qrCacheMaintainer] Error:`, err.message);
