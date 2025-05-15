@@ -109,9 +109,8 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
       const absPath = path.resolve(fileName);
 
       if (existsSync(absPath)) {
-        successful.add(fileName);
-        console.log(`🟦 [${index}/${total}] Exists: ${normalized} $${totalUSD} → ${amount}`);
-        return;
+        await fs.unlink(absPath); // 🔥 FORCE REWRITE
+        console.warn(`♻️ [${index}/${total}] Deleted existing PNG to force regeneration: ${normalized} $${totalUSD} → ${amount}`);
       }
 
       const buffer = await generateQR(normalized, amount);
@@ -122,7 +121,6 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
       await fs.writeFile(absPath, buffer);
       successful.add(fileName);
       console.log(`✅ [${index}/${total}] ${normalized} $${totalUSD} → ${amount}`);
-      return;
 
     } catch (err) {
       const delay = BASE_DELAY_MS * Math.pow(2, attempt);
