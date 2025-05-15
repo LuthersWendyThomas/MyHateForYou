@@ -121,8 +121,14 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
       const absPath = path.resolve(fileName);
 
       if (existsSync(absPath)) {
-        await fs.unlink(absPath); // 🔥 FORCE REWRITE
-        console.warn(`♻️ [${index}/${total}] Overwriting existing: ${normalized} $${totalUSD} → ${amount}`);
+        const buffer = await fs.readFile(absPath);
+        if (buffer.length >= 1000) {
+          console.log(`⏭️ [${index}/${total}] Already exists: ${fileName}`);
+          successful.add(fileName);
+          return;
+        }
+        await fs.unlink(absPath);
+        console.warn(`♻️ [${index}/${total}] Rewriting invalid: ${normalized} $${totalUSD} → ${amount}`);
       }
 
       const buffer = await generateQR(normalized, amount);
@@ -173,9 +179,11 @@ export async function validateQrFallbacks(autoFix = true) {
       if (autoFix) {
         console.warn("♻️ Attempting auto-regeneration of corrupt QRs...");
         const tasks = corrupt.map(name => {
-          const [symbol, amt] = name.replace(".png", "").split("_");
-          return { rawSymbol: symbol, totalUSD: null, normalized: symbol, amount: parseFloat(amt) };
-        });
+          const [symbol, amtRaw] = name.replace(".png", "").split("_");
+          const amount = sanitizeAmount(parseFloat(amtRaw));
+          if (!amount || isNaN(amount) || amount <= 0) return null;
+          return { rawSymbol: symbol, totalUSD: null, normalized: symbol, amount };
+        }).filter(Boolean);
 
         const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
         for (let i = 0; i < tasks.length; i++) {
@@ -183,7 +191,7 @@ export async function validateQrFallbacks(autoFix = true) {
           queue.add(async () => {
             const buffer = await generateQR(task.normalized, task.amount);
             const out = path.resolve("qr-cache", `${task.normalized}_${sanitizeAmount(task.amount).toFixed(6)}.png`);
-            if (buffer) await fs.writeFile(out, buffer);
+            if (buffer && buffer.length >= 1000) await fs.writeFile(out, buffer);
           });
         }
 
