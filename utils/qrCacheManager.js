@@ -1,4 +1,4 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.0.0•DIAMONDLOCK•520xGUARANTEED•∞REQUEUE•FULLSYNC
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.0.1•DIAMONDLOCK•520xGUARANTEED•FULLSYNC•TABLEMODE
 
 import fs from "fs/promises";
 import path from "path";
@@ -60,7 +60,7 @@ export async function generateFullQrCache(forceComplete = true) {
     }
   }
 
-  console.log(`🚀 [QR Cache] Starting generation of ${allTasks.length} fallback QR scenarios...`);
+  console.log(`🚀 [QR Cache] Generating *${allTasks.length}* fallback QR scenarios...`);
 
   const successful = new Set();
   let pending = [...allTasks];
@@ -68,7 +68,7 @@ export async function generateFullQrCache(forceComplete = true) {
 
   while (pending.length > 0 && cycle < 10) {
     cycle++;
-    console.log(`🔁 [Cycle ${cycle}] Tasks left: ${pending.length}...`);
+    console.log(`🔁 [Cycle ${cycle}] Pending: ${pending.length}...`);
 
     const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
     const failed = [];
@@ -89,11 +89,22 @@ export async function generateFullQrCache(forceComplete = true) {
     if (!forceComplete) break;
   }
 
+  const successList = [...successful].map((f, i) => ({
+    "#": i + 1,
+    "✅ FILE": path.basename(f),
+    "📁 PATH": f
+  }));
+
+  console.table(successList.slice(0, 10));
+  if (successList.length > 10) {
+    console.log(`...and ${successList.length - 10} more.`);
+  }
+
   console.log(`🎯 [DONE] QR fallback generation: ${successful.size}/${allTasks.length}`);
   if (successful.size < allTasks.length) {
     console.warn(`⚠️ Still missing: ${allTasks.length - successful.size} PNGs.`);
   } else {
-    console.log(`💎 All fallback QR codes successfully generated!`);
+    console.log(`💎 All 520 fallback QR codes successfully generated!`);
   }
 }
 
@@ -111,7 +122,7 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
 
       if (existsSync(absPath)) {
         await fs.unlink(absPath); // 🔥 FORCE REWRITE
-        console.warn(`♻️ [${index}/${total}] Deleted existing PNG to force regeneration: ${normalized} $${totalUSD} → ${amount}`);
+        console.warn(`♻️ [${index}/${total}] Overwriting existing: ${normalized} $${totalUSD} → ${amount}`);
       }
 
       const buffer = await generateQR(normalized, amount);
@@ -122,10 +133,11 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
       await fs.writeFile(absPath, buffer);
       successful.add(fileName);
       console.log(`✅ [${index}/${total}] ${normalized} $${totalUSD} → ${amount}`);
+      return;
 
     } catch (err) {
       const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} after ${delay}ms → ${normalized} $${totalUSD} → ${err.message}`);
+      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${normalized} $${totalUSD} → ${err.message}`);
       await sleep(delay);
     }
   }
