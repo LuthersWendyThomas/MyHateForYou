@@ -1,4 +1,4 @@
-// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v999999999.∞•GODMODE•REQUEUE•FULLSYNC
+// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v999999999.∞•ULTIMATE•REALITYLOCK•FIXED
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
@@ -98,9 +98,16 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
 
       const amount = sanitizeAmount(totalUSD / rate);
       const fileName = `qr-cache/${normalized}_${amount.toFixed(6)}.png`;
+      const key = `${normalized}_${amount.toFixed(6)}`;
 
-      if (existsSync(fileName)) {
-        successful.add(fileName);
+      let alreadyValid = false;
+      try {
+        const stats = await fs.stat(fileName);
+        alreadyValid = stats.isFile() && stats.size > 1000;
+      } catch {}
+
+      if (alreadyValid) {
+        successful.add(key);
         console.log(`🟦 [${index}/${total}] Exists: ${normalized} $${totalUSD} → ${amount}`);
         return;
       }
@@ -109,7 +116,7 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
       if (!buffer || buffer.length < 1000) throw new Error("Invalid QR buffer");
 
       await fs.writeFile(fileName, buffer);
-      successful.add(fileName);
+      successful.add(key);
       console.log(`✅ [${index}/${total}] ${normalized} $${totalUSD} → ${amount}`);
       return;
     } catch (err) {
