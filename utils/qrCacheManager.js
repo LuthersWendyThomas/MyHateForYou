@@ -1,5 +1,5 @@
 // 📦 utils/qrCacheManager.js | FINAL IMMORTAL v999999999.∞.ULTRA•GODMODE•DIAMONDLOCK
-// FULL 520x SUPPORT • BTC+ETH+MATIC+SOL • 2 DELIVERY FEES • 65 PRODUCTS • BULLETPROOF 24/7
+// FIXED: 520x Fallback Scenarios Covered Correctly (65x products/prices × 2 deliveryFees × 4 networks)
 
 import fs from "fs/promises";
 import path from "path";
@@ -38,27 +38,21 @@ export async function generateFullQrCache() {
   await initQrCacheDir();
 
   const deliveryFees = deliveryMethods.map(m => Number(m.fee));
-  const symbols = Object.keys(NETWORKS); // [BTC, ETH, MATIC, SOL]
-  const seenKeys = new Set();
+  const networks = Object.keys(NETWORKS); // BTC, ETH, MATIC, SOL
   const queue = [];
 
   for (const category in products) {
     for (const product of products[category]) {
-      const prices = product.prices || {};
-      for (const [qty, price] of Object.entries(prices)) {
+      if (!product.active || !product.prices) continue;
+      for (const [qty, price] of Object.entries(product.prices)) {
         const usd = Number(price);
         if (!usd || usd <= 0) continue;
 
         for (const fee of deliveryFees) {
           const totalUSD = usd + fee;
 
-          for (const rawSymbol of symbols) {
+          for (const rawSymbol of networks) {
             const normalized = normalizeSymbol(rawSymbol);
-            const rateKey = sanitizeAmount(totalUSD); // For dedupe
-            const key = `${normalized}_${rateKey}`;
-            if (seenKeys.has(key)) continue;
-
-            seenKeys.add(key);
             queue.push({ rawSymbol, totalUSD, normalized });
           }
         }
@@ -66,7 +60,7 @@ export async function generateFullQrCache() {
     }
   }
 
-  console.log(`🚀 [QR Cache] Preparing ${queue.length} unique fallback QR scenarios...`);
+  console.log(`🚀 [QR Cache] Preparing ${queue.length} fallback QR scenarios...`); // Should log 520
 
   let done = 0;
   const successful = new Set();
@@ -97,7 +91,7 @@ export async function generateFullQrCache() {
 
         if (existsSync(fileName)) {
           done++;
-          successful.add(`${normalized}_${amount}`);
+          successful.add(fileName);
           console.log(`🟦 [${index}/${total}] Already exists: ${normalized} $${totalUSD} → ${amount}`);
           return;
         }
@@ -105,7 +99,7 @@ export async function generateFullQrCache() {
         const buffer = await generateQR(normalized, amount);
         if (buffer && Buffer.isBuffer(buffer) && buffer.length > 1000) {
           await fs.writeFile(fileName, buffer);
-          successful.add(`${normalized}_${amount}`);
+          successful.add(fileName);
           done++;
           console.log(`✅ [${index}/${total}] ${normalized} $${totalUSD} → ${amount}`);
           return;
@@ -140,6 +134,6 @@ export async function generateFullQrCache() {
 
   console.log(`🎯 [DONE] QR fallback generation complete: ${successful.size}/${queue.length}`);
   if (successful.size < queue.length) {
-    console.warn(`⚠️ Some QR PNGs failed to generate: ${queue.length - successful.size} missing.`);
+    console.warn(`⚠️ Missing QR PNGs: ${queue.length - successful.size} from ${queue.length}`);
   }
 }
