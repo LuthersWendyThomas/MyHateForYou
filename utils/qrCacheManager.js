@@ -1,4 +1,4 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v9999999999•RETRY•SYNCLOCK
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v999999999999.∞+RETRY+SYNC+SKYLOCK
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
@@ -52,7 +52,8 @@ export async function generateFullQrCache() {
 
           for (const rawSymbol of symbols) {
             const normalized = normalizeSymbol(rawSymbol);
-            const key = `${normalized}_${sanitizeAmount(totalUSD)}`;
+            const rateKey = sanitizeAmount(totalUSD); // US cent amount for dedupe
+            const key = `${normalized}_${rateKey}`;
             if (seenKeys.has(key)) continue;
 
             seenKeys.add(key);
@@ -63,31 +64,42 @@ export async function generateFullQrCache() {
     }
   }
 
-  console.log(`🚀 [QR Cache] Preparing to generate ${queue.length} unique fallback QR codes...`);
+  console.log(`🚀 [QR Cache] Starting generation of ${queue.length} fallback QR codes...`);
 
-  const failed = new Set();
+  let done = 0;
   const successful = new Set();
 
   async function processTask({ rawSymbol, totalUSD, normalized }) {
-    let success = false;
-    while (!success) {
+    let retryCount = 0;
+    while (true) {
       try {
         const rate = await fetchCryptoPrice(rawSymbol);
-        if (!rate || rate <= 0) throw new Error("Invalid rate");
+        if (!rate || rate <= 0) throw new Error("Invalid crypto rate");
 
         const amount = sanitizeAmount(totalUSD / rate);
+        const fileName = `qr-cache/${normalized}_${amount}.png`;
+
+        if (existsSync(fileName)) {
+          done++;
+          successful.add(`${normalized}_${amount}`);
+          console.log(`🟦 [Skip] Already exists: ${fileName} (${done}/${queue.length})`);
+          return;
+        }
+
         const buffer = await generateQR(normalized, amount);
         if (buffer && Buffer.isBuffer(buffer) && buffer.length > 1000) {
-          const fileName = `qr-cache/${normalized}_${amount}.png`;
           await fs.writeFile(fileName, buffer);
-          console.log(`✅ [QR] ${normalized} $${totalUSD} → ${amount.toFixed(6)}`);
           successful.add(`${normalized}_${amount}`);
-          success = true;
+          done++;
+          console.log(`✅ [QR] ${normalized} $${totalUSD} → ${amount} (${done}/${queue.length})`);
+          return;
         } else {
-          throw new Error("QR buffer invalid");
+          throw new Error("Invalid buffer");
         }
+
       } catch (err) {
-        console.warn(`⏳ [Retry in ${RETRY_DELAY_MS / 1000}s] ${normalized} $${totalUSD} → ${err.message}`);
+        retryCount++;
+        console.warn(`⏳ [Retry #${retryCount}] ${normalized} $${totalUSD} → ${err.message}`);
         await sleep(RETRY_DELAY_MS);
       }
     }
@@ -107,5 +119,5 @@ export async function generateFullQrCache() {
 
   await runInBatches(queue, MAX_CONCURRENCY);
 
-  console.log(`🎯 [DONE] Fallback QR cache generated: ${successful.size}/${queue.length}`);
+  console.log(`🎯 [generateFullQrCache] DONE: ${done}/${queue.length} fallback QR codes generated.`);
 }
