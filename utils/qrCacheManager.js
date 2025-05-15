@@ -1,4 +1,4 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.0.3•DIAMONDLOCK•520xFORCEOVERWRITE
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v1.0.4•GODMODE•DIAMONDLOCK•VALIDATED•520xFORCEOVERWRITE
 
 import fs from "fs/promises";
 import path from "path";
@@ -91,15 +91,15 @@ export async function generateFullQrCache(forceComplete = true) {
     if (!forceComplete) break;
   }
 
-  const successList = [...successful].map((f, i) => ({
-    "#": i + 1,
-    "✅ FILE": path.basename(f),
-    "📁 PATH": f
-  }));
-
-  console.table(successList.slice(0, 10));
-  if (successList.length > 10) {
-    console.log(`...and ${successList.length - 10} more.`);
+  console.table(
+    [...successful].slice(0, 10).map((f, i) => ({
+      "#": i + 1,
+      "✅ FILE": path.basename(f),
+      "📁 PATH": f
+    }))
+  );
+  if (successful.size > 10) {
+    console.log(`...and ${successful.size - 10} more.`);
   }
 
   console.log(`🎯 [DONE] QR fallback generation: ${successful.size}/${totalCount}`);
@@ -122,7 +122,6 @@ async function attemptForceGenerate({ rawSymbol, totalUSD, normalized, index, to
       const fileName = `qr-cache/${normalized}_${amount.toFixed(6)}.png`;
       const absPath = path.resolve(fileName);
 
-      // Always delete old file, force regenerate
       if (existsSync(absPath)) {
         await fs.unlink(absPath);
         console.log(`♻️ [${index}/${total}] Overwriting: ${fileName}`);
@@ -146,4 +145,68 @@ async function attemptForceGenerate({ rawSymbol, totalUSD, normalized, index, to
   }
 
   failed.push({ rawSymbol, totalUSD, normalized });
+}
+
+export async function validateQrFallbacks(autoFix = true) {
+  try {
+    const dir = "qr-cache";
+    const files = await fs.readdir(dir);
+    const pngs = files.filter(f => f.endsWith(".png"));
+    const corrupt = [];
+
+    for (const file of pngs) {
+      const fullPath = path.join(dir, file);
+      try {
+        const buffer = await fs.readFile(fullPath);
+        if (!Buffer.isBuffer(buffer) || buffer.length < 1000) {
+          corrupt.push(file);
+        }
+      } catch {
+        corrupt.push(file);
+      }
+    }
+
+    const validCount = pngs.length - corrupt.length;
+    console.log(`📊 QR Validation: ${validCount} valid / ${pngs.length} total`);
+
+    if (corrupt.length > 0) {
+      console.warn(`❌ Corrupt files: ${corrupt.length}`);
+      if (autoFix) {
+        console.warn("♻️ Attempting auto-regeneration of corrupt QRs...");
+
+        const tasks = corrupt.map(file => {
+          const [symbol, amtRaw] = file.replace(".png", "").split("_");
+          const amount = sanitizeAmount(parseFloat(amtRaw));
+          if (!amount || isNaN(amount) || amount <= 0) return null;
+          return { symbol, amount };
+        }).filter(Boolean);
+
+        const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
+        for (let i = 0; i < tasks.length; i++) {
+          const { symbol, amount } = tasks[i];
+          queue.add(async () => {
+            try {
+              const buffer = await generateQR(symbol, amount);
+              if (!buffer || buffer.length < 1000) {
+                console.warn(`❌ Invalid regenerated QR: ${symbol} ${amount}`);
+                return;
+              }
+              const out = path.resolve("qr-cache", `${symbol}_${amount.toFixed(6)}.png`);
+              await fs.writeFile(out, buffer);
+              console.log(`✅ Regenerated: ${symbol} ${amount}`);
+            } catch (err) {
+              console.warn(`❌ Failed to regenerate: ${symbol} ${amount} → ${err.message}`);
+            }
+          });
+        }
+
+        await queue.onIdle();
+        console.log(`🧬 Auto-regeneration complete for corrupt QRs.`);
+      }
+    } else {
+      console.log("✅ All QR fallback files are valid.");
+    }
+  } catch (err) {
+    console.error(`❌ QR fallback validation failed: ${err.message}`);
+  }
 }
