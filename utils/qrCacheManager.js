@@ -1,3 +1,6 @@
+// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v999999999.∞.ULTRA•GODMODE•DIAMONDLOCK
+// FULL 520x SUPPORT • BTC+ETH+MATIC+SOL • 2 DELIVERY FEES • 65 PRODUCTS • BULLETPROOF 24/7
+
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
@@ -35,7 +38,7 @@ export async function generateFullQrCache() {
   await initQrCacheDir();
 
   const deliveryFees = deliveryMethods.map(m => Number(m.fee));
-  const symbols = Object.keys(NETWORKS);
+  const symbols = Object.keys(NETWORKS); // [BTC, ETH, MATIC, SOL]
   const seenKeys = new Set();
   const queue = [];
 
@@ -69,52 +72,54 @@ export async function generateFullQrCache() {
   const successful = new Set();
 
   async function processTask(index, total, { rawSymbol, totalUSD, normalized }) {
-  let retryCount = 0;
-  while (true) {
-    try {
-      let rate;
+    let retryCount = 0;
+    while (retryCount < 5) {
       try {
-        rate = await fetchCryptoPrice(rawSymbol);
+        let rate;
+        try {
+          rate = await fetchCryptoPrice(rawSymbol);
+        } catch (err) {
+          console.warn(`❌ [Rate Fetch Error] ${rawSymbol}:`, err.message || err);
+          await sleep(RETRY_DELAY_MS);
+          retryCount++;
+          continue;
+        }
+
+        if (!rate || rate <= 0) {
+          console.warn(`❌ [Invalid Rate] ${rawSymbol} returned: ${rate}`);
+          await sleep(RETRY_DELAY_MS);
+          retryCount++;
+          continue;
+        }
+
+        const amount = sanitizeAmount(totalUSD / rate);
+        const fileName = `qr-cache/${normalized}_${amount.toFixed(6)}.png`;
+
+        if (existsSync(fileName)) {
+          done++;
+          successful.add(`${normalized}_${amount}`);
+          console.log(`🟦 [${index}/${total}] Already exists: ${normalized} $${totalUSD} → ${amount}`);
+          return;
+        }
+
+        const buffer = await generateQR(normalized, amount);
+        if (buffer && Buffer.isBuffer(buffer) && buffer.length > 1000) {
+          await fs.writeFile(fileName, buffer);
+          successful.add(`${normalized}_${amount}`);
+          done++;
+          console.log(`✅ [${index}/${total}] ${normalized} $${totalUSD} → ${amount}`);
+          return;
+        } else {
+          throw new Error("QR buffer invalid");
+        }
       } catch (err) {
-        console.warn(`❌ [Rate Fetch Error] ${rawSymbol}:`, err.message || err);
+        retryCount++;
+        console.warn(`⏳ [Retry #${retryCount} | ${index}/${total}] ${normalized} $${totalUSD} → ${err.message}`);
         await sleep(RETRY_DELAY_MS);
-        continue;
       }
-
-      if (!rate || rate <= 0) {
-        console.warn(`❌ [Invalid Rate] ${rawSymbol} returned: ${rate}`);
-        await sleep(RETRY_DELAY_MS);
-        continue;
-      }
-
-      const amount = sanitizeAmount(totalUSD / rate);
-      const fileName = `qr-cache/${normalized}_${amount}.png`;
-
-      if (existsSync(fileName)) {
-        done++;
-        successful.add(`${normalized}_${amount}`);
-        console.log(`🟦 [${index}/${total}] Already exists: ${normalized} $${totalUSD} → ${amount}`);
-        return;
-      }
-
-      const buffer = await generateQR(normalized, amount);
-      if (buffer && Buffer.isBuffer(buffer) && buffer.length > 1000) {
-        await fs.writeFile(fileName, buffer);
-        successful.add(`${normalized}_${amount}`);
-        done++;
-        console.log(`✅ [${index}/${total}] ${normalized} $${totalUSD} → ${amount}`);
-        return;
-      } else {
-        throw new Error("QR buffer invalid");
-      }
-
-    } catch (err) {
-      retryCount++;
-      console.warn(`⏳ [Retry #${retryCount} | ${index}/${total}] ${normalized} $${totalUSD} → ${err.message}`);
-      await sleep(RETRY_DELAY_MS);
     }
+    console.warn(`❌ [FAILED] ${normalized} $${totalUSD} after ${retryCount} retries.`);
   }
-}
 
   const runInBatches = async (tasks, concurrency) => {
     let index = 0;
@@ -134,4 +139,7 @@ export async function generateFullQrCache() {
   await runInBatches(queue, MAX_CONCURRENCY);
 
   console.log(`🎯 [DONE] QR fallback generation complete: ${successful.size}/${queue.length}`);
+  if (successful.size < queue.length) {
+    console.warn(`⚠️ Some QR PNGs failed to generate: ${queue.length - successful.size} missing.`);
+  }
 }
