@@ -1,3 +1,5 @@
+// 📦 utils/generateQR.js | FINAL IMMORTAL v999999999.∞•QR•FALLBACK•SYNCFIXED
+
 import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
@@ -8,39 +10,24 @@ import {
   sanitizeAmount
 } from "./fallbackPathUtils.js";
 
-/**
- * 🔐 Normalize symbol (e.g., eth → ETH)
- */
 export function normalizeSymbol(symbol) {
   const raw = String(symbol || "").trim().toLowerCase();
   return ALIASES[raw] || raw.toUpperCase();
 }
 
-/**
- * 🏦 Resolve wallet address (override > config)
- */
 export function resolveAddress(symbol, overrideAddress) {
   const normalized = normalizeSymbol(symbol);
   return String(overrideAddress || WALLETS[normalized] || "").trim();
 }
 
-/**
- * 🔐 Wallet validator
- */
 function isValidAddress(addr) {
   return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
 }
 
-/**
- * 🧪 PNG buffer validity
- */
 function isValidBuffer(buffer) {
   return Buffer.isBuffer(buffer) && buffer.length > 1000;
 }
 
-/**
- * ⚡ Generate QR buffer (timeout-safe)
- */
 export async function generateQRBuffer(symbol, amount, address) {
   const formatted = sanitizeAmount(amount).toFixed(6);
   const uri = `${symbol.toLowerCase()}:${address}?amount=${formatted}&label=${encodeURIComponent("BalticPharmacyBot")}&message=${encodeURIComponent("Order")}`;
@@ -65,9 +52,6 @@ export async function generateQRBuffer(symbol, amount, address) {
   }
 }
 
-/**
- * 🧠 Master QR generator — cache-safe + fallback auto-heal
- */
 export async function generateQR(currency, amount, overrideAddress = null) {
   const symbol = normalizeSymbol(currency);
   const sanitizedAmount = sanitizeAmount(amount);
@@ -85,7 +69,6 @@ export async function generateQR(currency, amount, overrideAddress = null) {
   }
 
   try {
-    // 1️⃣ Try cache first (fallback)
     if (fs.existsSync(filePath)) {
       try {
         const buffer = fs.readFileSync(filePath);
@@ -102,7 +85,6 @@ export async function generateQR(currency, amount, overrideAddress = null) {
       }
     }
 
-    // 2️⃣ Generate new QR (live)
     console.warn(`🧪 [generateQR] Cache miss → generating live: ${symbol} ${sanitizedAmount}`);
     const buffer = await generateQRBuffer(symbol, sanitizedAmount, address);
     if (!buffer) return null;
@@ -116,16 +98,12 @@ export async function generateQR(currency, amount, overrideAddress = null) {
     }
 
     return buffer;
-
   } catch (err) {
     console.error("❌ [generateQR fatal]", err.message);
     return null;
   }
 }
 
-/**
- * 📬 Payment message with copyable address
- */
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
   const symbol = normalizeSymbol(currency);
   const val = sanitizeAmount(amount);
@@ -137,7 +115,7 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
 💳 *Payment details:*
 • Network: *${symbol}*
 • Amount: *${display} ${symbol}*
-• Address: \`${validAddr}\`
+• Address: \\`${validAddr}\\`
 ⏱️ *Expected payment within 30 minutes.*
 ✅ Use the QR code or copy the address.
 `.trim();
