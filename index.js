@@ -13,7 +13,6 @@ import { startQrCacheMaintenance } from "./jobs/qrCacheMaintainer.js";
 import { initQrCacheDir, generateFullQrCache, validateQrFallbacks } from "./utils/qrCacheManager.js";
 import "./config/discountSync.js";
 
-// ✅ Persistent user tracker
 const NEW_USERS_FILE = "./.newusers.json";
 let newUserSet = new Set();
 try {
@@ -21,10 +20,9 @@ try {
   const parsed = JSON.parse(raw);
   if (Array.isArray(parsed)) newUserSet = new Set(parsed);
 } catch (err) {
-  console.warn("⚠️ Failed to read .newusers.json:", err.message);
+  console.warn("\x1b[43m\x1b[30m ⚠️ Failed to read .newusers.json: " + err.message + " \x1b[0m");
 }
 
-// 🔁 Debounce tracker for polling_error
 let last409Time = 0;
 
 async function notifyCrash(source, err) {
@@ -32,16 +30,7 @@ async function notifyCrash(source, err) {
   const upper = source.toUpperCase();
   const now = new Date().toLocaleString("en-GB");
 
-  const formattedConsole = `
-\x1b[41m\x1b[30m
-💥 CRITICAL ERROR — ${upper}
-🕒 ${now}
-🧨 MESSAGE: ${msg}
-\x1b[0m`.trim();
-
-  const formattedAdmin = `❌ *${upper} CRASH:*\n\`\`\`\n${msg}\n\`\`\`\n🕒 ${now}`;
-
-  // Debounced special case for polling_error 409
+  // Special 409 case
   if (
     source === "polling_error" &&
     typeof msg === "string" &&
@@ -51,26 +40,18 @@ async function notifyCrash(source, err) {
     const nowMs = Date.now();
     if (nowMs - last409Time < 60_000) return;
     last409Time = nowMs;
-
-    console.log(`
-\x1b[43m\x1b[30m
-⚠️ 409 CONFLICT — BOT ALREADY POLLING
-🕒 ${now}
-📡 Skipping duplicate polling
-\x1b[0m`.trim());
-
+    console.log(`\x1b[43m\x1b[30m ⚠️ 409 CONFLICT — BOT ALREADY POLLING | ${now} | Skipping duplicate polling \x1b[0m`);
     await sendAdminPing(`⚠️ *409 Conflict: Already polling*\n🕒 ${now}`);
     return;
   }
 
-  // Print to console
-  console.error(formattedConsole);
+  // General error
+  console.error(`\x1b[41m\x1b[30m 💥 CRITICAL ERROR (${upper}) | ${now} | ${msg} \x1b[0m`);
 
-  // Notify admin
   try {
-    await sendAdminPing(formattedAdmin);
+    await sendAdminPing(`❌ *${upper} CRASH:*\n\`\`\`\n${msg}\n\`\`\`\n🕒 ${now}`);
   } catch (sendErr) {
-    console.warn("⚠️ Failed to send admin ping:", sendErr.message);
+    console.warn("\x1b[43m\x1b[30m ⚠️ Failed to send admin ping: " + sendErr.message + " \x1b[0m");
   }
 }
 
@@ -87,7 +68,7 @@ async function notifyCrash(source, err) {
       try {
         await writeFile(NEW_USERS_FILE, JSON.stringify([...newUserSet]), "utf8");
       } catch (err) {
-        console.warn("⚠️ Failed to save .newusers.json:", err.message);
+        console.warn("\x1b[43m\x1b[30m ⚠️ Failed to save .newusers.json: " + err.message + " \x1b[0m");
       }
 
       const timestamp = new Date().toLocaleString("en-GB");
@@ -95,8 +76,7 @@ async function notifyCrash(source, err) {
     });
 
     BOT.INSTANCE.on("polling_error", async (err) => {
-      const msg = err?.message || String(err);
-      await notifyCrash("polling_error", msg);
+      await notifyCrash("polling_error", err);
     });
 
     try {
@@ -106,15 +86,7 @@ async function notifyCrash(source, err) {
       const version = pkg.version || "1.0.0";
       const now = new Date().toLocaleString("en-GB");
 
-      console.log(`
-╔════════════════════════════════════════════════════════════════════════════╗
-║ ✅ BALTICPHARMACYBOT LIVE — FINAL IMMORTAL v${version} GODMODE + DIAMONDLOCK ║
-╚════════════════════════════════════════════════════════════════════════════╝
-🆙 Version: v${version}
-🕒 Started: ${now}
-👤 Logged in as: @${me.username} (${me.first_name})
-`.trim());
-
+      console.log(`\x1b[44m\x1b[30m ✅ BALTICPHARMACYBOT LIVE • v${version} • Started: ${now} • Logged in as: @${me.username} \x1b[0m`);
       await sendAdminPing(`✅ Bot started successfully\nVersion: *v${version}*\n🕒 ${now}`);
       setTimeout(() => sendAdminPing("✅ Bot fully ready (RAM warmed up, timers running, FSM live)."), 12 * 60 * 1000);
     } catch (initErr) {
@@ -126,7 +98,7 @@ async function notifyCrash(source, err) {
       try {
         autoExpireSessions();
       } catch (err) {
-        console.error("❌ [autoExpireSessions crash]:", err);
+        console.error(`\x1b[41m\x1b[30m ❌ [autoExpireSessions crash]: ${err.message} \x1b[0m`);
       }
     }, 10 * 60 * 1000);
 
@@ -134,22 +106,22 @@ async function notifyCrash(source, err) {
       try {
         cleanStalePaymentTimers();
       } catch (err) {
-        console.error("❌ [cleanStalePaymentTimers crash]:", err);
+        console.error(`\x1b[41m\x1b[30m ❌ [cleanStalePaymentTimers crash]: ${err.message} \x1b[0m`);
       }
     }, 5 * 60 * 1000);
 
     startQrCacheMaintenance();
 
     setTimeout(async () => {
-      console.log("⏳ Delayed QR fallback generation starting (3 min post-boot)...");
+      console.log("\x1b[44m\x1b[30m ⏳ Delayed QR fallback generation starting... \x1b[0m");
       try {
         await initQrCacheDir();
         await generateFullQrCache();
         await validateQrFallbacks(true);
-        console.log("✅ Delayed QR fallback generation complete and validated.");
+        console.log("\x1b[42m\x1b[30m ✅ Delayed QR fallback generation complete and validated. \x1b[0m");
         await sendAdminPing("📦 Delayed QR fallback generation completed successfully (post-boot).");
       } catch (err) {
-        console.error("❌ Delayed QR cache generation failed:", err.message);
+        console.error(`\x1b[41m\x1b[30m ❌ Delayed QR cache generation failed: ${err.message} \x1b[0m`);
         await sendAdminPing(`⚠️ QR fallback generation failed (post-boot)\n\`${err.message}\``);
       }
     }, 180_000);
@@ -174,46 +146,26 @@ process.on("unhandledRejection", async (reason) => {
   process.exit(1);
 });
 
-// 🔌 Graceful shutdown UI
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig =>
   process.on(sig, async () => {
     const ts = new Date().toLocaleString("en-GB");
-
-    // 💥 RED BLOCK VISUAL
-    console.log(`
-\x1b[41m\x1b[30m
-💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥
-🛑 SHUTDOWN SIGNAL RECEIVED: ${sig}
-🕒 ${ts}
-🔌 Stopping BalticPharmacyBot gracefully...
-💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥
-\x1b[0m`.trim());
+    console.log(`\x1b[41m\x1b[30m 🛑 SHUTDOWN SIGNAL RECEIVED: ${sig} | ${ts} | Stopping gracefully... \x1b[0m`);
 
     try {
       await BOT.INSTANCE.stopPolling();
       await BOT.INSTANCE.close();
 
-      // ✅ GREEN BLOCK VISUAL
-      console.log(`
-\x1b[42m\x1b[30m
-✅ BOT SHUTDOWN COMPLETE — FINAL STATUS: SAFE
-🧼 Polling stopped
-📦 FSM and timers flushed
-🛡️ Exit stable and secure
-🕒 ${ts}
-\x1b[0m`.trim());
-
-      // 📤 ADMIN NOTIFY
+      console.log(`\x1b[42m\x1b[30m ✅ BOT SHUTDOWN COMPLETE — SAFE EXIT @ ${ts} \x1b[0m`);
       await sendAdminPing(
         `🛑 *Bot shutdown signal received:* \`${sig}\`\n\n` +
         `✅ *Polling stopped*\n📦 *FSM cleaned*\n🛡️ *System exited cleanly*\n🕒 ${ts}`
       );
     } catch (err) {
-      console.warn("⚠️ Graceful shutdown error:", err.message);
+      console.warn("\x1b[43m\x1b[30m ⚠️ Graceful shutdown error: " + err.message + " \x1b[0m");
     }
 
     process.exit(0);
   })
 );
 
-console.log("✅ BALTICPHARMACYBOT READY • LOCKED • BULLETPROOF • ∞");
+console.log("\x1b[44m\x1b[30m ✅ BALTICPHARMACYBOT READY • LOCKED • BULLETPROOF • ∞ \x1b[0m");
