@@ -213,7 +213,7 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
     userSessions[uid].step = 1;
   }
 
-  const session = userSessions[uid]; // ✅ Deklaruojamas tik vieną kartą
+  const session = userSessions[uid]; // ✅ Tik ši viena versija būtina
 
   // 🧠 Per-user paspaudimų debounceris
   const now = Date.now();
@@ -228,11 +228,6 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
   if (isSpamming(uid, ctx)) return;
   const muted = await handleFlood(uid, bot, userMessages[uid], ctx);
   if (muted) return;
-
-  // ensure session exists
-  if (!userSessions[uid])                   userSessions[uid] = { step: 1, createdAt: Date.now() };
-  if (!isValidStep(userSessions[uid].step)) userSessions[uid].step = 1;
-  const session = userSessions[uid];
 
   // 🔄 Step-2 guard: only accept valid labels or Back
   if (session.step === 2) {
