@@ -5,7 +5,6 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import fs from "fs";
-import express from "express";
 import { readFile, writeFile } from "fs/promises";
 import { initBotInstance, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
@@ -14,11 +13,6 @@ import { sendAdminPing } from "./core/handlers/paymentHandler.js";
 import { startQrCacheMaintenance } from "./jobs/qrCacheMaintainer.js";
 import { initQrCacheDir } from "./utils/qrCacheManager.js";
 import "./config/discountSync.js";
-
-// ✅ Healthcheck for Render
-const app = express();
-app.get("/healthz", (_, res) => res.send("OK"));
-app.listen(3000, () => console.log("✅ Healthcheck ready on :3000"));
 
 // ✅ Persistent user tracker
 const NEW_USERS_FILE = "./.newusers.json";
@@ -42,7 +36,6 @@ async function notifyCrash(source, err) {
 (async () => {
   try {
     initBotInstance();
-
     await initQrCacheDir();
 
     BOT.INSTANCE.on("message", async (msg) => {
@@ -61,7 +54,39 @@ async function notifyCrash(source, err) {
       await sendAdminPing(`🆕 *New user joined*\n👤 UID: \`${uid}\`\n🕒 Joined: ${timestamp}`);
     });
 
-    registerMainHandler(BOT.INSTANCE);
+    BOT.INSTANCE.on("polling_error", async (err) => {
+      const msg = err?.message || String(err);
+      console.error("❌ [polling_error]", msg);
+      await notifyCrash("polling_error", msg);
+    });
+
+    try {
+      registerMainHandler(BOT.INSTANCE);
+      const me = await BOT.INSTANCE.getMe();
+
+      const pkg = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"));
+      const version = pkg.version || "1.0.0";
+      const now = new Date().toLocaleString("en-GB");
+
+      console.log(`
+╔════════════════════════════════════════════════════════════════════════════╗
+║ ✅ BALTICPHARMACYBOT LIVE — FINAL IMMORTAL v${version} GODMODE + DIAMONDLOCK ║
+╚════════════════════════════════════════════════════════════════════════════╝
+🆙 Version: v${version}
+🕒 Started: ${now}
+👤 Logged in as: @${me.username} (${me.first_name})
+`.trim());
+
+      await sendAdminPing(`✅ Bot started successfully\nVersion: *v${version}*\n🕒 ${now}`);
+
+      setTimeout(() => {
+        sendAdminPing("✅ Bot fully ready (RAM warmed up, timers running, FSM live).");
+      }, 12 * 60 * 1000);
+
+    } catch (initErr) {
+      await notifyCrash("bot.init", initErr);
+      process.exit(1);
+    }
 
     setInterval(() => {
       try {
@@ -80,26 +105,6 @@ async function notifyCrash(source, err) {
     }, 5 * 60 * 1000);
 
     startQrCacheMaintenance();
-
-    const me = await BOT.INSTANCE.getMe();
-    const pkg = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"));
-    const version = pkg.version || "1.0.0";
-    const now = new Date().toLocaleString("en-GB");
-
-    console.log(`
-╔════════════════════════════════════════════════════════════════════════════╗
-║ ✅ BALTICPHARMACYBOT LIVE — FINAL IMMORTAL v${version} GODMODE + DIAMONDLOCK ║
-╚════════════════════════════════════════════════════════════════════════════╝
-🆙 Version: v${version}
-🕒 Started: ${now}
-👤 Logged in as: @${me.username} (${me.first_name})
-`.trim());
-
-    await sendAdminPing(`✅ Bot started successfully\nVersion: *v${version}*\n🕒 ${now}`);
-
-    setTimeout(() => {
-      sendAdminPing("✅ Bot fully ready (RAM warmed up, timers running, FSM live).");
-    }, 12 * 60 * 1000);
 
   } catch (err) {
     await notifyCrash("boot", err);
@@ -122,6 +127,7 @@ process.on("unhandledRejection", async (reason) => {
   process.exit(1);
 });
 
+// 🔌 Shutdown handlers
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig =>
   process.on(sig, async () => {
     console.log(`\n🛑 Signal received (${sig}) → stopping bot...`);
