@@ -164,6 +164,7 @@ process.on("unhandledRejection", async (reason) => {
 
     try {
   await BOT.INSTANCE.stopPolling();
+  await BOT.INSTANCE.close();
 
   // 🧱 FINAL QR LOCKDOWN
   await generateFullQrCache();
