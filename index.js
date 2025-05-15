@@ -1,4 +1,4 @@
-// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.1.0•GODMODE•DIAMONDLOCK•QRFIX•SIGTERM
+// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.1.2•GODMODE•DIAMONDLOCK•QRSAFE•SIGTERM++
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -27,20 +27,13 @@ async function notifyCrash(source, err) {
   const msg = typeof err === "object" && err !== null ? err.message || JSON.stringify(err) : String(err);
   console.error(`💥 [CRASH during ${source}]:`, msg);
   try {
-    await sendAdminPing(`❌ *${source.toUpperCase()} CRASH:*\n\
-\`\`\`
-${msg}
-\`\`\``);
+    await sendAdminPing(`❌ *${source.toUpperCase()} CRASH:*\n\`\`\`\n${msg}\n\`\`\``);
   } catch {}
 }
-
-let gracefullyStopped = false;
 
 (async () => {
   try {
     initBotInstance();
-    await initQrCacheDir();
-    await validateQrFallbacks(); // ✅ fallback integrity on boot
 
     BOT.INSTANCE.on("message", async (msg) => {
       const uid = msg?.from?.id;
@@ -87,6 +80,7 @@ let gracefullyStopped = false;
       process.exit(1);
     }
 
+    // ♻️ Session cleanup
     setInterval(() => {
       try {
         autoExpireSessions();
@@ -103,7 +97,24 @@ let gracefullyStopped = false;
       }
     }, 5 * 60 * 1000);
 
+    // 🔁 Background QR fallback updater
     startQrCacheMaintenance();
+
+    // ⏳ DELAYED FULL QR CACHE GENERATION
+    setTimeout(async () => {
+      console.log("⏳ Delayed QR fallback generation starting (3 min post-boot)...");
+      try {
+        await initQrCacheDir();
+        await generateFullQrCache();
+        await validateQrFallbacks();
+        console.log("✅ Delayed QR fallback generation complete and validated.");
+        await sendAdminPing("📦 Delayed QR fallback generation completed successfully (post-boot).");
+      } catch (err) {
+        console.error("❌ Delayed QR cache generation failed:", err.message);
+        await sendAdminPing(`⚠️ QR fallback generation failed (post-boot)\n\`${err.message}\``);
+      }
+    }, 180_000); // ⏳ 3 minutes
+
   } catch (err) {
     await notifyCrash("boot", err);
     process.exit(1);
@@ -125,31 +136,17 @@ process.on("unhandledRejection", async (reason) => {
   process.exit(1);
 });
 
-// 🔀 Graceful shutdown with fallback QR regeneration
+// 🔌 Graceful shutdown (NO QR regeneration here anymore)
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig =>
   process.on(sig, async () => {
     console.log(`\n🛑 Signal received (${sig}) → stopping bot...`);
     try {
       await BOT.INSTANCE.stopPolling();
-      gracefullyStopped = true;
       console.log("✅ Bot stopped gracefully.");
       await sendAdminPing(`🛑 Bot stopped by signal (${sig}) — gracefully.`);
     } catch (err) {
       console.warn("⚠️ Graceful shutdown error:", err.message);
     }
-
-    try {
-      if (gracefullyStopped) {
-        console.log("♻️ Starting full QR fallback regeneration before exit...");
-        await generateFullQrCache();
-        await validateQrFallbacks();
-        console.log("💎 All fallback QR codes regenerated + verified before exit.");
-        await sendAdminPing("💾 QR cache fully regenerated and validated during shutdown.");
-      }
-    } catch (qrErr) {
-      console.warn("⚠️ QR regeneration during shutdown failed:", qrErr.message);
-    }
-
     process.exit(0);
   })
 );
