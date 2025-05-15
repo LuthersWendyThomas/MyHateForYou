@@ -92,7 +92,7 @@ export async function generateFullQrCache() {
         if (existsSync(fileName)) {
           done++;
           successful.add(fileName);
-          console.log(`🟦 [${index}/${total}] Already exists: ${normalized} $${totalUSD} → ${amount}`);
+          console.log(`🟦 [${done}/${queue.length}] Already exists: ${normalized} $${totalUSD} → ${amount}`);
           return;
         }
 
@@ -101,14 +101,14 @@ export async function generateFullQrCache() {
           await fs.writeFile(fileName, buffer);
           successful.add(fileName);
           done++;
-          console.log(`✅ [${index}/${total}] ${normalized} $${totalUSD} → ${amount}`);
+          console.log(`✅ [${done}/${queue.length}] ${normalized} $${totalUSD} → ${amount}`);
           return;
         } else {
           throw new Error("QR buffer invalid");
         }
       } catch (err) {
         retryCount++;
-        console.warn(`⏳ [Retry #${retryCount} | ${index}/${total}] ${normalized} $${totalUSD} → ${err.message}`);
+        console.warn(`⏳ [Retry #${retryCount} | ${done + 1}/${queue.length}] ${normalized} $${totalUSD} → ${err.message}`);
         await sleep(RETRY_DELAY_MS);
       }
     }
@@ -121,9 +121,8 @@ export async function generateFullQrCache() {
     const runNext = async () => {
       if (index >= total) return;
       const task = tasks[index];
-      const i = index + 1;
       index++;
-      await processTask(i, total, task);
+      await processTask(index, total, task);
       return runNext();
     };
     const runners = Array.from({ length: concurrency }, runNext);
