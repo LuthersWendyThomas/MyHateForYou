@@ -1,4 +1,5 @@
-// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.1.2•GODMODE•DIAMONDLOCK•QRSAFE•SIGTERM++
+// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.2.0•GODMODE•DIAMONDLOCK•WOWUI•SIGTERM++
+
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -23,9 +24,27 @@ try {
   console.warn("⚠️ Failed to read .newusers.json:", err.message);
 }
 
+// 🔁 Debounce tracker for polling_error
+let last409Time = 0;
+
 async function notifyCrash(source, err) {
   const msg = typeof err === "object" && err !== null ? err.message || JSON.stringify(err) : String(err);
-  console.error(`💥 [CRASH during ${source}]:`, msg);
+
+  // 🧼 Filter 409 polling conflict
+  if (
+    source === "polling_error" &&
+    typeof msg === "string" &&
+    msg.includes("409 Conflict") &&
+    msg.includes("getUpdates request")
+  ) {
+    const now = Date.now();
+    if (now - last409Time < 60_000) return; // ⏱️ Debounce 60s
+    last409Time = now;
+    console.log("\x1b[41m\x1b[37m❌ [polling_error] 409 Conflict: already being polled by another process\x1b[0m");
+    return;
+  }
+
+  console.error("\x1b[41m\x1b[30m💥 [CRASH during %s]: %s\x1b[0m", source, msg);
   try {
     await sendAdminPing(`❌ *${source.toUpperCase()} CRASH:*\n\`\`\`\n${msg}\n\`\`\``);
   } catch {}
@@ -53,7 +72,6 @@ async function notifyCrash(source, err) {
 
     BOT.INSTANCE.on("polling_error", async (err) => {
       const msg = err?.message || String(err);
-      console.error("❌ [polling_error]", msg);
       await notifyCrash("polling_error", msg);
     });
 
@@ -80,7 +98,6 @@ async function notifyCrash(source, err) {
       process.exit(1);
     }
 
-    // ♻️ Session cleanup
     setInterval(() => {
       try {
         autoExpireSessions();
@@ -97,10 +114,8 @@ async function notifyCrash(source, err) {
       }
     }, 5 * 60 * 1000);
 
-    // 🔁 Background QR fallback updater
     startQrCacheMaintenance();
 
-    // ⏳ DELAYED FULL QR CACHE GENERATION
     setTimeout(async () => {
       console.log("⏳ Delayed QR fallback generation starting (3 min post-boot)...");
       try {
@@ -113,7 +128,7 @@ async function notifyCrash(source, err) {
         console.error("❌ Delayed QR cache generation failed:", err.message);
         await sendAdminPing(`⚠️ QR fallback generation failed (post-boot)\n\`${err.message}\``);
       }
-    }, 180_000); // ⏳ 3 minutes
+    }, 180_000);
 
   } catch (err) {
     await notifyCrash("boot", err);
@@ -121,7 +136,6 @@ async function notifyCrash(source, err) {
   }
 })();
 
-// 🛡️ Global failsafes
 process.on("uncaughtException", async (err) => {
   await notifyCrash("uncaughtException", err);
   process.exit(1);
@@ -136,30 +150,26 @@ process.on("unhandledRejection", async (reason) => {
   process.exit(1);
 });
 
-// 🔌 Graceful shutdown with WOW UI/UX 🔥
+// 🔌 Graceful shutdown UI
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig =>
   process.on(sig, async () => {
     const ts = new Date().toLocaleString("en-GB");
-    console.log(`
-\u001b[41m\u001b[30m
+    console.log(`\x1b[41m\x1b[30m
 💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥
 🛑 SIGNAL RECEIVED → ${sig}
 🕒 ${ts}
 🔌 Stopping BalticPharmacyBot gracefully...
 💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥
-\u001b[0m
-`.trim());
+\x1b[0m`.trim());
 
     try {
       await BOT.INSTANCE.stopPolling();
-      console.log(`
-\u001b[41m\u001b[30m
+      console.log(`\x1b[42m\x1b[30m
 ✅ BOT STOPPED SUCCESSFULLY — SAFE EXIT
 🧼 Polling terminated cleanly
 📦 FSM + Timers shut down
 🛡️ SYSTEM STABLE ON EXIT
-\u001b[0m
-`.trim());
+\x1b[0m`.trim());
 
       await sendAdminPing(`🛑 Bot stopped by signal \`${sig}\`\n✅ *Gracefully shut down.*`);
     } catch (err) {
