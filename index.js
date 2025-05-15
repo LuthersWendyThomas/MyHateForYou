@@ -37,6 +37,7 @@ let gracefullyStopped = false;
   try {
     initBotInstance();
     await initQrCacheDir();
+    await validateQrFallbacks();
 
     BOT.INSTANCE.on("message", async (msg) => {
       const uid = msg?.from?.id;
