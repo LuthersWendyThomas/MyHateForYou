@@ -1,4 +1,4 @@
-// 📦 utils/fallbackPathUtils.js | IMMORTAL FINAL v2.0.0•DIAMONDLOCK•AUKSINE•SYNCED
+// 📦 utils/fallbackPathUtils.js | FINAL IMMORTAL v2.0.1•DIAMONDLOCK•∞UPGRADE•SAFECORE
 
 import path from "path";
 import { ALIASES } from "../config/config.js";
@@ -14,8 +14,12 @@ export const FALLBACK_DIR = path.join(process.cwd(), "qr-cache");
  * @returns {string}
  */
 export function normalizeSymbol(raw) {
-  const key = String(raw || "").trim().toLowerCase();
-  return (ALIASES[key] || key).toUpperCase();
+  try {
+    const key = String(raw || "").trim().toLowerCase();
+    return (ALIASES[key] || key).toUpperCase();
+  } catch {
+    return "UNKNOWN";
+  }
 }
 
 /**
@@ -24,8 +28,14 @@ export function normalizeSymbol(raw) {
  * @returns {number}
  */
 export function sanitizeAmount(input) {
-  const val = Number(input);
-  return Number.isFinite(val) && val > 0 ? +val.toFixed(6) : 0;
+  try {
+    const val = Number(input);
+    if (!Number.isFinite(val) || val <= 0) return 0;
+    const rounded = Math.floor(val * 1e6) / 1e6; // avoid floating point edge cases
+    return +rounded.toFixed(6);
+  } catch {
+    return 0;
+  }
 }
 
 /**
