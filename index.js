@@ -10,8 +10,8 @@ import { initBotInstance, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions, cleanStalePaymentTimers } from "./core/sessionManager.js";
 import { sendAdminPing } from "./core/handlers/paymentHandler.js";
-import { startQrCacheRefresher } from "./jobs/refreshQrCache.js";
-import { initQrCacheDir } from "./utils/qrCacheManager.js"; // ✅ Ensures fallback dir is ready on boot
+import { startQrCacheMaintenance } from "./jobs/qrCacheMaintainer.js";
+import { initQrCacheDir } from "./utils/qrCacheManager.js";
 import "./config/discountSync.js";
 
 // ✅ Persistent set of joined users
@@ -83,7 +83,7 @@ async function notifyCrash(source, err) {
     }, 5 * 60 * 1000);
 
     // ✅ Start fallback QR refresher (immediate + hourly)
-    startQrCacheRefresher();
+    startQrCacheMaintenance();
 
     // 🚀 Final startup banner
     const me = await BOT.INSTANCE.getMe();
