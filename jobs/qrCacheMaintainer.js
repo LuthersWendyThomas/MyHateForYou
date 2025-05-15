@@ -43,13 +43,13 @@ async function tryMaintain(isStartup = false) {
   try {
     console.log(`🧹 [qrCacheMaintainer] Ensuring cache dir + cleaning expired PNGs...`);
     await initQrCacheDir();
-    await cleanExpiredQRCodes();
+    const deletedCount = await cleanExpiredQRCodes();
 
     console.log(`🚀 [qrCacheMaintainer] Regenerating full QR fallback cache at ${now}...`);
-    await generateFullQrCache(); // ensures 520x fallback regeneration
+    await generateFullQrCache(true); // ✅ forceComplete always true
 
     console.log(`✅ [qrCacheMaintainer] All fallback QRs reloaded.`);
-    await sendAdminPing(`✅ ${label}`);
+    await sendAdminPing(`✅ ${label}\n🗑️ Expired cleaned: *${deletedCount}*`);
   } catch (err) {
     console.error(`❌ [qrCacheMaintainer] Error:`, err.message);
     try {
@@ -63,23 +63,27 @@ async function tryMaintain(isStartup = false) {
 async function cleanExpiredQRCodes() {
   try {
     const now = Date.now();
-    const files = await fs.readdir(FALLBACK_DIR); // ✅ FIXED: use global fallback dir
+    const files = await fs.readdir(FALLBACK_DIR);
     const targets = files.filter(f => f.endsWith(".png"));
 
     const deletedEntries = [];
 
     for (const file of targets) {
       const fullPath = path.join(FALLBACK_DIR, file);
-      const stats = await fs.stat(fullPath);
-      const age = now - stats.mtimeMs;
+      try {
+        const stats = await fs.stat(fullPath);
+        const age = now - stats.mtimeMs;
 
-      if (age > MAX_AGE_MS) {
-        await fs.unlink(fullPath);
-        deletedEntries.push({
-          "🗑️ File": file,
-          "⏱️ Age (min)": Math.floor(age / 60000),
-          "📂 Path": fullPath
-        });
+        if (age > MAX_AGE_MS) {
+          await fs.unlink(fullPath);
+          deletedEntries.push({
+            "🗑️ File": file,
+            "⏱️ Age (min)": Math.floor(age / 60000),
+            "📂 Path": fullPath
+          });
+        }
+      } catch (err) {
+        console.warn(`⚠️ [QR Cleaner] Stat/read fail for: ${file} → ${err.message}`);
       }
     }
 
@@ -91,7 +95,9 @@ async function cleanExpiredQRCodes() {
     }
 
     console.log(`✅ [QR Cleaner] ${deletedEntries.length} expired QR files removed.`);
+    return deletedEntries.length;
   } catch (err) {
     console.error(`❌ [QR Cleaner] Failed: ${err.message}`);
+    return 0;
   }
 }
