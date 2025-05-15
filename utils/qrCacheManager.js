@@ -1,6 +1,4 @@
-// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v6.0.0•GODMODE•SYNCFIXED•AI-PATCHED
-// QR AUTO-PREHEAT ENGINE • 520x VARIATION COVERAGE • FULL SYMBOL NORMALIZATION
-
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v9999999999•RETRY•SYNCLOCK
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
@@ -10,19 +8,19 @@ import { deliveryMethods } from "../config/features.js";
 import { sanitizeAmount } from "./fallbackPathUtils.js";
 import { NETWORKS } from "./fetchCryptoPrice.js";
 import { fetchCryptoPrice } from "./fetchCryptoPrice.js";
-import { rateLimiter } from "./rateLimiter.js";
 
-/**
- * 📁 Ensure fallback dir exists
- */
+const MAX_CONCURRENCY = 10;
+const RETRY_DELAY_MS = 3000;
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function initQrCacheDir() {
   const dir = "qr-cache";
   if (!existsSync(dir)) await fs.mkdir(dir, { recursive: true });
 }
 
-/**
- * 🧼 Delete all PNGs from cache
- */
 export async function cleanQrCacheDir() {
   try {
     const files = await fs.readdir("qr-cache");
@@ -34,19 +32,13 @@ export async function cleanQrCacheDir() {
   }
 }
 
-/**
- * ♻️ Full QR preheater for 520x scenarios
- */
 export async function generateFullQrCache() {
   await initQrCacheDir();
 
-  const skipped = [];
   const deliveryFees = deliveryMethods.map(m => Number(m.fee));
   const symbols = Object.keys(NETWORKS);
-  const seenAmounts = new Set();
-
-  let total = 0;
-  let done = 0;
+  const seenKeys = new Set();
+  const queue = [];
 
   for (const category in products) {
     for (const product of products[category]) {
@@ -59,68 +51,61 @@ export async function generateFullQrCache() {
           const totalUSD = usd + fee;
 
           for (const rawSymbol of symbols) {
-            total++;
+            const normalized = normalizeSymbol(rawSymbol);
+            const key = `${normalized}_${sanitizeAmount(totalUSD)}`;
+            if (seenKeys.has(key)) continue;
 
-            try {
-              await rateLimiter(rawSymbol);
-              const rate = await fetchCryptoPrice(rawSymbol);
-              if (!rate || rate <= 0) throw new Error("Invalid rate");
-
-              const normalized = normalizeSymbol(rawSymbol);
-              const amount = sanitizeAmount(totalUSD / rate);
-              const key = `${normalized}_${amount}`;
-              if (seenAmounts.has(key)) {
-                done++;
-                continue;
-              }
-
-              const buffer = await generateQR(normalized, amount);
-              if (buffer && Buffer.isBuffer(buffer) && buffer.length > 1000) {
-                seenAmounts.add(key);
-                done++;
-                console.log(`✅ [QR Fallback] ${normalized} $${totalUSD} → ${amount.toFixed(6)} (${done}/${total})`);
-              } else {
-                throw new Error("QR generation failed");
-              }
-
-            } catch (err) {
-              skipped.push({ symbol: rawSymbol, totalUSD });
-              console.warn(`⚠️ [QR Skip] ${rawSymbol} $${totalUSD} → ${err.message}`);
-            }
+            seenKeys.add(key);
+            queue.push({ rawSymbol, totalUSD, normalized });
           }
         }
       }
     }
   }
 
-  // Final retry pass for skips
-  if (skipped.length > 0) {
-    console.log(`🔁 Retrying ${skipped.length} skipped fallbacks...`);
-    for (const { symbol: rawSymbol, totalUSD } of skipped) {
-      try {
-        await rateLimiter(rawSymbol);
-        const rate = await fetchCryptoPrice(rawSymbol);
-        if (!rate || rate <= 0) continue;
+  console.log(`🚀 [QR Cache] Preparing to generate ${queue.length} unique fallback QR codes...`);
 
-        const normalized = normalizeSymbol(rawSymbol);
+  const failed = new Set();
+  const successful = new Set();
+
+  async function processTask({ rawSymbol, totalUSD, normalized }) {
+    let success = false;
+    while (!success) {
+      try {
+        const rate = await fetchCryptoPrice(rawSymbol);
+        if (!rate || rate <= 0) throw new Error("Invalid rate");
+
         const amount = sanitizeAmount(totalUSD / rate);
         const buffer = await generateQR(normalized, amount);
-        if (buffer) {
-          console.log(`✅ [QR Retry] ${normalized} $${totalUSD} → ${amount.toFixed(6)}`);
+        if (buffer && Buffer.isBuffer(buffer) && buffer.length > 1000) {
+          const fileName = `qr-cache/${normalized}_${amount}.png`;
+          await fs.writeFile(fileName, buffer);
+          console.log(`✅ [QR] ${normalized} $${totalUSD} → ${amount.toFixed(6)}`);
+          successful.add(`${normalized}_${amount}`);
+          success = true;
+        } else {
+          throw new Error("QR buffer invalid");
         }
       } catch (err) {
-        console.warn(`❌ [Retry Fail] ${rawSymbol} $${totalUSD} → ${err.message}`);
+        console.warn(`⏳ [Retry in ${RETRY_DELAY_MS / 1000}s] ${normalized} $${totalUSD} → ${err.message}`);
+        await sleep(RETRY_DELAY_MS);
       }
     }
   }
 
-  console.log(`🎯 [generateFullQrCache] Complete: ${done}/${total} fallbacks generated.`);
-}
+  const runInBatches = async (tasks, concurrency) => {
+    let i = 0;
+    const runNext = async () => {
+      if (i >= tasks.length) return;
+      const task = tasks[i++];
+      await processTask(task);
+      return runNext();
+    };
+    const runners = Array.from({ length: concurrency }, runNext);
+    await Promise.all(runners);
+  };
 
-/**
- * 🔁 Hourly refresher trigger
- */
-export async function refreshQrCache() {
-  console.log("♻️ [refreshQrCache] Started...");
-  await generateFullQrCache();
+  await runInBatches(queue, MAX_CONCURRENCY);
+
+  console.log(`🎯 [DONE] Fallback QR cache generated: ${successful.size}/${queue.length}`);
 }
