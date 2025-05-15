@@ -1,4 +1,4 @@
-// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v999999999.∞•FULLSYNC•REQUEUE•SAFEBOOT•LOCKED
+// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v999999999.∞•FULLSYNC•REQUEUE•SAFEBOOT•LOCKED•TABLEVIEW
 
 import fs from "fs/promises";
 import path from "path";
@@ -66,7 +66,8 @@ async function cleanExpiredQRCodes() {
     const files = await fs.readdir(FALLBACK_DIR); // ✅ FIXED: use global fallback dir
     const targets = files.filter(f => f.endsWith(".png"));
 
-    let deleted = 0;
+    const deletedEntries = [];
+
     for (const file of targets) {
       const fullPath = path.join(FALLBACK_DIR, file);
       const stats = await fs.stat(fullPath);
@@ -74,12 +75,22 @@ async function cleanExpiredQRCodes() {
 
       if (age > MAX_AGE_MS) {
         await fs.unlink(fullPath);
-        deleted++;
-        console.log(`🗑️ [QR Cleaner] Deleted expired: ${file}`);
+        deletedEntries.push({
+          "🗑️ File": file,
+          "⏱️ Age (min)": Math.floor(age / 60000),
+          "📂 Path": fullPath
+        });
       }
     }
 
-    console.log(`✅ [QR Cleaner] ${deleted} expired QR files removed.`);
+    if (deletedEntries.length > 0) {
+      console.table(deletedEntries.slice(0, 10));
+      if (deletedEntries.length > 10) {
+        console.log(`...and ${deletedEntries.length - 10} more expired QR files removed.`);
+      }
+    }
+
+    console.log(`✅ [QR Cleaner] ${deletedEntries.length} expired QR files removed.`);
   } catch (err) {
     console.error(`❌ [QR Cleaner] Failed: ${err.message}`);
   }
