@@ -1,13 +1,13 @@
-// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v999999999.∞•FULLSYNC•REQUEUE•SAFEBOOT
+// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v999999999.∞•FULLSYNC•REQUEUE•SAFEBOOT•LOCKED
 
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import { generateFullQrCache, initQrCacheDir } from "../utils/qrCacheManager.js";
+import { FALLBACK_DIR } from "../utils/fallbackPathUtils.js";
 import { sendAdminPing } from "../core/handlers/paymentHandler.js";
 
-const CACHE_DIR = "qr-cache";
-const MAX_AGE_MS = 60 * 60 * 1000; // 1h = 60min
+const MAX_AGE_MS = 60 * 60 * 1000; // 1h
 const INTERVAL_HOURS = 4;
 
 let isRunning = false;
@@ -46,7 +46,7 @@ async function tryMaintain(isStartup = false) {
     await cleanExpiredQRCodes();
 
     console.log(`🚀 [qrCacheMaintainer] Regenerating full QR fallback cache at ${now}...`);
-    await generateFullQrCache(); // guarantees all 520 regenerated with requeue logic
+    await generateFullQrCache(); // ensures 520x fallback regeneration
 
     console.log(`✅ [qrCacheMaintainer] All fallback QRs reloaded.`);
     await sendAdminPing(`✅ ${label}`);
@@ -63,12 +63,12 @@ async function tryMaintain(isStartup = false) {
 async function cleanExpiredQRCodes() {
   try {
     const now = Date.now();
-    const files = await fs.readdir(CACHE_DIR);
+    const files = await fs.readdir(FALLBACK_DIR); // ✅ FIXED: use global fallback dir
     const targets = files.filter(f => f.endsWith(".png"));
 
     let deleted = 0;
     for (const file of targets) {
-      const fullPath = path.join(CACHE_DIR, file);
+      const fullPath = path.join(FALLBACK_DIR, file);
       const stats = await fs.stat(fullPath);
       const age = now - stats.mtimeMs;
 
