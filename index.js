@@ -163,18 +163,24 @@ process.on("unhandledRejection", async (reason) => {
 \x1b[0m`.trim());
 
     try {
-      await BOT.INSTANCE.stopPolling();
-      console.log(`\x1b[42m\x1b[30m
+  await BOT.INSTANCE.stopPolling();
+
+  // 🧱 FINAL QR LOCKDOWN
+  await generateFullQrCache();
+  await validateQrFallbacks(true);
+
+  console.log(`\x1b[42m\x1b[30m
 ✅ BOT STOPPED SUCCESSFULLY — SAFE EXIT
 🧼 Polling terminated cleanly
 📦 FSM + Timers shut down
+📦 QR fallbacks refreshed
 🛡️ SYSTEM STABLE ON EXIT
 \x1b[0m`.trim());
 
-      await sendAdminPing(`🛑 Bot stopped by signal \`${sig}\`\n✅ *Gracefully shut down.*`);
-    } catch (err) {
-      console.warn("⚠️ Graceful shutdown error:", err.message);
-    }
+  await sendAdminPing(`🛑 Bot stopped by signal \`${sig}\`\n✅ *Gracefully shut down.*\n📦 QR cache refreshed on exit.`);
+} catch (err) {
+  console.warn("⚠️ Graceful shutdown error:", err.message);
+}
 
     process.exit(0);
   })
