@@ -165,10 +165,18 @@ async function retry(fn, retries = 3, base = 300) {
       return await fn();
     } catch (e) {
       err = e;
+
+      // 🛡️ Naujas saugiklis nuo AggregateError
+      if (e.name === "AggregateError" || e instanceof AggregateError) {
+        console.warn(`💥 AggregateError caught in retry: ${e.message}`);
+        continue;
+      }
+
       const delay = e instanceof RateLimitError
         ? e.retryAfterMs
         : base * 2 ** i + Math.random() * 150;
-      await new Promise(res => setTimeout(res, delay + 300)); // 🔁 Add buffer delay to avoid cascading
+
+      await new Promise(res => setTimeout(res, delay));
     }
   }
   throw err;
