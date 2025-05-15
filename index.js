@@ -178,9 +178,12 @@ process.on("unhandledRejection", async (reason) => {
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig =>
   process.on(sig, async () => {
     const ts = new Date().toLocaleString("en-GB");
-    console.log(`\x1b[41m\x1b[30m
+
+    // 💥 RED BLOCK VISUAL
+    console.log(`
+\x1b[41m\x1b[30m
 💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥
-🛑 SIGNAL RECEIVED → ${sig}
+🛑 SHUTDOWN SIGNAL RECEIVED: ${sig}
 🕒 ${ts}
 🔌 Stopping BalticPharmacyBot gracefully...
 💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥
@@ -190,18 +193,21 @@ process.on("unhandledRejection", async (reason) => {
       await BOT.INSTANCE.stopPolling();
       await BOT.INSTANCE.close();
 
-      await generateFullQrCache();
-      await validateQrFallbacks(true);
-
-      console.log(`\x1b[42m\x1b[30m
-✅ BOT STOPPED SUCCESSFULLY — SAFE EXIT
-🧼 Polling terminated cleanly
-📦 FSM + Timers shut down
-📦 QR fallbacks refreshed
-🛡️ SYSTEM STABLE ON EXIT
+      // ✅ GREEN BLOCK VISUAL
+      console.log(`
+\x1b[42m\x1b[30m
+✅ BOT SHUTDOWN COMPLETE — FINAL STATUS: SAFE
+🧼 Polling stopped
+📦 FSM and timers flushed
+🛡️ Exit stable and secure
+🕒 ${ts}
 \x1b[0m`.trim());
 
-      await sendAdminPing(`🛑 Bot stopped by signal \`${sig}\`\n✅ *Gracefully shut down.*\n📦 QR cache refreshed on exit.`);
+      // 📤 ADMIN NOTIFY
+      await sendAdminPing(
+        `🛑 *Bot shutdown signal received:* \`${sig}\`\n\n` +
+        `✅ *Polling stopped*\n📦 *FSM cleaned*\n🛡️ *System exited cleanly*\n🕒 ${ts}`
+      );
     } catch (err) {
       console.warn("⚠️ Graceful shutdown error:", err.message);
     }
