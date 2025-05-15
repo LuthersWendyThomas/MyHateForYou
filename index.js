@@ -1,4 +1,4 @@
-// 📦 index.js | BalticPharmacyBot — FINAL IMMORTAL v1.0.9.∞+QRFALLBACK•SIGTERM•VALIDATED•LOCKED
+// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.1.0•GODMODE•DIAMONDLOCK•QRFIX•SIGTERM
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -27,7 +27,10 @@ async function notifyCrash(source, err) {
   const msg = typeof err === "object" && err !== null ? err.message || JSON.stringify(err) : String(err);
   console.error(`💥 [CRASH during ${source}]:`, msg);
   try {
-    await sendAdminPing(`❌ *${source.toUpperCase()} CRASH:*\n\`\`\`\n${msg}\n\`\`\``);
+    await sendAdminPing(`❌ *${source.toUpperCase()} CRASH:*\n\
+\`\`\`
+${msg}
+\`\`\``);
   } catch {}
 }
 
@@ -64,7 +67,6 @@ let gracefullyStopped = false;
     try {
       registerMainHandler(BOT.INSTANCE);
       const me = await BOT.INSTANCE.getMe();
-
       const pkg = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"));
       const version = pkg.version || "1.0.0";
       const now = new Date().toLocaleString("en-GB");
@@ -79,10 +81,7 @@ let gracefullyStopped = false;
 `.trim());
 
       await sendAdminPing(`✅ Bot started successfully\nVersion: *v${version}*\n🕒 ${now}`);
-
-      setTimeout(() => {
-        sendAdminPing("✅ Bot fully ready (RAM warmed up, timers running, FSM live).");
-      }, 12 * 60 * 1000);
+      setTimeout(() => sendAdminPing("✅ Bot fully ready (RAM warmed up, timers running, FSM live)."), 12 * 60 * 1000);
     } catch (initErr) {
       await notifyCrash("bot.init", initErr);
       process.exit(1);
@@ -105,7 +104,6 @@ let gracefullyStopped = false;
     }, 5 * 60 * 1000);
 
     startQrCacheMaintenance();
-
   } catch (err) {
     await notifyCrash("boot", err);
     process.exit(1);
@@ -127,7 +125,7 @@ process.on("unhandledRejection", async (reason) => {
   process.exit(1);
 });
 
-// 🔌 Shutdown handlers with safe QR fallback regeneration + revalidation
+// 🔀 Graceful shutdown with fallback QR regeneration
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig =>
   process.on(sig, async () => {
     console.log(`\n🛑 Signal received (${sig}) → stopping bot...`);
@@ -135,16 +133,18 @@ process.on("unhandledRejection", async (reason) => {
       await BOT.INSTANCE.stopPolling();
       gracefullyStopped = true;
       console.log("✅ Bot stopped gracefully.");
+      await sendAdminPing(`🛑 Bot stopped by signal (${sig}) — gracefully.`);
     } catch (err) {
       console.warn("⚠️ Graceful shutdown error:", err.message);
     }
 
     try {
       if (gracefullyStopped) {
-        console.log("♻️ Starting full QR fallback regeneration...");
-        await generateFullQrCache();         // ✅ 520 garantuota
-        await validateQrFallbacks();         // ✅ po regeneracijos tikrinimas
+        console.log("♻️ Starting full QR fallback regeneration before exit...");
+        await generateFullQrCache();
+        await validateQrFallbacks();
         console.log("💎 All fallback QR codes regenerated + verified before exit.");
+        await sendAdminPing("💾 QR cache fully regenerated and validated during shutdown.");
       }
     } catch (qrErr) {
       console.warn("⚠️ QR regeneration during shutdown failed:", qrErr.message);
