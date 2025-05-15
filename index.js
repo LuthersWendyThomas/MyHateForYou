@@ -1,4 +1,4 @@
-// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.2.0•GODMODE•DIAMONDLOCK•WOWUI•SIGTERM++
+// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.2.1•GODMODE•DIAMONDLOCK•WOWUI•SIGTERM++•409VISUALS
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -29,25 +29,49 @@ let last409Time = 0;
 
 async function notifyCrash(source, err) {
   const msg = typeof err === "object" && err !== null ? err.message || JSON.stringify(err) : String(err);
+  const upper = source.toUpperCase();
+  const now = new Date().toLocaleString("en-GB");
 
-  // 🧼 Filter 409 polling conflict
+  const formattedConsole = `
+\x1b[41m\x1b[30m
+💥 CRITICAL ERROR — ${upper}
+🕒 ${now}
+🧨 MESSAGE: ${msg}
+\x1b[0m`.trim();
+
+  const formattedAdmin = `❌ *${upper} CRASH:*\n\`\`\`\n${msg}\n\`\`\`\n🕒 ${now}`;
+
+  // Debounced special case for polling_error 409
   if (
     source === "polling_error" &&
     typeof msg === "string" &&
     msg.includes("409 Conflict") &&
     msg.includes("getUpdates request")
   ) {
-    const now = Date.now();
-    if (now - last409Time < 60_000) return; // ⏱️ Debounce 60s
-    last409Time = now;
-    console.log("\x1b[41m\x1b[37m❌ [polling_error] 409 Conflict: already being polled by another process\x1b[0m");
+    const nowMs = Date.now();
+    if (nowMs - last409Time < 60_000) return;
+    last409Time = nowMs;
+
+    console.log(`
+\x1b[43m\x1b[30m
+⚠️ 409 CONFLICT — BOT ALREADY POLLING
+🕒 ${now}
+📡 Skipping duplicate polling
+\x1b[0m`.trim());
+
+    await sendAdminPing(`⚠️ *409 Conflict: Already polling*\n🕒 ${now}`);
     return;
   }
 
-  console.error("\x1b[41m\x1b[30m💥 [CRASH during %s]: %s\x1b[0m", source, msg);
+  // Print to console
+  console.error(formattedConsole);
+
+  // Notify admin
   try {
-    await sendAdminPing(`❌ *${source.toUpperCase()} CRASH:*\n\`\`\`\n${msg}\n\`\`\``);
-  } catch {}
+    await sendAdminPing(formattedAdmin);
+  } catch (sendErr) {
+    console.warn("⚠️ Failed to send admin ping:", sendErr.message);
+  }
 }
 
 (async () => {
@@ -163,14 +187,13 @@ process.on("unhandledRejection", async (reason) => {
 \x1b[0m`.trim());
 
     try {
-  await BOT.INSTANCE.stopPolling();
-  await BOT.INSTANCE.close();
+      await BOT.INSTANCE.stopPolling();
+      await BOT.INSTANCE.close();
 
-  // 🧱 FINAL QR LOCKDOWN
-  await generateFullQrCache();
-  await validateQrFallbacks(true);
+      await generateFullQrCache();
+      await validateQrFallbacks(true);
 
-  console.log(`\x1b[42m\x1b[30m
+      console.log(`\x1b[42m\x1b[30m
 ✅ BOT STOPPED SUCCESSFULLY — SAFE EXIT
 🧼 Polling terminated cleanly
 📦 FSM + Timers shut down
@@ -178,10 +201,10 @@ process.on("unhandledRejection", async (reason) => {
 🛡️ SYSTEM STABLE ON EXIT
 \x1b[0m`.trim());
 
-  await sendAdminPing(`🛑 Bot stopped by signal \`${sig}\`\n✅ *Gracefully shut down.*\n📦 QR cache refreshed on exit.`);
-} catch (err) {
-  console.warn("⚠️ Graceful shutdown error:", err.message);
-}
+      await sendAdminPing(`🛑 Bot stopped by signal \`${sig}\`\n✅ *Gracefully shut down.*\n📦 QR cache refreshed on exit.`);
+    } catch (err) {
+      console.warn("⚠️ Graceful shutdown error:", err.message);
+    }
 
     process.exit(0);
   })
