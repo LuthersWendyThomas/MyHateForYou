@@ -9,7 +9,7 @@ import { userSessions, isValidStep } from "../../state/userState.js";
 import { sendAndTrack, sendKeyboard } from "../../helpers/messageUtils.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
 import { resetSession, safeStart } from "./finalHandler.js";
-import { fullResetUserState, clearPaymentInfo } from "../core/sessionManager.js";
+import { fullResetUserState, clearPaymentInfo } from "../sessionManager.js";
 import { REGION_MAP, getRegionKeyboard, getCityKeyboard } from "../../config/regions.js";
 import { resolveDiscount } from "../../config/discountUtils.js";
 import { DISCOUNTS } from "../../config/discounts.js";
