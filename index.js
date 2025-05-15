@@ -1,4 +1,4 @@
-// 📦 index.js | BalticPharmacyBot — FINAL IMMORTAL v1.0.9•QRFIX•SIGTERM•GODMODE
+// 📦 index.js | BalticPharmacyBot — FINAL IMMORTAL v1.0.9.∞+QRFALLBACK•SIGTERM•VALIDATED•LOCKED
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -9,7 +9,7 @@ import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions, cleanStalePaymentTimers } from "./core/sessionManager.js";
 import { sendAdminPing } from "./core/handlers/paymentHandler.js";
 import { startQrCacheMaintenance } from "./jobs/qrCacheMaintainer.js";
-import { initQrCacheDir, generateFullQrCache } from "./utils/qrCacheManager.js";
+import { initQrCacheDir, generateFullQrCache, validateQrFallbacks } from "./utils/qrCacheManager.js";
 import "./config/discountSync.js";
 
 // ✅ Persistent user tracker
@@ -37,7 +37,7 @@ let gracefullyStopped = false;
   try {
     initBotInstance();
     await initQrCacheDir();
-    await validateQrFallbacks();
+    await validateQrFallbacks(); // ✅ fallback integrity on boot
 
     BOT.INSTANCE.on("message", async (msg) => {
       const uid = msg?.from?.id;
@@ -127,7 +127,7 @@ process.on("unhandledRejection", async (reason) => {
   process.exit(1);
 });
 
-// 🔌 Shutdown handlers with safe QR fallback generation
+// 🔌 Shutdown handlers with safe QR fallback regeneration + revalidation
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig =>
   process.on(sig, async () => {
     console.log(`\n🛑 Signal received (${sig}) → stopping bot...`);
@@ -142,8 +142,9 @@ process.on("unhandledRejection", async (reason) => {
     try {
       if (gracefullyStopped) {
         console.log("♻️ Starting full QR fallback regeneration...");
-        await generateFullQrCache(); // guarantees all 520 are generated
-        console.log("💎 All fallback QR codes regenerated before exit.");
+        await generateFullQrCache();         // ✅ 520 garantuota
+        await validateQrFallbacks();         // ✅ po regeneracijos tikrinimas
+        console.log("💎 All fallback QR codes regenerated + verified before exit.");
       }
     } catch (qrErr) {
       console.warn("⚠️ QR regeneration during shutdown failed:", qrErr.message);
