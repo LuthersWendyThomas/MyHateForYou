@@ -365,6 +365,19 @@ async function handleQuantity(bot, uid, input, session, userMessages) {
     return renderStep(bot, uid, 4, userMessages); // ⬅️ Grįžtam į produktų sąrašą
   }
 
+  // 🚫 Patikrinam ar produktas aktyvus
+  if (session.product?.active === false) {
+    await sendAndTrack(
+      bot,
+      uid,
+      "🚫 *This product is currently sold out.* Please choose something else.",
+      { parse_mode: "Markdown" },
+      userMessages
+    );
+    session.step = 4;
+    return renderStep(bot, uid, 4, userMessages);
+  }
+
   const qty   = input.match(/^[^\s(]+/)?.[0];
   const price = session.product?.prices?.[qty];
   if (!isFinite(price)) return renderStep(bot, uid, 5, userMessages);
