@@ -37,6 +37,7 @@ export async function cleanQrCacheDir() {
 
 export async function generateFullQrCache(forceComplete = true) {
   await initQrCacheDir();
+  await cleanQrCacheDir();
 
   const deliveryFees = deliveryMethods.map(m => Number(m.fee));
   const networks = Object.keys(NETWORKS);
