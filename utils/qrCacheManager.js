@@ -1,6 +1,4 @@
-// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v999999999.∞.ULTRA•GODMODE•DIAMONDLOCK
-// FIXED: 520x Fallback Scenarios Covered Correctly (65x products/prices × 2 deliveryFees × 4 networks)
-
+// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v999999999.∞•GODMODE•REQUEUE•FULLSYNC
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
@@ -46,14 +44,11 @@ export async function generateFullQrCache() {
   for (const category in products) {
     for (const product of products[category]) {
       if (!product.prices) continue;
-
       for (const [qty, price] of Object.entries(product.prices)) {
         const usd = Number(price);
         if (!usd || usd <= 0) continue;
-
         for (const fee of deliveryFees) {
           const totalUSD = usd + fee;
-
           for (const rawSymbol of networks) {
             const normalized = normalizeSymbol(rawSymbol);
             allTasks.push({ rawSymbol, totalUSD, normalized });
@@ -63,27 +58,35 @@ export async function generateFullQrCache() {
     }
   }
 
-  console.log(`🚀 [QR Cache] Starting regeneration of ${allTasks.length} fallback QR scenarios...`);
+  console.log(`🚀 [QR Cache] Starting generation of ${allTasks.length} fallback QR scenarios...`);
 
-  const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
   const successful = new Set();
-  const failed = [];
-  let done = 0;
+  let pending = [...allTasks];
+  let attempts = 0;
 
-  for (const task of allTasks) {
-    queue.add(() =>
-      attemptGenerate(task, done + 1, allTasks.length, successful, failed).then(() => done++)
-    );
+  while (pending.length > 0 && attempts < 5) {
+    attempts++;
+    console.log(`🔁 [Retry Cycle ${attempts}] Remaining: ${pending.length}...`);
+
+    const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
+    const failed = [];
+
+    for (let i = 0; i < pending.length; i++) {
+      const task = pending[i];
+      queue.add(() =>
+        attemptGenerate(task, i + 1, pending.length, successful, failed)
+      );
+    }
+
+    await queue.onIdle();
+    pending = failed;
   }
 
-  await queue.onIdle();
-
   console.log(`🎯 [DONE] QR fallback generation complete: ${successful.size}/${allTasks.length}`);
-  if (failed.length > 0) {
-    console.warn(`⚠️ Missing QR PNGs: ${failed.length} from ${allTasks.length}`);
-    for (const fail of failed) {
-      console.warn(`❌ FAILED: ${fail.normalized} → $${fail.totalUSD}`);
-    }
+  if (successful.size < allTasks.length) {
+    console.warn(`⚠️ Missing QR PNGs: ${allTasks.length - successful.size} from ${allTasks.length}`);
+  } else {
+    console.log(`💎 All fallback QR codes successfully generated!`);
   }
 }
 
@@ -97,8 +100,8 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
       const fileName = `qr-cache/${normalized}_${amount.toFixed(6)}.png`;
 
       if (existsSync(fileName)) {
-        console.log(`🟦 [${index}/${total}] Exists: ${normalized} $${totalUSD} → ${amount}`);
         successful.add(fileName);
+        console.log(`🟦 [${index}/${total}] Exists: ${normalized} $${totalUSD} → ${amount}`);
         return;
       }
 
@@ -118,4 +121,3 @@ async function attemptGenerate({ rawSymbol, totalUSD, normalized }, index, total
 
   failed.push({ rawSymbol, totalUSD, normalized });
 }
-
