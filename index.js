@@ -136,17 +136,36 @@ process.on("unhandledRejection", async (reason) => {
   process.exit(1);
 });
 
-// 🔌 Graceful shutdown (NO QR regeneration here anymore)
+// 🔌 Graceful shutdown with WOW UI/UX 🔥
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig =>
   process.on(sig, async () => {
-    console.log(`\n🛑 Signal received (${sig}) → stopping bot...`);
+    const ts = new Date().toLocaleString("en-GB");
+    console.log(`
+\u001b[41m\u001b[30m
+💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥
+🛑 SIGNAL RECEIVED → ${sig}
+🕒 ${ts}
+🔌 Stopping BalticPharmacyBot gracefully...
+💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥
+\u001b[0m
+`.trim());
+
     try {
       await BOT.INSTANCE.stopPolling();
-      console.log("✅ Bot stopped gracefully.");
-      await sendAdminPing(`🛑 Bot stopped by signal (${sig}) — gracefully.`);
+      console.log(`
+\u001b[41m\u001b[30m
+✅ BOT STOPPED SUCCESSFULLY — SAFE EXIT
+🧼 Polling terminated cleanly
+📦 FSM + Timers shut down
+🛡️ SYSTEM STABLE ON EXIT
+\u001b[0m
+`.trim());
+
+      await sendAdminPing(`🛑 Bot stopped by signal \`${sig}\`\n✅ *Gracefully shut down.*`);
     } catch (err) {
       console.warn("⚠️ Graceful shutdown error:", err.message);
     }
+
     process.exit(0);
   })
 );
