@@ -1,6 +1,4 @@
-// 📦 index.js | BalticPharmacyBot — FINAL IMMORTAL v1.0.7•DIAMONDLOCK•QRFALLBACKFIX
-// 24/7 BULLETPROOF • ADMIN NOTIFY • JOIN TRACKING • QR SYSTEM READY • FULL PERSISTENCE
-
+// 📦 index.js | BalticPharmacyBot — FINAL IMMORTAL v1.0.9•QRFIX•SIGTERM•GODMODE
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -11,7 +9,7 @@ import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions, cleanStalePaymentTimers } from "./core/sessionManager.js";
 import { sendAdminPing } from "./core/handlers/paymentHandler.js";
 import { startQrCacheMaintenance } from "./jobs/qrCacheMaintainer.js";
-import { initQrCacheDir } from "./utils/qrCacheManager.js";
+import { initQrCacheDir, generateFullQrCache } from "./utils/qrCacheManager.js";
 import "./config/discountSync.js";
 
 // ✅ Persistent user tracker
@@ -32,6 +30,8 @@ async function notifyCrash(source, err) {
     await sendAdminPing(`❌ *${source.toUpperCase()} CRASH:*\n\`\`\`\n${msg}\n\`\`\``);
   } catch {}
 }
+
+let gracefullyStopped = false;
 
 (async () => {
   try {
@@ -82,7 +82,6 @@ async function notifyCrash(source, err) {
       setTimeout(() => {
         sendAdminPing("✅ Bot fully ready (RAM warmed up, timers running, FSM live).");
       }, 12 * 60 * 1000);
-
     } catch (initErr) {
       await notifyCrash("bot.init", initErr);
       process.exit(1);
@@ -127,16 +126,28 @@ process.on("unhandledRejection", async (reason) => {
   process.exit(1);
 });
 
-// 🔌 Shutdown handlers
+// 🔌 Shutdown handlers with safe QR fallback generation
 ["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig =>
   process.on(sig, async () => {
     console.log(`\n🛑 Signal received (${sig}) → stopping bot...`);
     try {
       await BOT.INSTANCE.stopPolling();
+      gracefullyStopped = true;
       console.log("✅ Bot stopped gracefully.");
     } catch (err) {
-      console.warn("⚠️ Graceful shutdown error:", err);
+      console.warn("⚠️ Graceful shutdown error:", err.message);
     }
+
+    try {
+      if (gracefullyStopped) {
+        console.log("♻️ Starting full QR fallback regeneration...");
+        await generateFullQrCache(); // guarantees all 520 are generated
+        console.log("💎 All fallback QR codes regenerated before exit.");
+      }
+    } catch (qrErr) {
+      console.warn("⚠️ QR regeneration during shutdown failed:", qrErr.message);
+    }
+
     process.exit(0);
   })
 );
