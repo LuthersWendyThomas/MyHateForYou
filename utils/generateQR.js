@@ -1,4 +1,4 @@
-// 📦 utils/generateQR.js | FINAL IMMORTAL v999999999.∞•QR•FALLBACK•SYNCFIXED•LOCKED
+// 📦 utils/generateQR.js | FINAL IMMORTAL v999999999.∞•QR•FALLBACK•SYNCFIXED•LOCKED•FORCEOVERWRITE
 
 import QRCode from "qrcode";
 import fs from "fs";
@@ -69,24 +69,9 @@ export async function generateQR(currency, amount, overrideAddress = null) {
   }
 
   try {
-    if (fs.existsSync(filePath)) {
-      try {
-        const buffer = fs.readFileSync(filePath);
-        if (isValidBuffer(buffer)) {
-          if (process.env.DEBUG_MESSAGES === "true") {
-            console.log(`📦 [generateQR] Cache hit: ${path.basename(filePath)}`);
-          }
-          return buffer;
-        } else {
-          console.warn(`⚠️ [generateQR] Corrupt fallback: ${path.basename(filePath)} — regenerating...`);
-        }
-      } catch (err) {
-        console.warn(`⚠️ [generateQR] Read error on fallback: ${path.basename(filePath)} — ${err.message}`);
-      }
-    } else {
-      if (process.env.DEBUG_MESSAGES === "true") {
-        console.log(`🧪 [generateQR] Cache miss → generating live: ${symbol} ${sanitizedAmount}`);
-      }
+    // 💥 Always regenerate and overwrite the PNG fallback
+    if (process.env.DEBUG_MESSAGES === "true") {
+      console.log(`🔁 [generateQR] Forcing regeneration: ${symbol} ${sanitizedAmount}`);
     }
 
     const buffer = await generateQRBuffer(symbol, sanitizedAmount, address);
@@ -96,8 +81,8 @@ export async function generateQR(currency, amount, overrideAddress = null) {
       if (!fs.existsSync(FALLBACK_DIR)) {
         fs.mkdirSync(FALLBACK_DIR, { recursive: true });
       }
-      fs.writeFileSync(filePath, buffer);
-      console.log(`💾 [generateQR] Fallback saved: ${path.basename(filePath)}`);
+      fs.writeFileSync(filePath, buffer); // Always overwrite
+      console.log(`💾 [generateQR] Fallback saved (overwritten): ${path.basename(filePath)}`);
     } catch (saveErr) {
       console.warn(`⚠️ [generateQR] Failed to save fallback: ${saveErr.message}`);
     }
