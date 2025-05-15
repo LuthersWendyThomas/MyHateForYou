@@ -205,14 +205,17 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
   const input = normalizeText(text);
 
   // 🛡️ Anti-flood/spam filter (context-aware: ignores buttons + /start + ANTISPAM)
-  let lastActionTimestamp = 0;
+  if (!userSessions[uid]) userSessions[uid] = { step: 1, createdAt: Date.now() };
+  const session = userSessions[uid];
 
-  // Antro paspaudimo prevencija
-  if (Date.now() - lastActionTimestamp < 5000) {
-    await resetSession(uid);  // Išvalyti sesiją
-    return sendAndTrack(bot, uid, "⚠️ Auto SPAM system is moving you back to START!", {}, userMessages);  // Siųsti pranešimą
+  // 🧠 Per-user paspaudimų debounceris
+  const now = Date.now();
+  if (!session.lastActionTimestamp) session.lastActionTimestamp = 0;
+  if (now - session.lastActionTimestamp < 5000) {
+    await resetSession(uid);
+    return sendAndTrack(bot, uid, "⚠️ Auto SPAM system is moving you back to START!", {}, userMessages);
   }
-  lastActionTimestamp = Date.now();  // Atnaujinti paskutinį paspaudimo laiką
+  session.lastActionTimestamp = now;
 
   if (isSpamming(uid, ctx)) return;
   const muted = await handleFlood(uid, bot, userMessages[uid], ctx);
