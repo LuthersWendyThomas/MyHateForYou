@@ -9,7 +9,7 @@ import { userSessions, isValidStep } from "../../state/userState.js";
 import { sendAndTrack, sendKeyboard } from "../../helpers/messageUtils.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
 import { resetSession, safeStart } from "./finalHandler.js";
-import { fullResetUserState, clearPaymentInfo } from "../sessionManager.js";
+import { fullResetUserState } from "../sessionManager.js";
 import { REGION_MAP, getRegionKeyboard, getCityKeyboard } from "../../config/regions.js";
 import { resolveDiscount } from "../../config/discountUtils.js";
 import { DISCOUNTS } from "../../config/discounts.js";
@@ -480,7 +480,6 @@ async function handleConfirmOrCancel(bot, uid, input, session, userMessages) {
       { parse_mode: "Markdown" }, // <-- SKIRTUMAS ŠITAS: Markdown palaikymas
       userMessages
     );
-    await clearPaymentInfo(uid);
     await fullResetUserState(uid);
     return safeStart(bot, uid);
   }
@@ -523,7 +522,6 @@ async function handleFinalConfirmation(bot, uid, input, session, userMessages) {
       { parse_mode: "Markdown" },
       userMessages
     );
-    await clearPaymentInfo(uid);
     await fullResetUserState(uid);
     return safeStart(bot, uid);
   }
