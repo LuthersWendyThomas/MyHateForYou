@@ -1,4 +1,4 @@
-// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v999999999.∞•FULLSYNC•REQUEUE•SAFEBOOT•LOCKED•TABLEVIEW
+// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v1.0.2•GODMODE•DIAMONDLOCK•SYNCED•LIVECOUNT•TABLEVIEW
 
 import fs from "fs/promises";
 import path from "path";
@@ -46,10 +46,10 @@ async function tryMaintain(isStartup = false) {
     const deletedCount = await cleanExpiredQRCodes();
 
     console.log(`🚀 [qrCacheMaintainer] Regenerating full QR fallback cache at ${now}...`);
-    await generateFullQrCache(true); // ✅ forceComplete always true
+    const count = await generateFullQrCache(true); // 🧠 Return count from full generator
 
     console.log(`✅ [qrCacheMaintainer] All fallback QRs reloaded.`);
-    await sendAdminPing(`✅ ${label}\n🗑️ Expired cleaned: *${deletedCount}*`);
+    await sendAdminPing(`✅ ${label}\n🗑️ Expired cleaned: *${deletedCount}*\n📦 Total regenerated: *${count}*`);
   } catch (err) {
     console.error(`❌ [qrCacheMaintainer] Error:`, err.message);
     try {
