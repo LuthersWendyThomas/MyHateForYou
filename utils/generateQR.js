@@ -104,6 +104,7 @@ const filePath = getFallbackPath(symbol, sanitizedAmount);
   }
 }
 
+// 🧾 Fixed generatePaymentMessageWithButton()
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
   const symbol = normalizeSymbol(currency);
   const val = sanitizeAmount(amount);
@@ -115,7 +116,7 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
 💳 *Payment details:*
 • Network: *${symbol}*
 • Amount: *${display} ${symbol}*
-• Address: \\`${validAddr}\\`
+• Address: \`${validAddr}\`
 ⏱️ *Expected payment within 30 minutes.*
 ✅ Use the QR code or copy the address.
 `.trim();
