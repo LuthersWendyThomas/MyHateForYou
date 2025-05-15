@@ -1,4 +1,4 @@
-// 📦 utils/generateQR.js | FINAL IMMORTAL v999999999.∞•QR•FALLBACK•SYNCFIXED
+// 📦 utils/generateQR.js | FINAL IMMORTAL v999999999.∞•QR•FALLBACK•SYNCFIXED•LOCKED
 
 import QRCode from "qrcode";
 import fs from "fs";
@@ -53,10 +53,10 @@ export async function generateQRBuffer(symbol, amount, address) {
 }
 
 export async function generateQR(currency, amount, overrideAddress = null) {
-const sanitizedAmount = sanitizeAmount(amount);
-const symbol = normalizeSymbol(currency);
-const address = resolveAddress(symbol, overrideAddress);
-const filePath = getFallbackPath(symbol, sanitizedAmount);
+  const sanitizedAmount = sanitizeAmount(amount);
+  const symbol = normalizeSymbol(currency);
+  const address = resolveAddress(symbol, overrideAddress);
+  const filePath = getFallbackPath(symbol, sanitizedAmount);
 
   if (!isValidAddress(address)) {
     console.warn(`⚠️ [generateQR] Invalid wallet for ${symbol}: "${address}"`);
@@ -90,7 +90,10 @@ const filePath = getFallbackPath(symbol, sanitizedAmount);
     if (!buffer) return null;
 
     try {
-      if (!fs.existsSync(FALLBACK_DIR)) fs.mkdirSync(FALLBACK_DIR, { recursive: true });
+      // ✅ FIXED: make sure directory exists *before* write attempt
+      if (!fs.existsSync(FALLBACK_DIR)) {
+        fs.mkdirSync(FALLBACK_DIR, { recursive: true });
+      }
       fs.writeFileSync(filePath, buffer);
       console.log(`💾 [generateQR] Fallback saved: ${path.basename(filePath)}`);
     } catch (saveErr) {
@@ -104,11 +107,10 @@ const filePath = getFallbackPath(symbol, sanitizedAmount);
   }
 }
 
-// 🧾 Fixed generatePaymentMessageWithButton()
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
   const symbol = normalizeSymbol(currency);
   const val = sanitizeAmount(amount);
-  const display = Number.isFinite(val) ? val.toFixed(6) : "?.??????";
+  const display = Number.isFinite(val) && val > 0 ? val.toFixed(6) : "?.??????"; // ✅ FIXED: prevent `0.000000` showing for broken value
   const addr = resolveAddress(symbol, overrideAddress);
   const validAddr = isValidAddress(addr) ? addr : "[Invalid address]";
 
