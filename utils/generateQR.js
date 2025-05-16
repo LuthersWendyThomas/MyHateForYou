@@ -13,7 +13,6 @@ import {
   getAmountFilename
 } from "./fallbackPathUtils.js"; // Importuojame helperius iš fallbackPathUtils
 import { getAllQrScenarios } from "./qrScenarios.js"; // Importuojame qrScenarios.js
-import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // IMPORTUJAME fetchCryptoPrice, kad gauti kursus
 
 /**
  * 🔗 Resolve wallet address for a given symbol
@@ -88,9 +87,24 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
       console.log(`🔁 [generateQR] Generating: ${symbol} → $${amount}`);
     }
 
+    // First, check if fallback exists. If not, generate a new one.
+    const scenarios = await getAllQrScenarios();
+    const matchingScenario = scenarios.find(scenario => scenario.rawSymbol === symbol && scenario.expectedAmount === amount);
+
+    // If the fallback file exists, return it
+    if (matchingScenario) {
+      const buffer = await getCachedQR(symbol, amount, address);
+      if (buffer) {
+        console.log(`✅ [generateQR] Fallback found: ${filePath}`);
+        return buffer;
+      }
+    }
+
+    // Generate a new QR code if no fallback exists
     const buffer = await generateQRBuffer(symbol, amount, address);
     if (!isValidBuffer(buffer)) return null;
 
+    // Save new QR code to disk (fallback)
     try {
       if (!fs.existsSync(FALLBACK_DIR)) {
         fs.mkdirSync(FALLBACK_DIR, { recursive: true });
