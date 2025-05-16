@@ -2,7 +2,7 @@
 
 import { products } from "../config/products.js";
 import { deliveryMethods } from "../config/features.js";
-import { NETWORKS } from "./fetchCryptoPrice.js";
+import { ALIASES } from "../config/config.js"; // Imported ALIASES for network sync
 import { fetchCryptoPrice } from "./fetchCryptoPrice.js";
 import { sanitizeAmount, getAmountFilename } from "./fallbackPathUtils.js";
 
@@ -11,7 +11,7 @@ import { sanitizeAmount, getAmountFilename } from "./fallbackPathUtils.js";
  */
 export async function getLiveRatesMap() {
   const map = {};
-  const symbols = Object.keys(NETWORKS);
+  const symbols = Object.keys(ALIASES); // Using ALIASES for all network symbols
   for (const sym of symbols) {
     try {
       const rate = await fetchCryptoPrice(sym);
@@ -32,7 +32,7 @@ export async function getAllQrScenarios() {
   const result = [];
 
   const deliveryFees = deliveryMethods.map(method => Number(method.fee));
-  const networks = Object.keys(NETWORKS);
+  const networks = Object.keys(ALIASES); // Using ALIASES for network keys
   const rateMap = await getLiveRatesMap();
 
   for (const category in products) {
