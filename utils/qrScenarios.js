@@ -2,23 +2,20 @@
 
 import { products } from "../config/products.js";
 import { deliveryMethods } from "../config/features.js";
-import { NETWORKS } from "../config/networkConfig.js"; // Imported NETWORKS from config
-import { fetchCryptoPrice } from "./fetchCryptoPrice.js";
-import {
-  sanitizeAmount, 
-  getAmountFilename, 
-  normalizeSymbol // Added normalizeSymbol here
-} from "./fallbackPathUtils.js"; // All necessary helpers are imported
+import { NETWORKS } from "../config/networkConfig.js"; // Importuojame NETWORKS iš networkConfig.js
+import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // Importuojame fetchCryptoPrice
+import { sanitizeAmount, getAmountFilename, normalizeSymbol } from "./fallbackPathUtils.js"; // Importuojame helperius
 
 /**
- * ⛓️ Gauk visus gyvus kripto kursus 1 kartą ir išsaugok map'e
+ * 🎯 Gauk visus gyvus kripto kursus ir išsaugok map'e
  */
 export async function getLiveRatesMap() {
   const map = {};
-  const networks = Object.keys(NETWORKS); // Using NETWORKS for all network symbols
+  const networks = Object.keys(NETWORKS); // Naudojame NETWORKS tinklų simbolius
+
   for (const sym of networks) {
     try {
-      const rate = await fetchCryptoPrice(sym);
+      const rate = await fetchCryptoPrice(sym); // Naudojame fetchCryptoPrice vietoje custom funkcijos
       if (!rate || rate <= 0) throw new Error(`❌ Invalid rate: ${rate}`);
       map[sym] = rate;
     } catch (err) {
@@ -36,7 +33,7 @@ export async function getAllQrScenarios() {
   const result = [];
 
   const deliveryFees = deliveryMethods.map(method => Number(method.fee));
-  const networks = Object.keys(NETWORKS); // Using NETWORKS for network keys
+  const networks = Object.keys(NETWORKS); // Naudojame NETWORKS tinklų simbolius
   const rateMap = await getLiveRatesMap();
 
   for (const category in products) {
@@ -54,7 +51,6 @@ export async function getAllQrScenarios() {
             const rate = rateMap[rawSymbol];
             if (!rate || rate <= 0) continue;
 
-            // Use sanitizeAmount for rounding the calculated amount
             const expectedAmount = sanitizeAmount(totalUSD / rate);
             const filename = getAmountFilename(rawSymbol, expectedAmount);
 
