@@ -1,3 +1,5 @@
+// generateQR.js v1.1.3 DIAMOND LOCK VERSION
+
 import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
