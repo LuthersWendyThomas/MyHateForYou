@@ -1,4 +1,5 @@
-// 📦 utils/floodHandler.js | IMMORTAL FINAL v999999999.∞+SPAMNOTICE+SAFEDEBOUNCE
+// 📦 utils/floodHandler.js | IMMORTAL FINAL v999999999.∞+SPAMNOTICE+SOFTDEBOUNCE+ULTRAUX
+
 import {
   antiSpam,
   antiFlood,
@@ -28,6 +29,9 @@ export function isDoubleAction(uid, ctx = {}) {
   }
 }
 
+/**
+ * 🧠 Ultra-soft spam prevention (only before step 1)
+ */
 export function isSpamming(id, ctx = {}) {
   try {
     const isButton = Boolean(ctx?.callback_query || ctx?.message?.reply_markup);
@@ -43,7 +47,7 @@ export function isSpamming(id, ctx = {}) {
     const last = antiSpam[uid] || 0;
     antiSpam[uid] = now;
 
-    const tooFast = now - last < 300; // ⏱️ Palengvinta: 300ms
+    const tooFast = now - last < 700; // 🔄 Sušvelninta
     if (tooFast && process.env.DEBUG_MESSAGES === "true") {
       console.warn(`⚠️ [isSpamming] → Rapid messages detected (UID: ${uid})`);
     }
@@ -110,7 +114,7 @@ export async function handleFlood(id, bot, userMsgs = {}, ctx = {}) {
     const hits = antiFlood[uid].length;
 
     if (hits > limit) {
-      bannedUntil[uid] = now + 60 * 1000; // ⏳ Tik 1 min (užtenka)
+      bannedUntil[uid] = now + 60 * 1000; // ⏳ Tik 1 min
       await sendAndTrack(bot, uid,
         "⛔️ *Too many actions in short time.*\n🕓 Muted for *1 minute*.",
         { parse_mode: "Markdown" }, userMsgs
@@ -152,7 +156,8 @@ function isCity(ctx = {}, text = "") {
   const uid = String(ctx?.message?.chat?.id);
   const clean = text.trim().toLowerCase();
   const region = userSessions?.[uid]?.region;
-  const cities = REGION_MAP?.[region]?.cities || {};
+  if (!region || !REGION_MAP[region]) return false;
+  const cities = REGION_MAP[region].cities || {};
   return Object.keys(cities).some(c => {
     const base = c.replace(/^[^a-z0-9]+/i, "").toLowerCase();
     return base === clean;
