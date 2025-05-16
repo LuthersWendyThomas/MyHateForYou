@@ -1,205 +1,154 @@
-// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v3.0.0•GODMODE•MANAGER
+// 📦 generateQR.js v1.1.3 DIAMOND LOCK VERSION
 
-import fs from "fs/promises";
+import QRCode from "qrcode";
+import fs from "fs";
 import path from "path";
-import { existsSync } from "fs";
-import PQueue from "p-queue";
-import { generateQR } from "./generateQR.js"; // Importing generateQR for QR generation
+import { WALLETS } from "../config/config.js"; // WALLETS importas iš config
+import { NETWORKS } from "../utils/fetchCryptoPrice.js"; // Importuojame NETWORKS iš fetchCryptoPrice.js
 import {
-  sanitizeAmount,
-  getFallbackPath,
   FALLBACK_DIR,
+  getFallbackPath,
+  sanitizeAmount,
   normalizeSymbol,
   getAmountFilename
-} from "./fallbackPathUtils.js"; // Import helpers for sanitation, normalization, and filename handling
-import { getAllQrScenarios } from "./qrScenarios.js"; // Import qrScenarios.js for fetching all QR scenarios
+} from "./fallbackPathUtils.js"; // Importuojame helperius iš fallbackPathUtils
+import { getAllQrScenarios } from "./qrScenarios.js"; // Importuojame qrScenarios.js
+import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // IMPORTUJAME fetchCryptoPrice, kad gauti kursus
 
-import { NETWORKS } from "./fetchCryptoPrice.js"; // Use NETWORKS from fetchCryptoPrice.js for network rates
-import { WALLETS } from "../config/config.js"; // WALLETS from config for wallet address resolution
-
-const MAX_CONCURRENCY = 10;
-const MAX_RETRIES = 7;
-const BASE_DELAY_MS = 2000;
-
-function sleep(ms) {
-  return new Promise(res => setTimeout(res, ms));
+/**
+ * 🔗 Resolve wallet address for a given symbol
+ */
+export function resolveAddress(symbol, overrideAddress) {
+  const normalized = normalizeSymbol(symbol);
+  return String(overrideAddress || WALLETS[normalized] || "").trim();
 }
 
-// Attempt to generate QR and handle fallback if necessary
-async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      const filePath = path.join(FALLBACK_DIR, filename);
-
-      if (existsSync(filePath)) {
-        await fs.unlink(filePath);
-        console.log(`♻️ [${index}/${total}] Overwriting: ${filename}`);
-      }
-
-      // Use generateQR to create a new QR if necessary
-      const buffer = await generateQR(rawSymbol, expectedAmount);
-      if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 1000) {
-        throw new Error("Invalid QR buffer");
-      }
-
-      await fs.writeFile(filePath, buffer);
-      successful.add(filePath);
-      console.log(`✅ [${index}/${total}] ${rawSymbol} → ${expectedAmount}`);
-      return;
-    } catch (err) {
-      const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${rawSymbol}: ${err.message}`);
-      await sleep(delay);
-    }
-  }
-
-  failed.push({ rawSymbol, expectedAmount, filename });
+/**
+ * 🛡️ Validate wallet address
+ */
+function isValidAddress(addr) {
+  return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
 }
 
-// Initialize QR cache directory if it doesn't exist
-export async function initQrCacheDir() {
-  if (!existsSync(FALLBACK_DIR)) {
-    await fs.mkdir(FALLBACK_DIR, { recursive: true });
-  }
+/**
+ * 🧪 Validate buffer (basic check)
+ */
+function isValidBuffer(buffer) {
+  return Buffer.isBuffer(buffer) && buffer.length >= 300;
 }
 
-// Clean up expired QR codes from the cache directory
-export async function cleanQrCacheDir() {
+/**
+ * 🎨 Generate QR buffer from URI
+ */
+export async function generateQRBuffer(symbol, amount, address) {
+  const formatted = sanitizeAmount(amount).toFixed(6);
+  const uri = `${symbol.toLowerCase()}:${address}?amount=${formatted}&label=${encodeURIComponent("BalticPharmacyBot")}&message=${encodeURIComponent("Order")}`;
+
   try {
-    const files = await fs.readdir(FALLBACK_DIR);
-    const targets = files.filter(f => f.endsWith(".png"));
-    for (const f of targets) {
-      await fs.unlink(path.join(FALLBACK_DIR, f));
-    }
-    console.log(`🧹 [cleanQrCacheDir] Deleted ${targets.length} fallback PNGs.`);
+    const buffer = await Promise.race([
+      QRCode.toBuffer(uri, {
+        type: "png",
+        width: 300,
+        margin: 3,
+        errorCorrectionLevel: "H",
+        color: { dark: "#000000", light: "#FFFFFF" }
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("QR timeout")), 4000))
+    ]);
+
+    if (!isValidBuffer(buffer)) throw new Error("QR buffer invalid");
+    return buffer;
   } catch (err) {
-    console.warn("⚠️ [cleanQrCacheDir]", err.message);
-  }
-}
-
-// Generate full QR cache (either forced or based on existing scenarios)
-export async function generateFullQrCache(forceComplete = true) {
-  await initQrCacheDir();
-
-  const scenarios = await getAllQrScenarios(); // Get all the QR scenarios from the source of truth
-  const totalCount = scenarios.length;
-
-  console.log(`🚀 [QR Cache] Generating ${totalCount} fallback QR codes...`);
-
-  const successful = new Set();
-  let pending = [...scenarios];
-  let cycle = 0;
-
-  while (pending.length > 0 && cycle < 10) {
-    cycle++;
-    console.log(`🔁 [Cycle ${cycle}] Pending: ${pending.length}...`);
-
-    const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
-    const failed = [];
-    const offset = totalCount - pending.length;
-
-    for (let i = 0; i < pending.length; i++) {
-      const scenario = pending[i];
-      const index = offset + i + 1;
-
-      queue.add(() =>
-        attemptGenerate({ ...scenario, index, total: totalCount }, successful, failed).catch(err => {
-          console.warn(`❌ [queueTaskFailed] ${scenario.filename}: ${err.message}`);
-          failed.push(scenario);
-        })
-      );
-    }
-
-    await queue.onIdle();
-    pending = failed;
-    if (!forceComplete) break;
-  }
-}
-
-// Validate existing QR files and regenerate missing/corrupt files
-export async function validateQrFallbacks(autoFix = true) {
-  try {
-    const files = await fs.readdir(FALLBACK_DIR);
-    const pngs = files.filter(f => f.endsWith(".png"));
-    const scenarios = await getAllQrScenarios();
-    const expected = scenarios.length;
-
-    const expectedSet = new Set(scenarios.map(s => s.filename));
-    const corrupt = [];
-    const missing = [];
-
-    for (const filename of expectedSet) {
-      const filePath = path.join(FALLBACK_DIR, filename);
-      try {
-        const stat = await fs.stat(filePath);
-        if (!stat.isFile() || stat.size < 300) {
-          corrupt.push({ filename, filePath });
-        }
-      } catch {
-        missing.push({ filename, filePath });
-      }
-    }
-
-    const validCount = expected - corrupt.length - missing.length;
-    console.log(`📊 QR Validation: ${validCount}/${expected} valid`);
-
-    if ((corrupt.length > 0 || missing.length > 0) && autoFix) {
-      const toFix = [...corrupt, ...missing];
-      console.warn(`♻️ Regenerating ${toFix.length} missing/corrupt files...`);
-
-      const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
-
-      for (const { filename } of toFix) {
-        const [symbol, amtRaw] = filename.replace(".png", "").split("_");
-        const amount = sanitizeAmount(parseFloat(amtRaw));
-        if (!amount || isNaN(amount) || amount <= 0) continue;
-
-        queue.add(async () => {
-          try {
-            const buffer = await generateQR(symbol, amount);
-            if (!buffer) {
-              console.warn(`❌ Invalid QR: ${symbol} ${amount}`);
-              return;
-            }
-            const filePath = path.join(FALLBACK_DIR, filename);
-            await fs.writeFile(filePath, buffer);
-            console.log(`✅ Regenerated: ${symbol} ${amount}`);
-          } catch (err) {
-            console.warn(`❌ Regeneration failed: ${symbol} ${amount} → ${err.message}`);
-          }
-        });
-      }
-
-      await queue.onIdle();
-      console.log(`🧬 Regeneration complete.`);
-    } else {
-      console.log("✅ All fallback QR codes are valid.");
-    }
-  } catch (err) {
-    console.error(`❌ Validation failed: ${err.message}`);
-  }
-}
-
-// Get cached QR (if available) from the fallback path
-export async function getCachedQR(symbol, amount, address = null) {
-  try {
-    const filePath = getFallbackPath(symbol, amount);
-    if (!existsSync(filePath)) return null;
-    const buffer = await fs.readFile(filePath);
-    return Buffer.isBuffer(buffer) && buffer.length >= 300 ? buffer : null;
-  } catch {
+    console.error("❌ [generateQRBuffer]", err.message);
     return null;
   }
 }
 
-// Save QR to cache directory
-export async function saveCachedQR(symbol, amount, address = null, buffer) {
-  try {
-    const filePath = getFallbackPath(symbol, amount);
-    await fs.writeFile(filePath, buffer);
-    return true;
-  } catch (err) {
-    console.warn("⚠️ [saveCachedQR] Failed:", err.message);
-    return false;
+/**
+ * 🧾 Generate QR and save fallback PNG to disk (used by fallback system)
+ */
+export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
+  const symbol = normalizeSymbol(symbolRaw);
+  const amount = sanitizeAmount(amountRaw);
+  const address = resolveAddress(symbol, overrideAddress);
+  const filePath = getFallbackPath(symbol, amount);
+
+  if (!isValidAddress(address)) {
+    console.warn(`⚠️ [generateQR] Invalid wallet for ${symbol}: "${address}"`);
+    return null;
   }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    console.warn(`⚠️ [generateQR] Invalid amount: ${amountRaw}`);
+    return null;
+  }
+
+  try {
+    if (process.env.DEBUG_MESSAGES === "true") {
+      console.log(`🔁 [generateQR] Generating: ${symbol} → $${amount}`);
+    }
+
+    // First, check if fallback exists. If not, generate a new one.
+    const scenarios = await getAllQrScenarios();
+    const matchingScenario = scenarios.find(scenario => scenario.rawSymbol === symbol && scenario.expectedAmount === amount);
+
+    // If the fallback file exists, return it
+    if (matchingScenario) {
+      const buffer = await getCachedQR(symbol, amount, address);
+      if (buffer) {
+        console.log(`✅ [generateQR] Fallback found: ${filePath}`);
+        return buffer;
+      }
+    }
+
+    // Generate a new QR code if no fallback exists
+    const buffer = await generateQRBuffer(symbol, amount, address);
+    if (!isValidBuffer(buffer)) return null;
+
+    // Save new QR code to disk (fallback)
+    try {
+      if (!fs.existsSync(FALLBACK_DIR)) {
+        fs.mkdirSync(FALLBACK_DIR, { recursive: true });
+      }
+
+      fs.writeFileSync(filePath, buffer);
+      if (process.env.DEBUG_MESSAGES === "true") {
+        console.log(`💾 [generateQR] Fallback saved: ${path.basename(filePath)}`);
+      }
+    } catch (saveErr) {
+      console.warn(`⚠️ [generateQR] Save failed: ${saveErr.message}`);
+    }
+
+    return buffer;
+  } catch (err) {
+    console.error("❌ [generateQR fatal]", err.message);
+    return null;
+  }
+}
+
+/**
+ * 💬 Generate full payment message with "copy" button
+ */
+export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
+  const symbol = normalizeSymbol(currency);
+  const val = sanitizeAmount(amount);
+  const display = Number.isFinite(val) && val > 0 ? val.toFixed(6) : "?.??????";
+  const addr = resolveAddress(symbol, overrideAddress);
+  const validAddr = isValidAddress(addr) ? addr : "[Invalid address]";
+
+  const message = `
+💳 *Payment details:*
+• Network: *${symbol}*
+• Amount: *${display} ${symbol}*
+• Address: \`${validAddr}\`
+⏱️ *Expected payment within 30 minutes.*
+✅ Use the QR code or copy the address.
+`.trim();
+
+  return {
+    message,
+    reply_markup: {
+      inline_keyboard: [[{ text: "📋 Copy address", callback_data: `copy:${validAddr}` }]]
+    }
+  };
 }
