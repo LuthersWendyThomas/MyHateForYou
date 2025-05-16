@@ -1,4 +1,4 @@
-// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.2.1•GODMODE•DIAMONDLOCK•WOWUI•SIGTERM++•409VISUALS
+// 📦 index.js | BalticPharmacyBot — IMMORTAL FINAL v1.2.9•GODMODE•DIAMONDLOCK•WOWUI•SIGTERM∞•409SAFE
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -25,19 +25,12 @@ try {
 
 let last409Time = 0;
 
-async function notifyCrash(source, err) {
-  const msg = typeof err === "object" && err !== null ? err.message || JSON.stringify(err) : String(err);
-  const upper = source.toUpperCase();
+function logSoft409Conflict(message) {
   const now = new Date().toLocaleString("en-GB");
-
-  // General error
-  console.error(`\x1b[41m\x1b[30m 💥 CRITICAL ERROR (${upper}) | ${now} | ${msg} \x1b[0m`);
-
-  try {
-    await sendAdminPing(`❌ *${upper} CRASH:*\n\`\`\`\n${msg}\n\`\`\`\n🕒 ${now}`);
-  } catch (sendErr) {
-    console.warn("\x1b[43m\x1b[30m ⚠️ Failed to send admin ping: " + sendErr.message + " \x1b[0m");
-  }
+  const nowMs = Date.now();
+  if (nowMs - last409Time < 30000) return;
+  last409Time = nowMs;
+  console.warn(`\x1b[43m\x1b[30m ⚠️ 409 CONFLICT — ${message} | ${now} \x1b[0m`);
 }
 
 (async () => {
@@ -61,7 +54,13 @@ async function notifyCrash(source, err) {
     });
 
     BOT.INSTANCE.on("polling_error", async (err) => {
-      await notifyCrash("polling_error", err);
+      const msg = err?.message || String(err || "");
+      if (msg.includes("409") && msg.includes("getUpdates")) {
+        logSoft409Conflict("BOT ALREADY POLLING");
+        return;
+      }
+      const now = new Date().toLocaleString("en-GB");
+      console.error(`\x1b[41m\x1b[30m 💥 POLLING ERROR | ${now} | ${msg} \x1b[0m`);
     });
 
     try {
@@ -75,7 +74,8 @@ async function notifyCrash(source, err) {
       await sendAdminPing(`✅ Bot started successfully\nVersion: *v${version}*\n🕒 ${now}`);
       setTimeout(() => sendAdminPing("✅ Bot fully ready (RAM warmed up, timers running, FSM live)."), 12 * 60 * 1000);
     } catch (initErr) {
-      await notifyCrash("bot.init", initErr);
+      const msg = initErr?.message || String(initErr);
+      console.error(`\x1b[41m\x1b[30m 💥 BOT INIT FAILURE | ${new Date().toLocaleString("en-GB")} | ${msg} \x1b[0m`);
       process.exit(1);
     }
 
@@ -107,27 +107,25 @@ async function notifyCrash(source, err) {
         await sendAdminPing("📦 Delayed QR fallback generation completed successfully (post-boot).");
       } catch (err) {
         console.error(`\x1b[41m\x1b[30m ❌ Delayed QR cache generation failed: ${err.message} \x1b[0m`);
-        await sendAdminPing(`⚠️ QR fallback generation failed (post-boot)\n\`${err.message}\``);
       }
     }, 180_000);
 
   } catch (err) {
-    await notifyCrash("boot", err);
+    const msg = err?.message || String(err);
+    console.error(`\x1b[41m\x1b[30m 💥 CRITICAL STARTUP ERROR | ${new Date().toLocaleString("en-GB")} | ${msg} \x1b[0m`);
     process.exit(1);
   }
 })();
 
 process.on("uncaughtException", async (err) => {
-  await notifyCrash("uncaughtException", err);
+  const msg = err?.message || String(err);
+  console.error(`\x1b[41m\x1b[30m 💥 UNCAUGHT EXCEPTION | ${new Date().toLocaleString("en-GB")} | ${msg} \x1b[0m`);
   process.exit(1);
 });
 
 process.on("unhandledRejection", async (reason) => {
-  const error =
-    reason instanceof AggregateError
-      ? reason.errors?.map(e => e?.message || String(e)).join(" | ")
-      : reason?.message || String(reason);
-  await notifyCrash("unhandledRejection", error);
+  const msg = reason?.message || String(reason);
+  console.error(`\x1b[41m\x1b[30m 💥 UNHANDLED REJECTION | ${new Date().toLocaleString("en-GB")} | ${msg} \x1b[0m`);
   process.exit(1);
 });
 
@@ -143,22 +141,8 @@ process.on("unhandledRejection", async (reason) => {
       console.warn(`\x1b[43m\x1b[30m ⚠️ Graceful shutdown error: ${err.message} \x1b[0m`);
     }
 
-    // 💚 VISADA parodyk shutdown success bloką
     console.log(`\x1b[42m\x1b[30m ✅ BOT SHUTDOWN COMPLETE — SAFE EXIT @ ${ts} \x1b[0m`);
 
-    // 🛡️ Pabandyk siųsti pingą, bet neblokuok jei nepavyks
-    try {
-      setTimeout(() => {
-        sendAdminPing(
-          `🛑 *Bot shutdown signal received:* \`${sig}\`\n\n` +
-          `✅ *Polling stopped*\n📦 *FSM cleaned*\n🛡️ *System exited cleanly*\n🕒 ${ts}`
-        ).catch(() => {});
-      }, 250);
-    } catch {
-      // ⚠️ Nutylim – neverta trukdyti shutdown
-    }
-
-    // 💤 Duok laiko log'ams (ypač Render.com console)
     setTimeout(() => process.exit(0), 1000);
   })
 );
