@@ -18,6 +18,36 @@ function sleep(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
+// 🔁 FIX: Pakeltas čia, kad būtų prieš naudojimą
+async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const filePath = path.join(FALLBACK_DIR, filename);
+
+      if (existsSync(filePath)) {
+        await fs.unlink(filePath);
+        console.log(`♻️ [${index}/${total}] Overwriting: ${filename}`);
+      }
+
+      const buffer = await generateQR(rawSymbol, expectedAmount);
+      if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 1000) {
+        throw new Error("Invalid QR buffer");
+      }
+
+      await fs.writeFile(filePath, buffer);
+      successful.add(filePath);
+      console.log(`✅ [${index}/${total}] ${rawSymbol} → ${expectedAmount}`);
+      return;
+    } catch (err) {
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt);
+      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${rawSymbol}: ${err.message}`);
+      await sleep(delay);
+    }
+  }
+
+  failed.push({ rawSymbol, expectedAmount, filename });
+}
+
 export async function initQrCacheDir() {
   if (!existsSync(FALLBACK_DIR)) {
     await fs.mkdir(FALLBACK_DIR, { recursive: true });
@@ -73,34 +103,6 @@ export async function generateFullQrCache(forceComplete = true) {
     pending = failed;
     if (!forceComplete) break;
   }
-
-async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      const filePath = path.join(FALLBACK_DIR, filename);
-
-      if (existsSync(filePath)) {
-        await fs.unlink(filePath);
-        console.log(`♻️ [${index}/${total}] Overwriting: ${filename}`);
-      }
-
-      const buffer = await generateQR(rawSymbol, expectedAmount);
-      if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 1000) {
-        throw new Error("Invalid QR buffer");
-      }
-
-      await fs.writeFile(filePath, buffer);
-      successful.add(filePath);
-      console.log(`✅ [${index}/${total}] ${rawSymbol} → ${expectedAmount}`);
-      return;
-    } catch (err) {
-      const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${rawSymbol}: ${err.message}`);
-      await sleep(delay);
-    }
-  }
-
-  failed.push({ rawSymbol, expectedAmount, filename });
 }
 
 export async function validateQrFallbacks(autoFix = true) {
