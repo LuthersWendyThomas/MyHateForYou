@@ -1,21 +1,18 @@
 // 📦 utils/qrScenarios.js | FINAL IMMORTAL v3.0.0•GODMODE•SCENARIOLOCKED•SOURCEOFTRUTH
 
-import { products } from "../config/products.js";
-import { deliveryMethods } from "../config/features.js";
-import { NETWORKS } from "../config/networkConfig.js"; // Importuojame NETWORKS iš networkConfig.js
-import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // Importuojame fetchCryptoPrice
-import { sanitizeAmount, getAmountFilename, normalizeSymbol } from "./fallbackPathUtils.js"; // Importuojame helperius
+import { ALIASES, WALLETS } from "../config/config.js"; // Importuojame ALIASES ir WALLETS iš config.js
+import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // Naudokime fetchCryptoPrice duomenims gauti
+import { sanitizeAmount, getAmountFilename, normalizeSymbol } from "./fallbackPathUtils.js"; // Helperiai
 
 /**
- * 🎯 Gauk visus gyvus kripto kursus ir išsaugok map'e
+ * ⛓️ Gauk visus gyvus kripto kursus 1 kartą ir išsaugok map'e
  */
 export async function getLiveRatesMap() {
   const map = {};
-  const networks = Object.keys(NETWORKS); // Naudojame NETWORKS tinklų simbolius
-
+  const networks = Object.keys(ALIASES); // Using ALIASES for all network symbols
   for (const sym of networks) {
     try {
-      const rate = await fetchCryptoPrice(sym); // Naudojame fetchCryptoPrice vietoje custom funkcijos
+      const rate = await fetchCryptoPrice(sym);
       if (!rate || rate <= 0) throw new Error(`❌ Invalid rate: ${rate}`);
       map[sym] = rate;
     } catch (err) {
@@ -31,11 +28,9 @@ export async function getLiveRatesMap() {
  */
 export async function getAllQrScenarios() {
   const result = [];
+  const rateMap = await getLiveRatesMap(); // Gausime kursus tik čia
 
-  const deliveryFees = deliveryMethods.map(method => Number(method.fee));
-  const networks = Object.keys(NETWORKS); // Naudojame NETWORKS tinklų simbolius
-  const rateMap = await getLiveRatesMap();
-
+  // Iteruojame per produktus ir apskaičiuojame scenarijus
   for (const category in products) {
     for (const product of products[category]) {
       if (!product?.active || !product?.prices) continue;
@@ -44,13 +39,15 @@ export async function getAllQrScenarios() {
         const usd = Number(basePrice);
         if (!usd || usd <= 0) continue;
 
+        // Apskaičiuojame visus scenarijus su įvairiais mokesčiais
         for (const fee of deliveryFees) {
           const totalUSD = usd + fee;
 
-          for (const rawSymbol of networks) {
+          for (const rawSymbol of Object.keys(rateMap)) {
             const rate = rateMap[rawSymbol];
             if (!rate || rate <= 0) continue;
 
+            // Skaičiuojame kiek reikės kriptovaliutos už visą sumą
             const expectedAmount = sanitizeAmount(totalUSD / rate);
             const filename = getAmountFilename(rawSymbol, expectedAmount);
 
