@@ -2,6 +2,7 @@
 // 24/7 BULLETPROOF • FSM SAFE ENGINE • FLOOD RESISTANT • FULL USD SUPPORT • PERFECT SYNC
 
 import { getAmountFilename, getFallbackPath, sanitizeAmount } from "../../utils/fallbackPathUtils.js";
+import { generateQR } from "../../utils/generateQR.js";
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
 import { products } from "../../config/products.js";
