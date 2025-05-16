@@ -1,17 +1,67 @@
 // 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v3.1.9•DIAMONDLOCK+ULTRAFAST+QRFALLBACKSAFE
-
 import fetch from 'node-fetch';
 import { rateLimiter } from './rateLimiter.js';
-import { ALIASES } from '../config/config.js'; // Importing from config.js for consistency
+import { ALIASES }     from '../config/config.js';
 
-const CACHE_TTL = 5 * 60 * 1000;
-const MICRO_FALLBACK = 30 * 1000;
+const CACHE_TTL       = 5 * 60 * 1000;
+const MICRO_FALLBACK  = 30 * 1000;
 const REQUEST_TIMEOUT = 10000;
 
 const cache = new Map(); // <symbol, { rate, ts }>
 const locks = new Map(); // <symbol, Promise<number>>
 
-export const NETWORKS = ALIASES; // Using ALIASES to ensure consistency across the system
+export const NETWORKS = {
+  BTC: {
+    coinGecko: {
+      buildUrls: [() =>
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'],
+      extract: d => Number(d.bitcoin?.usd)
+    },
+    coinCap: {
+      buildUrls: [() =>
+        'https://api.coincap.io/v2/assets/bitcoin'],
+      extract: d => Number(d.data?.priceUsd)
+    }
+  },
+  ETH: {
+    coinGecko: {
+      buildUrls: [() =>
+        'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'],
+      extract: d => Number(d.ethereum?.usd)
+    },
+    coinCap: {
+      buildUrls: [() =>
+        'https://api.coincap.io/v2/assets/ethereum'],
+      extract: d => Number(d.data?.priceUsd)
+    }
+  },
+  MATIC: {
+    coinGecko: {
+      buildUrls: [
+        () => 'https://api.coingecko.com/api/v3/simple/price?ids=polygon&vs_currencies=usd',
+        () => 'https://api.coingecko.com/api/v3/simple/price?ids=matic-network&vs_currencies=usd'
+      ],
+      extract: d => Number(d.polygon?.usd ?? d['matic-network']?.usd)
+    },
+    coinCap: {
+      buildUrls: [() =>
+        'https://api.coincap.io/v2/assets/polygon'],
+      extract: d => Number(d.data?.priceUsd)
+    }
+  },
+  SOL: {
+    coinGecko: {
+      buildUrls: [() =>
+        'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd'],
+      extract: d => Number(d.solana?.usd)
+    },
+    coinCap: {
+      buildUrls: [() =>
+        'https://api.coincap.io/v2/assets/solana'],
+      extract: d => Number(d.data?.priceUsd)
+    }
+  }
+};
 
 class RateLimitError extends Error {
   constructor(msg, ms) {
@@ -116,6 +166,7 @@ async function retry(fn, retries = 3, base = 300) {
     } catch (e) {
       err = e;
 
+      // 🛡️ Naujas saugiklis nuo AggregateError
       if (e.name === "AggregateError" || e instanceof AggregateError) {
         console.warn(`💥 AggregateError caught in retry: ${e.message}`);
         continue;
@@ -149,3 +200,4 @@ function isValid(n) {
 export async function getSafeRate(symbol) {
   return await fetchCryptoPrice(symbol);
 }
+
