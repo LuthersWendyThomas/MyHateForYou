@@ -1,6 +1,6 @@
 // 📦 utils/qrScenarios.js | FINAL IMMORTAL v3.0.0•GODMODE•SCENARIOLOCKED•SOURCEOFTRUTH
 
-import { ALIASES, WALLETS } from "../config/config.js"; // Importing ALIASES and WALLETS from config.js
+import { NETWORKS, WALLETS } from "../config/config.js"; // Importing NETWORKS and WALLETS from config.js
 import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // Use fetchCryptoPrice for rate fetching
 import { sanitizeAmount, getAmountFilename, normalizeSymbol } from "./fallbackPathUtils.js"; // Necessary helpers
 
@@ -9,7 +9,7 @@ import { sanitizeAmount, getAmountFilename, normalizeSymbol } from "./fallbackPa
  */
 export async function getLiveRatesMap() {
   const map = {};
-  const networks = Object.keys(ALIASES); // Using ALIASES for all network symbols
+  const networks = Object.keys(NETWORKS); // Using NETWORKS for all network symbols (BTC, ETH, MATIC, SOL)
 
   // Loop through all network symbols
   for (const sym of networks) {
@@ -34,8 +34,8 @@ export async function getLiveRatesMap() {
 }
 
 /**
- * 🎯 Grąžina visas galimas QR scenarijų kombinacijas su realiais kursais ir amounts
- * Tai vienintelis tiesos šaltinis visai sistemai (generate + validate + check).
+ * 🎯 Return all possible QR scenarios with real-time rates and amounts
+ * This is the single source of truth for generating and validating QR codes
  */
 export async function getAllQrScenarios() {
   const result = [];
