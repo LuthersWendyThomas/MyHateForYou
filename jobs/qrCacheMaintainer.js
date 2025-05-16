@@ -1,10 +1,8 @@
-// 📦 jobs/qrCacheMaintainer.js | FINAL IMMORTAL v3.1.0•SCENARIOLOCKED•SYNCED•100%FIXED
-
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js";
-import { FALLBACK_DIR } from "../utils/fallbackPathUtils.js";
+import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js"; // Tikslūs importai
+import { FALLBACK_DIR } from "../utils/fallbackPathUtils.js"; // Užtikriname, kad kelias į fallback dir būtų teisingas
 import { sendAdminPing } from "../core/handlers/paymentHandler.js";
 import { getExpectedQrCount } from "../utils/qrScenarios.js"; // ✅ FIXED: naudoti tiesos šaltinį
 
