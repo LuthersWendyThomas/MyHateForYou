@@ -91,10 +91,10 @@ export async function handlePayment(bot, id, userMsgs, preGeneratedQR) {
    let qrBuffer = preGeneratedQR || await getCachedQR(symbol, amount, session.wallet);
 
   if (!qrBuffer) {
-    qrBuffer = await generateQR(symbol, amount, session.wallet);
     if (qrBuffer && Buffer.isBuffer(qrBuffer) && qrBuffer.length >= 300) {
       await saveCachedQR(symbol, amount, session.wallet, qrBuffer);
-    }
+  } else {
+    console.warn(`⚠️ [QR] Live generation failed for ${symbol} ${amount}`);
   }
 
     if (process.env.DEBUG_MESSAGES === "true") {
