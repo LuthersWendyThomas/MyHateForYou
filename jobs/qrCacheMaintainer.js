@@ -1,4 +1,4 @@
-// qrCacheManager.js v1.2.4 2025 deploy locked
+// qrCacheMaintainer.js v1.2.4 2025 deploy locked
 
 import fs from "fs/promises";
 import path from "path";
