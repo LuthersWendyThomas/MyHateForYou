@@ -1,4 +1,4 @@
-// 📦 utils/generateQR.js | FINAL GODMODE v2.9.9•SYNCLOCK•∞READY•FALLBACKSAFE
+// 📦 utils/generateQR.js | FINAL GODMODE v3.0.0•IMMORTAL•SYNCED•SCENARIOSAFE•FALLBACKREADY
 
 import QRCode from "qrcode";
 import fs from "fs";
@@ -12,7 +12,7 @@ import {
 } from "./fallbackPathUtils.js";
 
 /**
- * 🔗 Get wallet address for given symbol
+ * 🔗 Resolve wallet address for a given symbol
  */
 export function resolveAddress(symbol, overrideAddress) {
   const normalized = normalizeSymbol(symbol);
@@ -20,21 +20,21 @@ export function resolveAddress(symbol, overrideAddress) {
 }
 
 /**
- * 🛡️ Simple wallet address format check
+ * 🛡️ Validate wallet address
  */
 function isValidAddress(addr) {
   return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
 }
 
 /**
- * 🧪 Check if buffer is valid QR PNG
+ * 🧪 Validate buffer (basic check)
  */
 function isValidBuffer(buffer) {
   return Buffer.isBuffer(buffer) && buffer.length >= 300;
 }
 
 /**
- * 🎨 Create QR buffer for given payment URI
+ * 🎨 Generate QR buffer from URI
  */
 export async function generateQRBuffer(symbol, amount, address) {
   const formatted = sanitizeAmount(amount).toFixed(6);
@@ -61,7 +61,7 @@ export async function generateQRBuffer(symbol, amount, address) {
 }
 
 /**
- * 🧾 Generate QR buffer and save fallback PNG if needed
+ * 🧾 Generate QR and save fallback PNG to disk (used by fallback system)
  */
 export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
   const symbol = normalizeSymbol(symbolRaw);
