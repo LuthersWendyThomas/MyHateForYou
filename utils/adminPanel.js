@@ -1,5 +1,4 @@
-// 📦 utils/adminPanel.js | FINAL IMMORTAL ADMINLOCK v999999999.9999∞.2
-// MAX SYNC + DISCOUNT CONTROL + TOGGLE SYSTEM + BROADCAST + STATS + BULLETPROOF FSM FIX
+// 📦 utils/adminPanel.js | FINAL IMMORTAL v999999999.999999.ULTIMATE•ADMINLOCK•FSMSAFE
 
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import {
@@ -48,12 +47,12 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
   if (!id || String(id) !== String(BOT.ADMIN_ID) || !text) return;
 
   const s = (sessions[id] ||= {});
-  s.step = null; // ⬅ garantuotas išėjimas iš FSM funnel
+  s.step = null; // ✅ FULL EXIT from FSM funnel
 
   try {
     if (s.adminStep === "ban_user") {
       await banUser(text); delete s.adminStep;
-      return sendAndTrack(bot, id, `❌ User banned: \`${text}\``, { parse_mode: "Markdown" }, {});
+      return openAdminPanel(bot, id);
     }
 
     if (s.adminStep === "temp_ban") {
@@ -62,12 +61,12 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
       if (!targetId || isNaN(mins) || mins < 1)
         return sendAndTrack(bot, id, "⚠️ Format: `123456789 10`", { parse_mode: "Markdown" }, {});
       await banUserTemporary(targetId, mins); delete s.adminStep;
-      return sendAndTrack(bot, id, `⏳ Temp ban → \`${targetId}\` for *${mins} min*`, { parse_mode: "Markdown" }, {});
+      return openAdminPanel(bot, id);
     }
 
     if (s.adminStep === "unban_user") {
       await unbanUser(text); delete s.adminStep;
-      return sendAndTrack(bot, id, `✅ User unbanned: \`${text}\``, { parse_mode: "Markdown" }, {});
+      return openAdminPanel(bot, id);
     }
 
     if (s.adminStep === "discount_manage") {
@@ -77,9 +76,7 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
       if (!DISCOUNT_TYPES.includes(type))
         return sendAndTrack(bot, id, `❌ Invalid type. Use: *${DISCOUNT_TYPES.join(", ")}*`, { parse_mode: "Markdown" }, {});
       setDiscount(type, keyRaw || null, active, pct); delete s.adminStep;
-      return sendAndTrack(bot, id,
-        `✅ *${type}* discount updated → \`${keyRaw || "(global)"}\` = *${pct}%* (${active ? "ON" : "OFF"})`,
-        { parse_mode: "Markdown" }, {});
+      return openAdminPanel(bot, id);
     }
 
     if (s.adminStep === "toggle_manage") {
@@ -104,13 +101,13 @@ export async function handleAdminAction(bot, msg, sessions = userSessions) {
       }
 
       delete s.adminStep;
-      return sendAndTrack(bot, id, `🟢 Toggle updated: \`${target}\` → ${status ? "ON ✅" : "OFF ❌"}`, { parse_mode: "Markdown" }, {});
+      return openAdminPanel(bot, id);
     }
 
     if (s.adminStep === "broadcast") {
       await startBroadcast(bot, id, text);
       delete s.adminStep;
-      return;
+      return openAdminPanel(bot, id);
     }
 
     switch (text) {
