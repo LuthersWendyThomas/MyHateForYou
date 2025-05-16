@@ -36,6 +36,7 @@ function logSoft409Conflict(message) {
 (async () => {
   try {
     initBotInstance();
+    await startSafePolling(BOT.INSTANCE);
 
     BOT.INSTANCE.on("message", async (msg) => {
       const uid = msg?.from?.id;
