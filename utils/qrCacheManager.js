@@ -1,5 +1,3 @@
-// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v3.0.0•GODMODE•SCENARIOLOCKED•
-
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
@@ -8,9 +6,10 @@ import { generateQR } from "./generateQR.js";
 import {
   sanitizeAmount,
   getFallbackPath,
-  FALLBACK_DIR
-} from "./fallbackPathUtils.js";
-import { getAllQrScenarios } from "./qrScenarios.js";
+  FALLBACK_DIR,
+  normalizeSymbol // Pridėtas normalizeSymbol importas
+} from "./fallbackPathUtils.js"; // Pridėtas normalizeSymbol importas
+import { getAllQrScenarios } from "./qrScenarios.js"; // Pridėtas getAllQrScenarios importas
 
 const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 7;
@@ -72,7 +71,7 @@ export async function cleanQrCacheDir() {
 export async function generateFullQrCache(forceComplete = true) {
   await initQrCacheDir();
 
-  const scenarios = await getAllQrScenarios();
+  const scenarios = await getAllQrScenarios();  // Generuojame scenarijus
   const totalCount = scenarios.length;
 
   console.log(`🚀 [QR Cache] Generating ${totalCount} fallback QR codes...`);
