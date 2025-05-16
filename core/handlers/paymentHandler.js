@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | FINAL IMMORTAL v999999999.∞+DIAMONDLOCK+SYNCFIXED+FULLCLEAN
+// 📦 core/handlers/paymentHandler.js | FINAL IMMORTAL v999999999
 // FULL AI-DRIVEN QR LOGIC • STEP-SAFE • SESSION-SYNC • BULLETPROOF • FULLRESET INTEGRATED
 
 import { generateQR } from "../../utils/generateQR.js";
