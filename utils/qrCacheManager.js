@@ -4,19 +4,19 @@ import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import PQueue from "p-queue";
-import { generateQR } from "./generateQR.js";
+import { generateQR } from "./generateQR.js"; // This will generate QR codes
 import {
   sanitizeAmount,
   getFallbackPath,
   FALLBACK_DIR,
   normalizeSymbol,
   getAmountFilename
-} from "./fallbackPathUtils.js"; // Importuojame visus helperius iš fallbackPathUtils
-import { getAllQrScenarios } from "./qrScenarios.js"; // Importuojame qrScenarios.js
+} from "./fallbackPathUtils.js"; // All helpers from fallbackPathUtils
+import { getAllQrScenarios } from "./qrScenarios.js"; // Importing qrScenarios.js for rate fetching
 
-// Importuojame NETWORKS iš config/networkConfig.js
-import { NETWORKS } from "../config/networkConfig.js"; // Importuojame NETWORKS
-import { WALLETS } from "../config/config.js"; // Importuojame WALLETS
+// Importing NETWORKS and WALLETS for consistency in fetching rates and wallet handling
+import { NETWORKS } from "../config/networkConfig.js";
+import { WALLETS } from "../config/config.js"; // Importing WALLETS for address resolution
 
 const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 7;
@@ -26,7 +26,6 @@ function sleep(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
-// Pakeista: naudojame getAllQrScenarios importą ir nebe fetchCryptoPrice tiesiogiai
 async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
@@ -37,6 +36,7 @@ async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, tot
         console.log(`♻️ [${index}/${total}] Overwriting: ${filename}`);
       }
 
+      // Generate QR code using the generateQR function, passing the rawSymbol and expectedAmount
       const buffer = await generateQR(rawSymbol, expectedAmount);
       if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 1000) {
         throw new Error("Invalid QR buffer");
@@ -78,7 +78,7 @@ export async function cleanQrCacheDir() {
 export async function generateFullQrCache(forceComplete = true) {
   await initQrCacheDir();
 
-  const scenarios = await getAllQrScenarios();  // Generuojame scenarijus
+  const scenarios = await getAllQrScenarios();  // Getting all QR scenarios from the source of truth
   const totalCount = scenarios.length;
 
   console.log(`🚀 [QR Cache] Generating ${totalCount} fallback QR codes...`);
