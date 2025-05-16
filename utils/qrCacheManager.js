@@ -1,3 +1,5 @@
+// 📦 utils/qrCacheMaintainer.js | FINAL IMMORTAL v3.0.0•GODMODE•MAINTENANCE
+
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
@@ -8,9 +10,13 @@ import {
   getFallbackPath,
   FALLBACK_DIR,
   normalizeSymbol,
-  getAmountFilename
-} from "./fallbackPathUtils.js";  // Correct import for getAmountFilename
+  getAmountFilename // Added back missing helper
+} from "./fallbackPathUtils.js";  // Now includes getAmountFilename import
 import { getAllQrScenarios } from "./qrScenarios.js"; // Correct import for qrScenarios.js
+
+// Importing NETWORKS from config
+import { NETWORKS } from "../config/networkConfig.js"; // Imported NETWORKS from config
+import { WALLETS } from "../config/config.js"; // WALLETS import
 
 const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 7;
