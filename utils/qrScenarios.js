@@ -1,4 +1,4 @@
-// 📦 utils/qrScenarios.js | FINAL IMMORTAL v2.0.0•GODMODE•SOURCEOFTRUTH•SYNCED•RATED
+// 📦 utils/qrScenarios.js | FINAL IMMORTAL v3.0.0•GODMODE•SCENARIOLOCKED•SOURCEOFTRUTH
 
 import { products } from "../config/products.js";
 import { deliveryMethods } from "../config/features.js";
@@ -54,16 +54,16 @@ export async function getAllQrScenarios() {
             const filename = getAmountFilename(rawSymbol, expectedAmount);
 
             result.push({
-              category,                   // 🌿 Cannabis, ❄️ Cocaine, etc.
-              productName: product.name, // 🔥 Zaza (Exotic Indoor), etc.
-              quantity,                  // "3.5g", "1pc", etc.
-              basePrice: usd,            // original product price
-              deliveryFee: fee,          // 5 or 10
-              totalUSD,                  // full total
-              rawSymbol,                 // BTC, ETH, MATIC, SOL
-              mockRate: rate,            // gyvas kursas
-              expectedAmount,            // apskaičiuotas kripto kiekis
-              filename                   // pvz. BTC_0.000781.png
+              category,
+              productName: product.name,
+              quantity,
+              basePrice: usd,
+              deliveryFee: fee,
+              totalUSD,
+              rawSymbol,
+              mockRate: rate,
+              expectedAmount,
+              filename
             });
           }
         }
@@ -72,13 +72,4 @@ export async function getAllQrScenarios() {
   }
 
   return result;
-}
-
-/**
- * 📈 Skaičiuoja kiek iš viso QR kombinacijų yra sistema turi turėti.
- * Naudoti validate/generate palyginimams.
- */
-export async function getExpectedQrCount() {
-  const list = await getAllQrScenarios();
-  return list.length;
 }
