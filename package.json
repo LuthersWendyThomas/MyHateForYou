@@ -1,6 +1,6 @@
 {
   "name": "BalticPharmacyBot",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "BalticPharmacyBot — Fully automated Telegram bot with crypto payments, regional discounts, city-based delivery, QR fallback caching and 24/7 bulletproof architecture.",
   "main": "index.js",
   "type": "module",
