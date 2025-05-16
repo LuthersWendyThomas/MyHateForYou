@@ -3,33 +3,33 @@
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js"; // Correct imports for cache management
-import { FALLBACK_DIR, sanitizeAmount, normalizeSymbol, getAmountFilename } from "../utils/fallbackPathUtils.js"; // Importing helpers from fallbackPathUtils
-import { sendAdminPing } from "../core/handlers/paymentHandler.js"; // To send admin notifications
-import { getExpectedQrCount } from "../utils/qrScenarios.js"; // Importing the scenario data from qrScenarios.js
+import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js"; // Importing QR Cache Management
+import { FALLBACK_DIR, sanitizeAmount, normalizeSymbol, getAmountFilename } from "../utils/fallbackPathUtils.js"; // All necessary helpers for sanitization and file paths
+import { sendAdminPing } from "../core/handlers/paymentHandler.js"; // Admin ping notifications
+import { getExpectedQrCount } from "../utils/qrScenarios.js"; // Import for getting expected QR scenarios
 
-// Importing necessary elements for rate fetching and wallet address resolution
-import { NETWORKS } from "../utils/fetchCryptoPrice.js"; // To use NETWORKS for currency symbol handling
-import { WALLETS } from "../config/config.js"; // WALLETS import for address resolution
-import { fetchCryptoPrice } from "../utils/fetchCryptoPrice.js"; // Importing the fetchCryptoPrice module to get the latest crypto prices
+// Importing fetchCryptoPrice and NETWORKS from fetchCryptoPrice.js for rate fetching and network symbols handling
+import { NETWORKS } from "../utils/fetchCryptoPrice.js"; // For using NETWORKS
+import { WALLETS } from "../config/config.js"; // WALLETS for address resolution
+import { fetchCryptoPrice } from "../utils/fetchCryptoPrice.js"; // Import for fetching crypto prices
 
-const MAX_AGE_MS = 60 * 60 * 1000; // Maximum age of 1 hour for cache expiration
-const INTERVAL_HOURS = 4; // Cache will be cleaned and regenerated every 4 hours
+const MAX_AGE_MS = 60 * 60 * 1000; // Cache expires after 1 hour
+const INTERVAL_HOURS = 4; // Cache maintenance happens every 4 hours
 
-let isRunning = false; // Prevent overlapping maintenance tasks
+let isRunning = false; // Flag to prevent overlapping maintenance tasks
 
 /**
- * Start QR cache maintenance process
+ * Start the QR cache maintenance process
  */
 export function startQrCacheMaintenance() {
   console.log(`🛠️ [qrCacheMaintainer] QR fallback maintenance scheduled every ${INTERVAL_HOURS}h`);
-  setTimeout(() => scheduleMaintenance(true), 3 * 60 * 1000); // Start maintenance 3 minutes after startup
-  setInterval(() => scheduleMaintenance(false), INTERVAL_HOURS * 60 * 60 * 1000); // Repeat every INTERVAL_HOURS
+  setTimeout(() => scheduleMaintenance(true), 3 * 60 * 1000); // Start maintenance after a 3-minute delay
+  setInterval(() => scheduleMaintenance(false), INTERVAL_HOURS * 60 * 60 * 1000); // Repeat every 4 hours
 }
 
 /**
- * Schedule maintenance task to run if it's not already running
- * @param {boolean} isStartup - Flag to indicate if this is the startup task
+ * Schedule maintenance if it's not already running
+ * @param {boolean} isStartup - Flag to indicate if this is the startup maintenance
  */
 function scheduleMaintenance(isStartup = false) {
   if (isRunning) {
@@ -49,7 +49,7 @@ function scheduleMaintenance(isStartup = false) {
 
 /**
  * Main maintenance process (cleaning and regenerating QR cache)
- * @param {boolean} isStartup - Flag indicating whether this is the startup maintenance
+ * @param {boolean} isStartup - Flag indicating if this is the startup maintenance
  */
 async function tryMaintain(isStartup = false) {
   const now = new Date().toLocaleTimeString("en-GB");
@@ -62,7 +62,7 @@ async function tryMaintain(isStartup = false) {
     await initQrCacheDir();
     const deletedCount = await cleanExpiredQRCodes();
 
-    const expected = await getExpectedQrCount(); // Retrieve the expected QR count (fresh from the scenarios)
+    const expected = await getExpectedQrCount(); // Get the expected number of QR codes
 
     console.log(`🚀 [qrCacheMaintainer] Regenerating fallback QR cache (${expected} total)...`);
     await generateFullQrCache(true);
