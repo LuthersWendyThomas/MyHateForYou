@@ -74,25 +74,6 @@ export async function generateFullQrCache(forceComplete = true) {
     if (!forceComplete) break;
   }
 
-  console.table(
-    [...successful].slice(0, 10).map((f, i) => ({
-      "#": i + 1,
-      "✅ FILE": path.basename(f),
-      "📁 PATH": f
-    }))
-  );
-  if (successful.size > 10) {
-    console.log(`...and ${successful.size - 10} more.`);
-  }
-
-  console.log(`🎯 [DONE] Generated: ${successful.size}/${totalCount}`);
-  if (successful.size < totalCount) {
-    console.warn(`⚠️ Still missing: ${totalCount - successful.size} PNGs.`);
-  } else {
-    console.log(`💎 All fallback QR codes successfully generated.`);
-  }
-}
-
 async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
