@@ -30,21 +30,6 @@ async function notifyCrash(source, err) {
   const upper = source.toUpperCase();
   const now = new Date().toLocaleString("en-GB");
 
-  // Special 409 case
-  if (
-    source === "polling_error" &&
-    typeof msg === "string" &&
-    msg.includes("409 Conflict") &&
-    msg.includes("getUpdates request")
-  ) {
-    const nowMs = Date.now();
-    if (nowMs - last409Time < 60_000) return;
-    last409Time = nowMs;
-    console.log(`\x1b[43m\x1b[30m ⚠️ 409 CONFLICT — BOT ALREADY POLLING | ${now} | Skipping duplicate polling \x1b[0m`);
-    await sendAdminPing(`⚠️ *409 Conflict: Already polling*\n🕒 ${now}`);
-    return;
-  }
-
   // General error
   console.error(`\x1b[41m\x1b[30m 💥 CRITICAL ERROR (${upper}) | ${now} | ${msg} \x1b[0m`);
 
@@ -162,8 +147,8 @@ process.on("unhandledRejection", async (reason) => {
           `🛑 *Bot shutdown signal received:* \`${sig}\`\n\n` +
           `✅ *Polling stopped*\n📦 *FSM cleaned*\n🛡️ *System exited cleanly*\n🕒 ${ts}`
         );
-      } catch {
-        // ⚠️ Nutylim ping failą per shutdown – neverta trukdyti
+      } catch (err) {
+        console.warn(`\x1b[43m\x1b[30m ⚠️ Admin ping during shutdown failed: ${err.message} \x1b[0m`);
       }
 
     } catch (err) {
