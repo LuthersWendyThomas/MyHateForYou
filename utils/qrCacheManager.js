@@ -7,9 +7,10 @@ import {
   sanitizeAmount,
   getFallbackPath,
   FALLBACK_DIR,
-  normalizeSymbol // Pridėtas normalizeSymbol importas
-} from "./fallbackPathUtils.js"; // Pridėtas normalizeSymbol importas
-import { getAllQrScenarios } from "./qrScenarios.js"; // Pridėtas getAllQrScenarios importas
+  normalizeSymbol,
+  getAmountFilename // Corrected the missing import
+} from "./fallbackPathUtils.js";  // Now includes getAmountFilename import
+import { getAllQrScenarios } from "./qrScenarios.js"; // Correct import for qrScenarios.js
 
 const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 7;
