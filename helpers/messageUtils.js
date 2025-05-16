@@ -75,7 +75,7 @@ export async function sendPhotoAndTrack(bot, id, photo, options = {}, messages =
   if (!bot || !uid || !photo) return null;
 
   try {
-    const msg = await bot.sendPhoto(uid, photo, {
+    const msg = await bot.sendPhoto(uid, { source: photo }, {
       parse_mode: "Markdown",
       ...options
     }).catch(e => { logError("⚠️ sendPhoto", e, uid); return null; });
