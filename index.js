@@ -104,7 +104,6 @@ function logSoft409Conflict(message) {
         await generateFullQrCache();
         await validateQrFallbacks(true);
         console.log("\x1b[42m\x1b[30m ✅ Delayed QR fallback generation complete and validated. \x1b[0m");
-        await sendAdminPing("📦 Delayed QR fallback generation completed successfully (post-boot).");
       } catch (err) {
         console.error(`\x1b[41m\x1b[30m ❌ Delayed QR cache generation failed: ${err.message} \x1b[0m`);
       }
