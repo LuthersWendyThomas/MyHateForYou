@@ -4,19 +4,18 @@ import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import PQueue from "p-queue";
-import { generateQR } from "./generateQR.js"; // This will generate QR codes
+import { generateQR } from "./generateQR.js"; // Importing generateQR for QR generation
 import {
   sanitizeAmount,
   getFallbackPath,
   FALLBACK_DIR,
   normalizeSymbol,
   getAmountFilename
-} from "./fallbackPathUtils.js"; // All helpers from fallbackPathUtils
-import { getAllQrScenarios } from "./qrScenarios.js"; // Importing qrScenarios.js for rate fetching
+} from "./fallbackPathUtils.js"; // Import helpers for sanitation, normalization, and filename handling
+import { getAllQrScenarios } from "./qrScenarios.js"; // Import qrScenarios.js for fetching all QR scenarios
 
-// Importing NETWORKS and WALLETS for consistency in fetching rates and wallet handling
-import { NETWORKS } from "../config/networkConfig.js";
-import { WALLETS } from "../config/config.js"; // Importing WALLETS for address resolution
+import { NETWORKS } from "../config/networkConfig.js"; // Use NETWORKS from fetchCryptoPrice.js for network rates
+import { WALLETS } from "../config/config.js"; // WALLETS from config for wallet address resolution
 
 const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 7;
@@ -26,6 +25,7 @@ function sleep(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
+// Attempt to generate QR and handle fallback if necessary
 async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
@@ -36,7 +36,7 @@ async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, tot
         console.log(`♻️ [${index}/${total}] Overwriting: ${filename}`);
       }
 
-      // Generate QR code using the generateQR function, passing the rawSymbol and expectedAmount
+      // Use generateQR to create a new QR if necessary
       const buffer = await generateQR(rawSymbol, expectedAmount);
       if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 1000) {
         throw new Error("Invalid QR buffer");
@@ -56,12 +56,14 @@ async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, tot
   failed.push({ rawSymbol, expectedAmount, filename });
 }
 
+// Initialize QR cache directory if it doesn't exist
 export async function initQrCacheDir() {
   if (!existsSync(FALLBACK_DIR)) {
     await fs.mkdir(FALLBACK_DIR, { recursive: true });
   }
 }
 
+// Clean up expired QR codes from the cache directory
 export async function cleanQrCacheDir() {
   try {
     const files = await fs.readdir(FALLBACK_DIR);
@@ -75,10 +77,11 @@ export async function cleanQrCacheDir() {
   }
 }
 
+// Generate full QR cache (either forced or based on existing scenarios)
 export async function generateFullQrCache(forceComplete = true) {
   await initQrCacheDir();
 
-  const scenarios = await getAllQrScenarios();  // Getting all QR scenarios from the source of truth
+  const scenarios = await getAllQrScenarios(); // Get all the QR scenarios from the source of truth
   const totalCount = scenarios.length;
 
   console.log(`🚀 [QR Cache] Generating ${totalCount} fallback QR codes...`);
@@ -113,6 +116,7 @@ export async function generateFullQrCache(forceComplete = true) {
   }
 }
 
+// Validate existing QR files and regenerate missing/corrupt files
 export async function validateQrFallbacks(autoFix = true) {
   try {
     const files = await fs.readdir(FALLBACK_DIR);
@@ -176,6 +180,7 @@ export async function validateQrFallbacks(autoFix = true) {
   }
 }
 
+// Get cached QR (if available) from the fallback path
 export async function getCachedQR(symbol, amount, address = null) {
   try {
     const filePath = getFallbackPath(symbol, amount);
@@ -187,6 +192,7 @@ export async function getCachedQR(symbol, amount, address = null) {
   }
 }
 
+// Save QR to cache directory
 export async function saveCachedQR(symbol, amount, address = null, buffer) {
   try {
     const filePath = getFallbackPath(symbol, amount);
