@@ -10,10 +10,10 @@ import {
   sanitizeAmount,
   normalizeSymbol,
   getAmountFilename
-} from "./fallbackPathUtils.js";
+} from "./fallbackPathUtils.js"; // Importing essential helpers for file paths and sanitization
 
-// Importuojame trūkstamus elementus
-import { getAllQrScenarios } from "../utils/qrScenarios.js"; // Pridėtas importas
+// Importing necessary utilities for QR scenarios
+import { getAllQrScenarios } from "../utils/qrScenarios.js"; // Fetch all QR scenarios dynamically
 
 /**
  * 🔗 Resolve wallet address for a given symbol
