@@ -1,3 +1,5 @@
+// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v3.0.0•GODMODE•SCENARIOLOCKED•
+
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
