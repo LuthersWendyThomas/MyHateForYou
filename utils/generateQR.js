@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 import { WALLETS } from "../config/config.js"; // WALLETS importas iš config
-import { NETWORKS } from "../config/networkConfig.js"; // Importuojame NETWORKS iš config/networkConfig.js
+import { NETWORKS } from "../utils/fetchCryptoPrice.js"; // Importuojame NETWORKS iš fetchCryptoPrice.js
 import {
   FALLBACK_DIR,
   getFallbackPath,
@@ -13,6 +13,7 @@ import {
   getAmountFilename
 } from "./fallbackPathUtils.js"; // Importuojame helperius iš fallbackPathUtils
 import { getAllQrScenarios } from "./qrScenarios.js"; // Importuojame qrScenarios.js
+import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // IMPORTUJAME fetchCryptoPrice, kad gauti kursus
 
 /**
  * 🔗 Resolve wallet address for a given symbol
