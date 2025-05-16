@@ -4,7 +4,7 @@ import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import PQueue from "p-queue";
-import { generateQR } from "./generateQR.js";
+import { generateQR } from "./utils/generateQR.js";
 import {
   sanitizeAmount,
   getFallbackPath,
