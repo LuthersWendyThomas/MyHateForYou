@@ -1,4 +1,4 @@
-// 📦 utils/generateQR.js | IMMORTAL FINAL v2.0.0•GODMODE•SYNCLOCK•FULLOVERWRITE
+// 📦 utils/generateQR.js | FINAL GODMODE v2.9.9•SYNCLOCK•∞READY•FALLBACKSAFE
 
 import QRCode from "qrcode";
 import fs from "fs";
@@ -30,7 +30,7 @@ function isValidAddress(addr) {
  * 🧪 Check if buffer is valid QR PNG
  */
 function isValidBuffer(buffer) {
-  return Buffer.isBuffer(buffer) && buffer.length >= 1000;
+  return Buffer.isBuffer(buffer) && buffer.length >= 300;
 }
 
 /**
@@ -61,7 +61,7 @@ export async function generateQRBuffer(symbol, amount, address) {
 }
 
 /**
- * 🧾 Generate QR and save fallback PNG to /qr-cache/
+ * 🧾 Generate QR buffer and save fallback PNG if needed
  */
 export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
   const symbol = normalizeSymbol(symbolRaw);
@@ -93,7 +93,9 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
       }
 
       fs.writeFileSync(filePath, buffer);
-      console.log(`💾 [generateQR] Fallback saved: ${path.basename(filePath)}`);
+      if (process.env.DEBUG_MESSAGES === "true") {
+        console.log(`💾 [generateQR] Fallback saved: ${path.basename(filePath)}`);
+      }
     } catch (saveErr) {
       console.warn(`⚠️ [generateQR] Save failed: ${saveErr.message}`);
     }
