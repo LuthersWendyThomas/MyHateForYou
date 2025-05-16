@@ -73,3 +73,12 @@ export async function getAllQrScenarios() {
 
   return result;
 }
+
+/**
+ * 📈 Skaičiuoja kiek iš viso QR kombinacijų sistema turi turėti.
+ * Naudoti validate/generate palyginimams ar admin pranešimams.
+ */
+export async function getExpectedQrCount() {
+  const scenarios = await getAllQrScenarios();
+  return scenarios.length;
+}
