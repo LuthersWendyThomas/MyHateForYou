@@ -14,7 +14,7 @@ import {
 } from "./fallbackPathUtils.js"; // Import helpers for sanitation, normalization, and filename handling
 import { getAllQrScenarios } from "./qrScenarios.js"; // Import qrScenarios.js for fetching all QR scenarios
 
-import { NETWORKS } from "./fetchCryptoPrices.js"; // Use NETWORKS from fetchCryptoPrice.js for network rates
+import { NETWORKS } from "./fetchCryptoPrice.js"; // Use NETWORKS from fetchCryptoPrice.js for network rates
 import { WALLETS } from "../config/config.js"; // WALLETS from config for wallet address resolution
 
 const MAX_CONCURRENCY = 10;
