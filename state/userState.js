@@ -97,7 +97,13 @@ export function safeStartSession(id) {
   const uid = sanitizeId(id);
   if (!uid) return;
 
-  userSessions[uid] = { step: 1, createdAt: Date.now() };
+  const now = Date.now();
+  userSessions[uid] = {
+    step: 1,
+    createdAt: now,
+    lastActionTimestamp: now // 💠 Debounce apsaugai
+  };
+
   activeUsers.add(uid);
   logAction("✅ [safeStartSession]", "Session started", uid);
 }
