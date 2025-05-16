@@ -1,20 +1,17 @@
-// 📦 utils/qrCacheMaintainer.js | FINAL IMMORTAL v3.0.0•GODMODE•MAINTENANCE
-
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js"; // Importing QR Cache Management
-import { FALLBACK_DIR, sanitizeAmount, normalizeSymbol, getAmountFilename } from "../utils/fallbackPathUtils.js"; // All necessary helpers for sanitization and file paths
+import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js"; // Correct imports for cache management
+import { FALLBACK_DIR, sanitizeAmount, normalizeSymbol, getAmountFilename } from "../utils/fallbackPathUtils.js"; // Importing helpers from fallbackPathUtils
 import { sendAdminPing } from "../core/handlers/paymentHandler.js"; // Admin ping notifications
-import { getExpectedQrCount } from "../utils/qrScenarios.js"; // Import for getting expected QR scenarios
+import { getAllQrScenarios } from "../utils/qrScenarios.js"; // Import for getting the list of QR scenarios
 
-// Importing fetchCryptoPrice and NETWORKS from fetchCryptoPrice.js for rate fetching and network symbols handling
-import { NETWORKS } from "../utils/fetchCryptoPrice.js"; // For using NETWORKS
+// Importing necessary elements for rate fetching and wallet address resolution
 import { WALLETS } from "../config/config.js"; // WALLETS for address resolution
 import { fetchCryptoPrice } from "../utils/fetchCryptoPrice.js"; // Import for fetching crypto prices
 
-const MAX_AGE_MS = 60 * 60 * 1000; // Cache expires after 1 hour
-const INTERVAL_HOURS = 4; // Cache maintenance happens every 4 hours
+const MAX_AGE_MS = 60 * 60 * 1000; // Maximum age of 1 hour for cache expiration
+const INTERVAL_HOURS = 4; // Cache will be cleaned and regenerated every 4 hours
 
 let isRunning = false; // Flag to prevent overlapping maintenance tasks
 
@@ -125,4 +122,12 @@ async function cleanExpiredQRCodes() {
     console.error(`❌ [QR Cleaner] Failed: ${err.message}`);
     return 0;
   }
+}
+
+/**
+ * Get the expected QR count (based on scenarios)
+ */
+async function getExpectedQrCount() {
+  const scenarios = await getAllQrScenarios();
+  return scenarios.length;
 }
