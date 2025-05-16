@@ -1,20 +1,21 @@
-// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v1.0.4•GODMODE•DIAMONDLOCK•SYNCED•MATCHED•NO-BOOT
+// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v2.0.0•GODMODE•LOCKED•SYNCED•SCENARIOCORE
 
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateFullQrCache, initQrCacheDir } from "../utils/qrCacheManager.js";
+import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js";
 import { FALLBACK_DIR } from "../utils/fallbackPathUtils.js";
 import { sendAdminPing } from "../core/handlers/paymentHandler.js";
+import { getAllQrScenarios } from "../utils/qrScenarios.js";
 
-const MAX_AGE_MS = 60 * 60 * 1000; // 1h
+const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
 const INTERVAL_HOURS = 4;
 
 let isRunning = false;
 
 export function startQrCacheMaintenance() {
   console.log(`🛠️ [qrCacheMaintainer] QR fallback maintenance scheduled every ${INTERVAL_HOURS}h`);
-  setTimeout(() => scheduleMaintenance(false), INTERVAL_HOURS * 60 * 60 * 1000);
+  setTimeout(() => scheduleMaintenance(true), 3 * 60 * 1000); // Delay on boot
   setInterval(() => scheduleMaintenance(false), INTERVAL_HOURS * 60 * 60 * 1000);
 }
 
@@ -45,11 +46,15 @@ async function tryMaintain(isStartup = false) {
     await initQrCacheDir();
     const deletedCount = await cleanExpiredQRCodes();
 
-    console.log(`🚀 [qrCacheMaintainer] Regenerating full QR fallback cache at ${now}...`);
-    await generateFullQrCache(true); // no count returned
+    const expected = getAllQrScenarios().length;
+    console.log(`🚀 [qrCacheMaintainer] Regenerating fallback QR cache (${expected} total)...`);
+    await generateFullQrCache(true);
 
-    console.log(`✅ [qrCacheMaintainer] All fallback QRs reloaded.`);
-    await sendAdminPing(`✅ ${label}\n🗑️ Expired cleaned: *${deletedCount}*\n📦 QR cache refreshed successfully.`);
+    console.log(`🔍 [qrCacheMaintainer] Validating fallback QR files...`);
+    await validateQrFallbacks(true);
+
+    console.log(`✅ [qrCacheMaintainer] All fallback QRs regenerated and validated.`);
+    await sendAdminPing(`✅ ${label}\n🗑️ Expired cleaned: *${deletedCount}*\n📦 ${expected} QRs regenerated + validated.`);
   } catch (err) {
     console.error(`❌ [qrCacheMaintainer] Error:`, err.message);
     try {
