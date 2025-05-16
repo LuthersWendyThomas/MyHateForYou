@@ -5,7 +5,7 @@ dotenv.config();
 
 import fs from "fs";
 import { readFile, writeFile } from "fs/promises";
-import { initBotInstance, BOT } from "./config/config.js";
+import { initBotInstance, startSafePolling, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions, cleanStalePaymentTimers } from "./core/sessionManager.js";
 import { sendAdminPing } from "./core/handlers/paymentHandler.js";
