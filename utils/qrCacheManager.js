@@ -42,16 +42,14 @@ async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, tot
         throw new Error("Invalid QR buffer");
       }
 
-      await fs.writeFile(filePath, buffer);
-      successful.add(filePath);
-      console.log(`✅ [${index}/${total}] ${rawSymbol} → ${expectedAmount}`);
-      return;
-    } catch (err) {
-      const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${rawSymbol}: ${err.message}`);
-      await sleep(delay);
-    }
-  }
+      try {
+        await fs.writeFile(filePath, buffer);
+        successful.add(filePath);
+        console.log(`✅ [${index}/${total}] ${rawSymbol} → ${expectedAmount}`);
+        return;
+      } catch (err) {
+        throw new Error(`❌ Failed to write QR fallback: ${filename} → ${err.message}`);
+      }
 
   failed.push({ rawSymbol, expectedAmount, filename });
 }
@@ -116,7 +114,6 @@ export async function generateFullQrCache(forceComplete = true) {
   }
 }
 
-// Validate existing QR files and regenerate missing/corrupt files
 export async function validateQrFallbacks(autoFix = true) {
   try {
     const files = await fs.readdir(FALLBACK_DIR);
@@ -134,7 +131,16 @@ export async function validateQrFallbacks(autoFix = true) {
       try {
         const stat = await fs.stat(filePath);
         if (!stat.isFile() || stat.size < 300) {
-          await fs.unlink(filePath); // 💣 remove corrupted fallback PNG
+          console.warn(`⚠️ Stat fail or too small [${stat.size}B]: ${filename}`);
+          await fs.unlink(filePath);
+          corrupt.push({ filename, filePath });
+          continue;
+        }
+
+        const buffer = await fs.readFile(filePath);
+        if (!Buffer.isBuffer(buffer) || buffer.length < 300) {
+          console.warn(`⚠️ Corrupt buffer [${buffer?.length || 0}B]: ${filename}`);
+          await fs.unlink(filePath);
           corrupt.push({ filename, filePath });
         }
       } catch {
@@ -165,13 +171,18 @@ export async function validateQrFallbacks(autoFix = true) {
         queue.add(async () => {
           try {
             const buffer = await generateQR(symbol, amount);
-            if (!buffer) {
-              console.warn(`❌ Invalid QR: ${symbol} ${amount}`);
+            if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 300) {
+              console.warn(`❌ Invalid regenerated buffer: ${symbol} ${amount}`);
               return;
             }
+
             const filePath = path.join(FALLBACK_DIR, filename);
-            await fs.writeFile(filePath, buffer);
-            console.log(`✅ Regenerated: ${symbol} ${amount}`);
+            try {
+              await fs.writeFile(filePath, buffer);
+              console.log(`✅ Regenerated: ${symbol} ${amount}`);
+            } catch (writeErr) {
+              console.warn(`❌ Failed to write QR: ${filename} → ${writeErr.message}`);
+            }
           } catch (err) {
             console.warn(`❌ Regeneration failed: ${symbol} ${amount} → ${err.message}`);
           }
