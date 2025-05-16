@@ -1,7 +1,9 @@
 // 📦 utils/qrScenarios.js | FINAL IMMORTAL v3.0.0•GODMODE•SCENARIOLOCKED•SOURCEOFTRUTH
 
+import { products } from "../config/products.js"; // Import products from config
 import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js"; // Use fetchCryptoPrice for rate fetching
 import { sanitizeAmount, getAmountFilename, normalizeSymbol } from "./fallbackPathUtils.js"; // Necessary helpers
+import { deliveryMethods } from "../config/features.js"; // Importing delivery fees from config/features.js
 
 /**
  * ⛓️ Fetch all live crypto rates once and store them in a map
@@ -41,7 +43,7 @@ export async function getAllQrScenarios() {
   const rateMap = await getLiveRatesMap(); // Get live rates map (BTC, ETH, MATIC, SOL)
 
   // Iterate over products and calculate scenarios
-  for (const category in products) {
+  for (const category in products) { // Access products here
     for (const product of products[category]) {
       if (!product?.active || !product?.prices) continue;
 
@@ -50,7 +52,7 @@ export async function getAllQrScenarios() {
         if (!usd || usd <= 0) continue;
 
         // Calculate all possible scenarios with various delivery fees
-        for (const fee of deliveryFees) {
+        for (const { fee } of deliveryMethods) { // Use deliveryMethods from config/features.js
           const totalUSD = usd + fee;
 
           // Iterate over all the networks (BTC, ETH, MATIC, SOL)
