@@ -70,27 +70,45 @@ export async function sendKeyboard(bot, id, text, keyboard, messages = userMessa
   }
 }
 
+// 📦 helpers/messageUtils.js | IMMORTAL FINAL v1.0.3•DIAMONDLOCK•SYNCED•QRREADY•BULLETPROOF
+
 export async function sendPhotoAndTrack(bot, id, photo, options = {}, messages = userMessages) {
   const uid = sanitizeId(id);
   if (!bot || !uid || !photo) return null;
 
   try {
-    const msg = await bot.sendPhoto(uid, { source: photo }, {
+    // Ensure the photo is sent as a file or buffer, not a URL to prevent URI size issues
+    const source = isBuffer(photo) || isFile(photo) ? photo : { source: photo };
+
+    const msg = await bot.sendPhoto(uid, source, {
       parse_mode: "Markdown",
       ...options
-    }).catch(e => { logError("⚠️ sendPhoto", e, uid); return null; });
+    }).catch(e => {
+      logError("⚠️ sendPhoto", e, uid);
+      return null;
+    });
 
     if (msg?.message_id) {
       track(uid, msg.message_id, messages);
       logAction("🖼️ sendPhotoAndTrack", `→ ${uid}`, msg.message_id);
     }
 
+    // Scheduling cleanup after the photo is sent successfully
     scheduleCleanup(bot, uid, messages);
     return msg;
   } catch (err) {
     logError("❌ sendPhotoAndTrack", err, uid);
     return null;
   }
+}
+
+// Helper function to determine if the source is a valid buffer or file
+function isBuffer(source) {
+  return Buffer.isBuffer(source);
+}
+
+function isFile(source) {
+  return source && typeof source === 'object' && source.path;
 }
 
 export async function tryNotify(bot, id, text) {
