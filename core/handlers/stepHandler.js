@@ -219,7 +219,7 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
   const now = Date.now();
   if (!session.lastActionTimestamp) session.lastActionTimestamp = 0;
 
-  const debounceMs = 1000; // 💠 Sušvelninta: tik jei <1s
+  const debounceMs = 700; // 💠 Sušvelninta: tik jei <1s
   if (now - session.lastActionTimestamp < debounceMs) {
     console.warn(`⚠️ Debounced: UID=${uid}, Δ=${now - session.lastActionTimestamp}ms`);
     await sendAndTrack(bot, uid, "⚠️ *Auto SPAM Prevention!*\nPlease slow down.", { parse_mode: "Markdown" }, userMessages);
