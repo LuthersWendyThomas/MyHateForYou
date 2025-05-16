@@ -1,18 +1,20 @@
-// generateQR.js v1.1.3 DIAMOND LOCK VERSION
+// 📦 generateQR.js v1.1.3 DIAMOND LOCK VERSION
 
 import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
-import { WALLETS, ALIASES } from "../config/config.js";
+import { WALLETS } from "../config/config.js";
+import { NETWORKS } from "../config/networkConfig.js"; // Importing NETWORKS from config/networkConfig.js
 import {
   FALLBACK_DIR,
   getFallbackPath,
   sanitizeAmount,
-  normalizeSymbol
-} from "./fallbackPathUtils.js";
+  normalizeSymbol,
+  getAmountFilename // Correct import for getAmountFilename from fallbackPathUtils
+} from "./fallbackPathUtils.js"; // Now includes getAmountFilename import
 
-// Importuojame trūkstamus elementus
-import { getAllQrScenarios } from "./qrScenarios.js"; // Pridėtas importas
+// Importing all required elements from qrScenarios.js
+import { getAllQrScenarios } from "./qrScenarios.js";
 
 /**
  * 🔗 Resolve wallet address for a given symbol
