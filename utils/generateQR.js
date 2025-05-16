@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 import { WALLETS } from "../config/config.js"; // WALLETS importas iš config
-import { NETWORKS } from "../utils/fetchCryptoPrice.js"; // Importuojame NETWORKS iš fetchCryptoPrice.js
+import { NETWORKS } from "./fetchCryptoPrice.js"; // Importuojame NETWORKS iš fetchCryptoPrice.js
 import {
   FALLBACK_DIR,
   getFallbackPath,
@@ -42,7 +42,7 @@ function isValidBuffer(buffer) {
  */
 export async function generateQRBuffer(symbol, amount, address) {
   const formatted = sanitizeAmount(amount).toFixed(6);
-  const uri = `${symbol.toLowerCase()}:${address}?amount=${formatted}&label=${encodeURIComponent("BalticPharmacyBot")}&message=${encodeURIComponent("Order")}`;
+  const uri = ${symbol.toLowerCase()}:${address}?amount=${formatted}&label=${encodeURIComponent("BalticPharmacyBot")}&message=${encodeURIComponent("Order")};
 
   try {
     const buffer = await Promise.race([
@@ -74,18 +74,18 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
   const filePath = getFallbackPath(symbol, amount);
 
   if (!isValidAddress(address)) {
-    console.warn(`⚠️ [generateQR] Invalid wallet for ${symbol}: "${address}"`);
+    console.warn(⚠️ [generateQR] Invalid wallet for ${symbol}: "${address}");
     return null;
   }
 
   if (!Number.isFinite(amount) || amount <= 0) {
-    console.warn(`⚠️ [generateQR] Invalid amount: ${amountRaw}`);
+    console.warn(⚠️ [generateQR] Invalid amount: ${amountRaw});
     return null;
   }
 
   try {
     if (process.env.DEBUG_MESSAGES === "true") {
-      console.log(`🔁 [generateQR] Generating: ${symbol} → $${amount}`);
+      console.log(🔁 [generateQR] Generating: ${symbol} → $${amount});
     }
 
     // First, check if fallback exists. If not, generate a new one.
@@ -96,7 +96,7 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
     if (matchingScenario) {
       const buffer = await getCachedQR(symbol, amount, address);
       if (buffer) {
-        console.log(`✅ [generateQR] Fallback found: ${filePath}`);
+        console.log(✅ [generateQR] Fallback found: ${filePath});
         return buffer;
       }
     }
@@ -113,10 +113,10 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
 
       fs.writeFileSync(filePath, buffer);
       if (process.env.DEBUG_MESSAGES === "true") {
-        console.log(`💾 [generateQR] Fallback saved: ${path.basename(filePath)}`);
+        console.log(💾 [generateQR] Fallback saved: ${path.basename(filePath)});
       }
     } catch (saveErr) {
-      console.warn(`⚠️ [generateQR] Save failed: ${saveErr.message}`);
+      console.warn(⚠️ [generateQR] Save failed: ${saveErr.message});
     }
 
     return buffer;
@@ -136,19 +136,19 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
   const addr = resolveAddress(symbol, overrideAddress);
   const validAddr = isValidAddress(addr) ? addr : "[Invalid address]";
 
-  const message = `
+  const message = 
 💳 *Payment details:*
 • Network: *${symbol}*
 • Amount: *${display} ${symbol}*
-• Address: \`${validAddr}\`
+• Address: \${validAddr}\
 ⏱️ *Expected payment within 30 minutes.*
 ✅ Use the QR code or copy the address.
-`.trim();
+.trim();
 
   return {
     message,
     reply_markup: {
-      inline_keyboard: [[{ text: "📋 Copy address", callback_data: `copy:${validAddr}` }]]
+      inline_keyboard: [[{ text: "📋 Copy address", callback_data: copy:${validAddr} }]]
     }
   };
 }
