@@ -4,15 +4,15 @@ import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import PQueue from "p-queue";
-import { generateQR } from "./utils/generateQR.js";
+import { generateQR } from "../utils/generateQR.js";
 import {
   sanitizeAmount,
   getFallbackPath,
   FALLBACK_DIR,
   normalizeSymbol,
   getAmountFilename // Correct import for getAmountFilename
-} from "./utils/fallbackPathUtils.js";  // Now includes getAmountFilename import
-import { getAllQrScenarios } from "./utils/qrScenarios.js"; // Correct import for qrScenarios.js
+} from "../utils/fallbackPathUtils.js";  // Now includes getAmountFilename import
+import { getAllQrScenarios } from "../utils/qrScenarios.js"; // Correct import for qrScenarios.js
 
 const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 7;
