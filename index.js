@@ -156,12 +156,18 @@ process.on("unhandledRejection", async (reason) => {
       await BOT.INSTANCE.close();
 
       console.log(`\x1b[42m\x1b[30m ✅ BOT SHUTDOWN COMPLETE — SAFE EXIT @ ${ts} \x1b[0m`);
-      await sendAdminPing(
-        `🛑 *Bot shutdown signal received:* \`${sig}\`\n\n` +
-        `✅ *Polling stopped*\n📦 *FSM cleaned*\n🛡️ *System exited cleanly*\n🕒 ${ts}`
-      );
+
+      try {
+        await sendAdminPing(
+          `🛑 *Bot shutdown signal received:* \`${sig}\`\n\n` +
+          `✅ *Polling stopped*\n📦 *FSM cleaned*\n🛡️ *System exited cleanly*\n🕒 ${ts}`
+        );
+      } catch {
+        // ⚠️ Nutylim ping failą per shutdown – neverta trukdyti
+      }
+
     } catch (err) {
-      console.warn("\x1b[43m\x1b[30m ⚠️ Graceful shutdown error: " + err.message + " \x1b[0m");
+      console.warn(`\x1b[43m\x1b[30m ⚠️ Graceful shutdown error: ${err.message} \x1b[0m`);
     }
 
     process.exit(0);
