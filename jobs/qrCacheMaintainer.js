@@ -1,4 +1,4 @@
-// 📦 jobs/qrCacheMaintainer.js | FINAL IMMORTAL v3.0.0•SYNCED•SCENARIOLOCKED•∞SAFE
+// 📦 jobs/qrCacheMaintainer.js | FINAL IMMORTAL v3.1.0•SCENARIOLOCKED•SYNCED•100%FIXED
 
 import fs from "fs/promises";
 import path from "path";
@@ -6,7 +6,7 @@ import { existsSync } from "fs";
 import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js";
 import { FALLBACK_DIR } from "../utils/fallbackPathUtils.js";
 import { sendAdminPing } from "../core/handlers/paymentHandler.js";
-import { getAllQrScenarios } from "../utils/qrScenarios.js";
+import { getExpectedQrCount } from "../utils/qrScenarios.js"; // ✅ FIXED: naudoti tiesos šaltinį
 
 const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
 const INTERVAL_HOURS = 4;
@@ -46,8 +46,7 @@ async function tryMaintain(isStartup = false) {
     await initQrCacheDir();
     const deletedCount = await cleanExpiredQRCodes();
 
-    const scenarios = await getAllQrScenarios();
-    const expected = scenarios.length;
+    const expected = await getExpectedQrCount(); // ✅ FIXED: teisingas vienintelis šaltinis
 
     console.log(`🚀 [qrCacheMaintainer] Regenerating fallback QR cache (${expected} total)...`);
     await generateFullQrCache(true);
