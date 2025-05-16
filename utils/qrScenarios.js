@@ -1,7 +1,7 @@
 // 📦 utils/qrScenarios.js | FINAL IMMORTAL v3.0.0•GODMODE•SCENARIOLOCKED•SOURCEOFTRUTH
 
 import { ALIASES, WALLETS } from "../config/config.js"; // Importuojame ALIASES ir WALLETS iš config.js
-import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // Naudokime fetchCryptoPrice duomenims gauti
+import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // Naudojame fetchCryptoPrice duomenims gauti
 import { sanitizeAmount, getAmountFilename, normalizeSymbol } from "./fallbackPathUtils.js"; // Helperiai
 
 /**
@@ -12,7 +12,7 @@ export async function getLiveRatesMap() {
   const networks = Object.keys(ALIASES); // Using ALIASES for all network symbols
   for (const sym of networks) {
     try {
-      const rate = await fetchCryptoPrice(sym);
+      const rate = await fetchCryptoPrice(sym);  // Fetching the rate using the `fetchCryptoPrice`
       if (!rate || rate <= 0) throw new Error(`❌ Invalid rate: ${rate}`);
       map[sym] = rate;
     } catch (err) {
@@ -43,6 +43,7 @@ export async function getAllQrScenarios() {
         for (const fee of deliveryFees) {
           const totalUSD = usd + fee;
 
+          // Iteruojame per kiekvieną valiutą ir generuojame QR kodus pagal kiekvieną simbolį
           for (const rawSymbol of Object.keys(rateMap)) {
             const rate = rateMap[rawSymbol];
             if (!rate || rate <= 0) continue;
