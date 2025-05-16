@@ -12,7 +12,7 @@ import {
 } from "./fallbackPathUtils.js";
 
 // Importuojame trūkstamus elementus
-import { getAllQrScenarios } from "../utils/qrScenarios.js"; // Pridėtas importas
+import { getAllQrScenarios } from "./qrScenarios.js"; // Pridėtas importas
 
 /**
  * 🔗 Resolve wallet address for a given symbol
