@@ -26,6 +26,7 @@ function sleep(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
+// Pakeista: naudojame getAllQrScenarios importą ir nebe fetchCryptoPrice tiesiogiai
 async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
