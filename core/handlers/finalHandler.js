@@ -18,12 +18,17 @@ export async function safeStart(bot, id) {
   if (!bot?.sendMessage || !uid) return;
 
   try {
-    await fullResetUserState(uid);
+  await fullResetUserState(uid);
 
-    userSessions[uid] = { step: 1, createdAt: Date.now() };
-    activeUsers.add(uid);
+  const now = Date.now();
+  userSessions[uid] = {
+    step: 1,
+    createdAt: now,
+    lastActionTimestamp: now // 💠 Saugiklis nuo netikro debounce
+  };
+  activeUsers.add(uid);
 
-    await bot.sendChatAction(uid, "typing").catch(() => {});
+  await bot.sendChatAction(uid, "typing").catch(() => {});
 
     const menu = getMainMenu(uid);
     const imgPath = path.join(process.cwd(), "assets", "greeting.jpg");
