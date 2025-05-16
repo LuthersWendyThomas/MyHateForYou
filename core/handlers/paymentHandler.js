@@ -2,7 +2,7 @@
 // FULL AI-DRIVEN QR LOGIC • STEP-SAFE • SESSION-SYNC • BULLETPROOF • FULLRESET INTEGRATED
 
 import { getCachedQR, saveCachedQR } from "../../utils/qrCacheManager.js";
-import { generateQR } from "../../utils/generateQR.js";
+import { getOrCreateQRFromCache } from "../../utils/generateQR.js"; // ✅ NAUJAS IMPORTAS
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
 import { saveOrder } from "../../utils/saveOrder.js";
@@ -63,7 +63,7 @@ async function safeSend(fn, ...args) {
 export async function handlePayment(bot, id, userMsgs, preGeneratedQR) {
   const session = userSessions[id];
   if (!session || session.step !== 7 || session.paymentInProgress) {
-    return safeStart(bot, id); // ✅ saugiau grąžinti
+    return safeStart(bot, id);
   }
 
   session.paymentInProgress = true;
@@ -88,14 +88,14 @@ export async function handlePayment(bot, id, userMsgs, preGeneratedQR) {
     session.expectedAmount = amount;
     session.step = 9;
 
-   let qrBuffer = preGeneratedQR || await getCachedQR(symbol, amount, session.wallet);
+    // ✅ Inform client instantly (no waiting lag)
+    await sendAndTrack(bot, id, "💡 Preparing payment info...", {}, userMsgs);
 
-  if (!qrBuffer) {
-    if (qrBuffer && Buffer.isBuffer(qrBuffer) && qrBuffer.length >= 300) {
-      await saveCachedQR(symbol, amount, session.wallet, qrBuffer);
-  } else {
-    console.warn(`⚠️ [QR] Live generation failed for ${symbol} ${amount}`);
-  }
+    const qrBuffer = preGeneratedQR || await getOrCreateQRFromCache(symbol, amount, session.wallet);
+
+    if (!isValidBuffer(qrBuffer)) {
+      throw new Error(`QR code unavailable. Try again later.`);
+    }
 
     if (process.env.DEBUG_MESSAGES === "true") {
       console.debug(`[handlePayment] UID=${id} AMOUNT=${amount} ${symbol}`);
@@ -124,7 +124,7 @@ export async function handlePayment(bot, id, userMsgs, preGeneratedQR) {
     const timer = setTimeout(async () => {
       console.warn(`⌛️ [payment timeout] User ${id}`);
       delete paymentTimers[id];
-      await fullResetUserState(id); // ✅ central cleanup
+      await fullResetUserState(id);
     }, TIMEOUT_MS);
 
     session.paymentTimer = timer;
@@ -137,7 +137,7 @@ export async function handlePayment(bot, id, userMsgs, preGeneratedQR) {
 
   } catch (err) {
     console.error("❌ [handlePayment error]:", err.message || err);
-    await fullResetUserState(id); // ✅ saugiai išvalome
+    await fullResetUserState(id);
     return sendAndTrack(bot, id, `❗️ Payment failed:\n*${err.message}*`, {
       parse_mode: "Markdown"
     }, userMsgs);
