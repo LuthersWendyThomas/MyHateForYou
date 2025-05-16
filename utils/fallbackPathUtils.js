@@ -1,8 +1,8 @@
-// fallbackPathUtils.js v1.1.3
+// 📦 fallbackPathUtils.js v1.1.3
 
 import path from "path";
-import { ALIASES } from "../config/config.js";
-import { getAllQrScenarios } from "./qrScenarios.js"; // Pridėtas importas iš qrScenarios.js
+import { NETWORKS } from "../config/networkConfig.js"; // Naudojame NETWORKS iš networkConfig.js
+import { getAllQrScenarios } from "./qrScenarios.js"; // Importuojame qrScenarios.js
 
 // Tikslus kelias į QR fallback direktoriją
 export const FALLBACK_DIR = path.join(process.cwd(), "qr-cache");
@@ -15,7 +15,7 @@ export const FALLBACK_DIR = path.join(process.cwd(), "qr-cache");
 export function normalizeSymbol(raw) {
   try {
     const key = String(raw || "").trim().toLowerCase();
-    return (ALIASES[key] || key).toUpperCase();
+    return (NETWORKS[key] || key).toUpperCase(); // Naudojame NETWORKS vietoje ALIASES
   } catch {
     return "UNKNOWN";
   }
