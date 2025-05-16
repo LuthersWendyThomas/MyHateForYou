@@ -11,8 +11,8 @@ import {
   FALLBACK_DIR,
   normalizeSymbol,
   getAmountFilename // Correct import for getAmountFilename
-} from "./fallbackPathUtils.js";  // Now includes getAmountFilename import
-import { getAllQrScenarios } from "./qrScenarios.js"; // Correct import for qrScenarios.js
+} from "./utils/fallbackPathUtils.js";  // Now includes getAmountFilename import
+import { getAllQrScenarios } from "./utils/qrScenarios.js"; // Correct import for qrScenarios.js
 
 const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 7;
