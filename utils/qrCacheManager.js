@@ -125,6 +125,7 @@ export async function validateQrFallbacks(autoFix = true) {
     const expected = scenarios.length;
 
     const expectedSet = new Set(scenarios.map(s => s.filename));
+    const foundSet = new Set(pngs);
     const corrupt = [];
     const missing = [];
 
@@ -133,7 +134,7 @@ export async function validateQrFallbacks(autoFix = true) {
       try {
         const stat = await fs.stat(filePath);
         if (!stat.isFile() || stat.size < 300) {
-          await fs.unlink(filePath); // 💣 DELETE corrupted fallback file
+          await fs.unlink(filePath); // 💣 remove corrupted fallback PNG
           corrupt.push({ filename, filePath });
         }
       } catch {
@@ -141,8 +142,14 @@ export async function validateQrFallbacks(autoFix = true) {
       }
     }
 
+    const trulyMissing = [...expectedSet].filter(f => !foundSet.has(f));
     const validCount = expected - corrupt.length - missing.length;
-    console.log(`📊 QR Validation: ${validCount}/${expected} valid`);
+
+    console.log(`📊 QR Validation Summary:`);
+    console.log(`✅ Valid: ${validCount}`);
+    console.log(`❌ Corrupt: ${corrupt.length}`);
+    console.log(`🚫 Missing: ${missing.length}`);
+    console.log(`📂 Total expected: ${expected}`);
 
     if ((corrupt.length > 0 || missing.length > 0) && autoFix) {
       const toFix = [...corrupt, ...missing];
@@ -178,29 +185,5 @@ export async function validateQrFallbacks(autoFix = true) {
     }
   } catch (err) {
     console.error(`❌ Validation failed: ${err.message}`);
-  }
-}
-
-// Get cached QR (if available) from the fallback path
-export async function getCachedQR(symbol, amount, address = null) {
-  try {
-    const filePath = getFallbackPath(symbol, amount);
-    if (!existsSync(filePath)) return null;
-    const buffer = await fs.readFile(filePath);
-    return Buffer.isBuffer(buffer) && buffer.length >= 300 ? buffer : null;
-  } catch {
-    return null;
-  }
-}
-
-// Save QR to cache directory
-export async function saveCachedQR(symbol, amount, address = null, buffer) {
-  try {
-    const filePath = getFallbackPath(symbol, amount);
-    await fs.writeFile(filePath, buffer);
-    return true;
-  } catch (err) {
-    console.warn("⚠️ [saveCachedQR] Failed:", err.message);
-    return false;
   }
 }
