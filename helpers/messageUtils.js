@@ -153,7 +153,8 @@ function scheduleCleanup(bot, uid, messages) {
         });
       }
 
-      if (autobanEnabled.status) {
+      // ✅ Saugus autoban tik jei pristatymas buvo pradėtas
+      if (autobanEnabled.status && session?.deliveryInProgress) {
         await banUser(uid);
         logAction("⛔ scheduleCleanup", `Auto-banned → ${uid}`);
       } else {
