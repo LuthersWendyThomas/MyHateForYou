@@ -1,4 +1,4 @@
-// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL SOFTLOCK v1.0.0
+// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL SOFTLOCK v1.0.1•DIAMONDLOCK•ADMINFIX
 // FSM-SAFE • DEBOUNCE-AWARE • FLOOD+SPAM GUARD • CONFIRM/CANCEL READY • UX SYNCED
 
 import { BOT } from "../../config/config.js";
@@ -78,6 +78,12 @@ export function registerMainHandler(bot) {
 
     userSessions[uid] ||= { step: 1, createdAt: Date.now() };
     userSessions[uid].lastText = text;
+
+    // 🔐 Admin override: skip FSM funnel if adminStep active
+    if (isAdmin(uid) && userSessions[uid]?.adminStep) {
+      console.log(`🛡️ FSM skipped — adminStep active (${userSessions[uid].adminStep})`);
+      return await safeCall(() => handleAdminAction(bot, msg, userSessions), uid);
+    }
 
     try {
       if (text === "/start") {
