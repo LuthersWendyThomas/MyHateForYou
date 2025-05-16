@@ -1,11 +1,8 @@
-// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v1.0.0•GODMODE•LOCKED•SYNCED•∞FALLBACK
-
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import PQueue from "p-queue";
-import { generateQR, normalizeSymbol } from "./generateQR.js";
-import { fetchCryptoPrice } from "./fetchCryptoPrice.js";
+import { generateQR } from "./generateQR.js";
 import {
   sanitizeAmount,
   getFallbackPath,
@@ -18,18 +15,22 @@ const MAX_RETRIES = 7;
 const BASE_DELAY_MS = 2000;
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(res => setTimeout(res, ms));
 }
 
 export async function initQrCacheDir() {
-  if (!existsSync(FALLBACK_DIR)) await fs.mkdir(FALLBACK_DIR, { recursive: true });
+  if (!existsSync(FALLBACK_DIR)) {
+    await fs.mkdir(FALLBACK_DIR, { recursive: true });
+  }
 }
 
 export async function cleanQrCacheDir() {
   try {
     const files = await fs.readdir(FALLBACK_DIR);
     const targets = files.filter(f => f.endsWith(".png"));
-    for (const f of targets) await fs.unlink(path.join(FALLBACK_DIR, f));
+    for (const f of targets) {
+      await fs.unlink(path.join(FALLBACK_DIR, f));
+    }
     console.log(`🧹 [cleanQrCacheDir] Deleted ${targets.length} fallback PNGs.`);
   } catch (err) {
     console.warn("⚠️ [cleanQrCacheDir]", err.message);
@@ -39,12 +40,9 @@ export async function cleanQrCacheDir() {
 export async function generateFullQrCache(forceComplete = true) {
   await initQrCacheDir();
 
-  const scenarios = getAllQrScenarios().map(s => ({
-    ...s,
-    normalized: normalizeSymbol(s.rawSymbol)
-  }));
-
+  const scenarios = await getAllQrScenarios();
   const totalCount = scenarios.length;
+
   console.log(`🚀 [QR Cache] Generating ${totalCount} fallback QR codes...`);
 
   const successful = new Set();
@@ -54,18 +52,19 @@ export async function generateFullQrCache(forceComplete = true) {
   while (pending.length > 0 && cycle < 10) {
     cycle++;
     console.log(`🔁 [Cycle ${cycle}] Pending: ${pending.length}...`);
+
     const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
     const failed = [];
     const offset = totalCount - pending.length;
 
     for (let i = 0; i < pending.length; i++) {
-      const task = pending[i];
+      const scenario = pending[i];
       const index = offset + i + 1;
 
       queue.add(() =>
-        attemptGenerate({ ...task, index, total: totalCount }, successful, failed).catch(err => {
-          console.warn(`❌ [queueTaskFailed] ${task.normalized} $${task.totalUSD}: ${err.message}`);
-          failed.push(task);
+        attemptGenerate({ ...scenario, index, total: totalCount }, successful, failed).catch(err => {
+          console.warn(`❌ [queueTaskFailed] ${scenario.filename}: ${err.message}`);
+          failed.push(scenario);
         })
       );
     }
@@ -94,67 +93,55 @@ export async function generateFullQrCache(forceComplete = true) {
   }
 }
 
-async function attemptGenerate({ rawSymbol, totalUSD, normalized, index, total }, successful, failed) {
+async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      const rate = await fetchCryptoPrice(rawSymbol);
-      if (!rate || rate <= 0) throw new Error(`Invalid rate: ${rate}`);
-
-      const amount = sanitizeAmount(totalUSD / rate);
-      if (!amount || amount <= 0) throw new Error(`Invalid amount: ${amount}`);
-
-      const filePath = getFallbackPath(normalized, amount);
+      const filePath = path.join(FALLBACK_DIR, filename);
 
       if (existsSync(filePath)) {
         await fs.unlink(filePath);
-        console.log(`♻️ [${index}/${total}] Overwriting: ${path.basename(filePath)}`);
+        console.log(`♻️ [${index}/${total}] Overwriting: ${filename}`);
       }
 
-      const buffer = await generateQR(normalized, amount);
+      const buffer = await generateQR(rawSymbol, expectedAmount);
       if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 1000) {
         throw new Error("Invalid QR buffer");
       }
 
       await fs.writeFile(filePath, buffer);
       successful.add(filePath);
-      console.log(`✅ [${index}/${total}] ${normalized} $${totalUSD} → ${amount}`);
+      console.log(`✅ [${index}/${total}] ${rawSymbol} → ${expectedAmount}`);
       return;
     } catch (err) {
       const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${normalized}: ${err.message}`);
+      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${rawSymbol}: ${err.message}`);
       await sleep(delay);
     }
   }
 
-  failed.push({ rawSymbol, totalUSD, normalized });
+  failed.push({ rawSymbol, expectedAmount, filename });
 }
 
 export async function validateQrFallbacks(autoFix = true) {
   try {
     const files = await fs.readdir(FALLBACK_DIR);
     const pngs = files.filter(f => f.endsWith(".png"));
-    const scenarios = getAllQrScenarios();
+    const scenarios = await getAllQrScenarios();
     const expected = scenarios.length;
 
-    const expectedMap = new Map();
-    for (const s of scenarios) {
-      const normalized = normalizeSymbol(s.rawSymbol);
-      const key = `${normalized}_${sanitizeAmount(s.totalUSD / 1).toFixed(6)}`; // Dummy division for float formatting
-      expectedMap.set(key, s);
-    }
-
+    const expectedSet = new Set(scenarios.map(s => s.filename));
     const corrupt = [];
     const missing = [];
 
-    for (const [key] of expectedMap) {
-      const filePath = path.resolve(FALLBACK_DIR, `${key}.png`);
+    for (const filename of expectedSet) {
+      const filePath = path.join(FALLBACK_DIR, filename);
       try {
-        const buffer = await fs.readFile(filePath);
-        if (!Buffer.isBuffer(buffer) || buffer.length < 1000) {
-          corrupt.push({ key, filePath });
+        const stat = await fs.stat(filePath);
+        if (!stat.isFile() || stat.size < 300) {
+          corrupt.push({ filename, filePath });
         }
       } catch {
-        missing.push({ key, filePath });
+        missing.push({ filename, filePath });
       }
     }
 
@@ -167,20 +154,20 @@ export async function validateQrFallbacks(autoFix = true) {
 
       const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
 
-      for (const { key } of toFix) {
-        const [symbol, amtRaw] = key.split("_");
+      for (const { filename } of toFix) {
+        const [symbol, amtRaw] = filename.replace(".png", "").split("_");
         const amount = sanitizeAmount(parseFloat(amtRaw));
         if (!amount || isNaN(amount) || amount <= 0) continue;
 
         queue.add(async () => {
           try {
             const buffer = await generateQR(symbol, amount);
-            if (!buffer || buffer.length < 1000) {
+            if (!buffer) {
               console.warn(`❌ Invalid QR: ${symbol} ${amount}`);
               return;
             }
-            const outPath = getFallbackPath(symbol, amount);
-            await fs.writeFile(outPath, buffer);
+            const filePath = path.join(FALLBACK_DIR, filename);
+            await fs.writeFile(filePath, buffer);
             console.log(`✅ Regenerated: ${symbol} ${amount}`);
           } catch (err) {
             console.warn(`❌ Regeneration failed: ${symbol} ${amount} → ${err.message}`);
