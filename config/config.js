@@ -55,7 +55,7 @@ export async function startSafePolling(bot) {
   }
 
   try {
-    await bot.deleteWebhook();    // 🧹 Remove webhook if set
+    // ⛔ NEBENAUDOJAM deleteWebhook, nes kai kurios versijos neturi šio metodo
     await bot.stopPolling();      // 🛑 Stop previous polling
     await bot.startPolling();     // 🚀 Start polling cleanly
     console.log("✅ [startSafePolling] Bot polling started safely.");
