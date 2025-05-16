@@ -1,4 +1,4 @@
-// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v3.0.1 •GODMODE•MANAGER
+// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v3.0.1 GODMODE MANAGER
 
 import fs from "fs/promises";
 import path from "path";
