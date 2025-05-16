@@ -1,3 +1,5 @@
+// fallbackPathUtils.js v1.1.3
+
 import path from "path";
 import { ALIASES } from "../config/config.js";
 import { getAllQrScenarios } from "./qrScenarios.js"; // Pridėtas importas iš qrScenarios.js
