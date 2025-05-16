@@ -195,3 +195,9 @@ function parseRetryAfter(h) {
 function isValid(n) {
   return typeof n === "number" && Number.isFinite(n) && n > 0;
 }
+
+// ✅ Universalus alias API
+export async function getSafeRate(symbol) {
+  return await fetchCryptoPrice(symbol);
+}
+
