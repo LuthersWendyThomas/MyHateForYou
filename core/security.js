@@ -1,17 +1,15 @@
-// 🛡️ core/security.js | IMMORTAL FINAL v3.0.0•999999999999999999X•DIAMONDLOCK•SYNCED
-// FSM-SAFE • QR/STEP 9 SAFE • BUTTON-FRIENDLY • ULTRA UX • ZERO FALSE BLOCKS • FULLY SYNCED
-
+// 🛡️ core/security.js | IMMORTAL FINAL v3.0.1•SOFTLOCK•999999999X•SYNCED
 import { isBanned } from "../utils/bans.js";
 import { sendAndTrack } from "../helpers/messageUtils.js";
 import { antiSpam, antiFlood, bannedUntil, userSessions } from "../state/userState.js";
 import { MENU_BUTTONS } from "../helpers/keyboardConstants.js";
 import { BOT } from "../config/config.js";
 
-// ——— Limitai ———
-const SPAM_INTERVAL_MS    = 1400;
-const FLOOD_LIMIT         = 9;
-const FLOOD_WINDOW_MS     = 9000;
-const TEMP_MUTE_MS        = 90 * 1000;
+// ——— Limitai (SUŠVELNINTI) ———
+const SPAM_INTERVAL_MS    = 700;     // 🔄 Minkštintas debounce
+const FLOOD_LIMIT         = 12;      // 💦 Didesnė tolerancija
+const FLOOD_WINDOW_MS     = 8000;    // ⏱️ Trumpesnis langas
+const TEMP_MUTE_MS        = 60 * 1000; // ⏳ Tik 1 min
 const MAX_MESSAGE_LENGTH  = 600;
 const MAX_INPUT_FREQUENCY = 6;
 const MAX_DISTINCT_INPUTS = 20;
@@ -24,9 +22,6 @@ const BUTTON_TEXTS = Object.values(MENU_BUTTONS)
 // 🧠 Tekstų istorija
 const recentTexts = new Map();
 
-/**
- * 🧠 Pagrindinis UX/FSM aware leidimo filtras
- */
 export async function canProceed(id, bot, text = "") {
   const uid = sanitizeId(id);
   if (!uid) return false;
@@ -35,10 +30,8 @@ export async function canProceed(id, bot, text = "") {
   const session = userSessions[uid] || {};
   const input = String(text || "").trim().toLowerCase();
 
-  // ✅ Leisti mygtukus
   if (BUTTON_TEXTS.includes(input)) return true;
 
-  // ✅ Leisti confirm/cancel žingsniuose 8–9
   if (session.step === 8 || session.step === 9) {
     const allowed = [
       MENU_BUTTONS.CONFIRM.text.toLowerCase(),
@@ -63,9 +56,6 @@ export async function canProceed(id, bot, text = "") {
   }
 }
 
-/**
- * 💦 FLOOD detekcija
- */
 export async function handleFlood(id, bot) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
@@ -91,9 +81,6 @@ export async function handleFlood(id, bot) {
   return false;
 }
 
-/**
- * 🚫 SPAM detekcija
- */
 export function isSpamming(id) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
@@ -107,9 +94,6 @@ export function isSpamming(id) {
   return tooFast;
 }
 
-/**
- * 🚨 Per ilgas arba per daug kartų kartojamas tekstas
- */
 function isMessageDangerous(id, rawText) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
@@ -134,9 +118,6 @@ function isMessageDangerous(id, rawText) {
   return false;
 }
 
-/**
- * 🔇 Ar useris mute'intas
- */
 export function isMuted(id) {
   const uid = sanitizeId(id);
   if (!uid || isAdmin(uid)) return false;
@@ -154,15 +135,12 @@ export function isMuted(id) {
   return stillMuted;
 }
 
-/**
- * 📣 Mute notification
- */
 async function notifyUserMuted(bot, uid) {
   try {
     const session = userSessions[uid];
     if (!session?.mutedNotified) {
       await sendAndTrack(bot, uid,
-        "⛔ *Too many actions!*\nYou've been *muted for 1.5 minutes*. Please slow down.",
+        "⛔ *Too many actions!*\nYou've been *muted for 1 minute*. Please slow down.",
         { parse_mode: "Markdown" }
       );
       if (session) session.mutedNotified = true;
