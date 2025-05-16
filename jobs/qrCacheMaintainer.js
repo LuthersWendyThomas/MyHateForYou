@@ -1,5 +1,3 @@
-// qrCacheMaintainer.js v1.1.3 DIAMOND LOCKED VERSION
-
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
@@ -192,4 +190,12 @@ export async function saveCachedQR(symbol, amount, address = null, buffer) {
     console.warn("⚠️ [saveCachedQR] Failed:", err.message);
     return false;
   }
+}
+
+// Exports the function you mentioned
+export async function startQrCacheMaintenance() {
+  // Here we could execute the maintenance tasks for the QR cache.
+  console.log("Starting QR Cache Maintenance...");
+  await cleanQrCacheDir();
+  await generateFullQrCache();
 }
