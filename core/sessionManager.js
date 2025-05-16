@@ -167,6 +167,24 @@ export function printSessionSummary() {
   }
 }
 
+/**
+ * 🟢 Safe session start (used for fresh FSM init)
+ */
+export function safeStartSession(id) {
+  const uid = sanitizeId(id);
+  if (!uid) return;
+
+  const now = Date.now();
+  userSessions[uid] = {
+    step: 1,
+    createdAt: now,
+    lastActionTimestamp: now // 💠 Debounce apsaugai
+  };
+
+  activeUsers.add(uid);
+  logAction("✅ [safeStartSession]", "Session started", uid);
+}
+
 // ——— Internal Helpers ———
 
 function sanitizeId(id) {
