@@ -1,8 +1,6 @@
 // 📦 core/handlers/stepHandler.js | IMMORTAL FINAL v1.0.9•99999999X•ULTIMATE•GODMODE•DIAMONDLOCK
 // 24/7 BULLETPROOF • FSM SAFE ENGINE • FLOOD RESISTANT • FULL USD SUPPORT • PERFECT SYNC
 
-import { getAmountFilename, getFallbackPath, sanitizeAmount } from "../../utils/fallbackPathUtils.js";
-import { generateQR } from "../../utils/generateQR.js";
 import { deliveryMethods } from "../../config/features.js";
 import { WALLETS } from "../../config/config.js";
 import { products } from "../../config/products.js";
@@ -429,44 +427,7 @@ async function handleOrderConfirm(bot, uid, input, session, userMessages) {
 
   // ⏳ Inform the user we're loading payment info
   await sendAndTrack(bot, uid, "⏳ Loading payment info...", {}, userMessages);
-
-  // ✅ Get current crypto rate
-  const { rate, symbol } = await getSafeRate(session.currency);
-  const usd = session.totalPrice;
-  const amountRaw = usd / rate;
-  const amount = sanitizeAmount(amountRaw);
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error("Calculated crypto amount is invalid");
-  }
-
-  session.expectedAmount = amount;
-  session.step = 9;
-
-  // 🧠 QR Generation with timeout logic
-  const qrPromise = generateQR(symbol, amount, session.wallet);
-  const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('⏱️ [QR Delay]')), 5000)
-  );
-
-  let qrBuffer;
-  try {
-    qrBuffer = await Promise.race([qrPromise, timeout]);
-  } catch (err) {
-    console.warn(err.message);
-    await sendAndTrack(bot, uid, "Still generating QR...", {}, userMessages);
-    qrBuffer = await qrPromise; // continue waiting
-  }
-
-  if (!qrBuffer || !Buffer.isBuffer(qrBuffer) || qrBuffer.length < 1000) {
-    throw new Error("QR generation failed");
-  }
-
-  if (process.env.DEBUG_MESSAGES === "true") {
-    console.debug(`[handlePayment] UID=${uid} AMOUNT=${amount} ${symbol}`);
-  }
-
-  return handlePayment(bot, uid, userMessages, qrBuffer); // 🟢 PRIDUODAM QR
+  return handlePayment(bot, uid, userMessages);
 }
 
 // 🔧 IMMORTAL PATCHED CONFIRM/CANCEL FLOW (SYNCED)
