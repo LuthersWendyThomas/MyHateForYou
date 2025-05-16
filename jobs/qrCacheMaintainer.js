@@ -1,107 +1,195 @@
+// qrCacheMaintainer.js v1.1.3 DIAMOND LOCKED VERSION
+
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js"; // Tikslūs importai
-import { FALLBACK_DIR } from "../utils/fallbackPathUtils.js"; // Užtikriname, kad kelias į fallback dir būtų teisingas
-import { sendAdminPing } from "../core/handlers/paymentHandler.js";
-import { getExpectedQrCount } from "../utils/qrScenarios.js"; // ✅ FIXED: naudoti tiesos šaltinį
+import PQueue from "p-queue";
+import { generateQR } from "./generateQR.js";
+import {
+  sanitizeAmount,
+  getFallbackPath,
+  FALLBACK_DIR,
+  normalizeSymbol,
+  getAmountFilename // Correct import for getAmountFilename
+} from "./fallbackPathUtils.js";  // Now includes getAmountFilename import
+import { getAllQrScenarios } from "./qrScenarios.js"; // Correct import for qrScenarios.js
 
-const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
-const INTERVAL_HOURS = 4;
+const MAX_CONCURRENCY = 10;
+const MAX_RETRIES = 7;
+const BASE_DELAY_MS = 2000;
 
-let isRunning = false;
-
-export function startQrCacheMaintenance() {
-  console.log(`🛠️ [qrCacheMaintainer] QR fallback maintenance scheduled every ${INTERVAL_HOURS}h`);
-  setTimeout(() => scheduleMaintenance(true), 3 * 60 * 1000); // Delay on boot
-  setInterval(() => scheduleMaintenance(false), INTERVAL_HOURS * 60 * 60 * 1000);
+function sleep(ms) {
+  return new Promise(res => setTimeout(res, ms));
 }
 
-function scheduleMaintenance(isStartup = false) {
-  if (isRunning) {
-    console.log("⏳ [qrCacheMaintainer] Skipping: previous maintenance still in progress.");
-    return;
-  }
-
-  isRunning = true;
-  tryMaintain(isStartup)
-    .catch(err => {
-      console.error(`❌ [qrCacheMaintainer] Maintenance failure: ${err.message}`);
-    })
-    .finally(() => {
-      isRunning = false;
-    });
-}
-
-async function tryMaintain(isStartup = false) {
-  const now = new Date().toLocaleTimeString("en-GB");
-  const label = isStartup
-    ? "🔄 QR fallback maintenance on bot startup."
-    : "♻️ QR fallback cache auto-maintained (every 4h).";
-
-  try {
-    console.log(`🧹 [qrCacheMaintainer] Ensuring cache dir + cleaning expired PNGs...`);
-    await initQrCacheDir();
-    const deletedCount = await cleanExpiredQRCodes();
-
-    const expected = await getExpectedQrCount(); // ✅ FIXED: teisingas vienintelis šaltinis
-
-    console.log(`🚀 [qrCacheMaintainer] Regenerating fallback QR cache (${expected} total)...`);
-    await generateFullQrCache(true);
-
-    console.log(`🔍 [qrCacheMaintainer] Validating fallback QR files...`);
-    await validateQrFallbacks(true);
-
-    console.log(`✅ [qrCacheMaintainer] All fallback QRs regenerated and validated.`);
-    await sendAdminPing(`✅ ${label}\n🗑️ Expired cleaned: *${deletedCount}*\n📦 ${expected} QRs regenerated + validated.`);
-  } catch (err) {
-    console.error(`❌ [qrCacheMaintainer] Error:`, err.message);
+// 🔁 FIX: Pakeltas čia, kad būtų prieš naudojimą
+async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      await sendAdminPing(`❌ QR fallback maintenance failed: *${err.message}*`);
-    } catch (e) {
-      console.warn("⚠️ [Admin ping error]:", e.message);
+      const filePath = path.join(FALLBACK_DIR, filename);
+
+      if (existsSync(filePath)) {
+        await fs.unlink(filePath);
+        console.log(`♻️ [${index}/${total}] Overwriting: ${filename}`);
+      }
+
+      const buffer = await generateQR(rawSymbol, expectedAmount);
+      if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 1000) {
+        throw new Error("Invalid QR buffer");
+      }
+
+      await fs.writeFile(filePath, buffer);
+      successful.add(filePath);
+      console.log(`✅ [${index}/${total}] ${rawSymbol} → ${expectedAmount}`);
+      return;
+    } catch (err) {
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt);
+      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${rawSymbol}: ${err.message}`);
+      await sleep(delay);
     }
   }
+
+  failed.push({ rawSymbol, expectedAmount, filename });
 }
 
-async function cleanExpiredQRCodes() {
+export async function initQrCacheDir() {
+  if (!existsSync(FALLBACK_DIR)) {
+    await fs.mkdir(FALLBACK_DIR, { recursive: true });
+  }
+}
+
+export async function cleanQrCacheDir() {
   try {
-    const now = Date.now();
     const files = await fs.readdir(FALLBACK_DIR);
     const targets = files.filter(f => f.endsWith(".png"));
-
-    const deletedEntries = [];
-
-    for (const file of targets) {
-      const fullPath = path.join(FALLBACK_DIR, file);
-      try {
-        const stats = await fs.stat(fullPath);
-        const age = now - stats.mtimeMs;
-
-        if (age > MAX_AGE_MS) {
-          await fs.unlink(fullPath);
-          deletedEntries.push({
-            "🗑️ File": file,
-            "⏱️ Age (min)": Math.floor(age / 60000),
-            "📂 Path": fullPath
-          });
-        }
-      } catch (err) {
-        console.warn(`⚠️ [QR Cleaner] Stat/read fail for: ${file} → ${err.message}`);
-      }
+    for (const f of targets) {
+      await fs.unlink(path.join(FALLBACK_DIR, f));
     }
-
-    if (deletedEntries.length > 0) {
-      console.table(deletedEntries.slice(0, 10));
-      if (deletedEntries.length > 10) {
-        console.log(`...and ${deletedEntries.length - 10} more expired QR files removed.`);
-      }
-    }
-
-    console.log(`✅ [QR Cleaner] ${deletedEntries.length} expired QR files removed.`);
-    return deletedEntries.length;
+    console.log(`🧹 [cleanQrCacheDir] Deleted ${targets.length} fallback PNGs.`);
   } catch (err) {
-    console.error(`❌ [QR Cleaner] Failed: ${err.message}`);
-    return 0;
+    console.warn("⚠️ [cleanQrCacheDir]", err.message);
+  }
+}
+
+export async function generateFullQrCache(forceComplete = true) {
+  await initQrCacheDir();
+
+  const scenarios = await getAllQrScenarios();  // Generuojame scenarijus
+  const totalCount = scenarios.length;
+
+  console.log(`🚀 [QR Cache] Generating ${totalCount} fallback QR codes...`);
+
+  const successful = new Set();
+  let pending = [...scenarios];
+  let cycle = 0;
+
+  while (pending.length > 0 && cycle < 10) {
+    cycle++;
+    console.log(`🔁 [Cycle ${cycle}] Pending: ${pending.length}...`);
+
+    const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
+    const failed = [];
+    const offset = totalCount - pending.length;
+
+    for (let i = 0; i < pending.length; i++) {
+      const scenario = pending[i];
+      const index = offset + i + 1;
+
+      queue.add(() =>
+        attemptGenerate({ ...scenario, index, total: totalCount }, successful, failed).catch(err => {
+          console.warn(`❌ [queueTaskFailed] ${scenario.filename}: ${err.message}`);
+          failed.push(scenario);
+        })
+      );
+    }
+
+    await queue.onIdle();
+    pending = failed;
+    if (!forceComplete) break;
+  }
+}
+
+export async function validateQrFallbacks(autoFix = true) {
+  try {
+    const files = await fs.readdir(FALLBACK_DIR);
+    const pngs = files.filter(f => f.endsWith(".png"));
+    const scenarios = await getAllQrScenarios();
+    const expected = scenarios.length;
+
+    const expectedSet = new Set(scenarios.map(s => s.filename));
+    const corrupt = [];
+    const missing = [];
+
+    for (const filename of expectedSet) {
+      const filePath = path.join(FALLBACK_DIR, filename);
+      try {
+        const stat = await fs.stat(filePath);
+        if (!stat.isFile() || stat.size < 300) {
+          corrupt.push({ filename, filePath });
+        }
+      } catch {
+        missing.push({ filename, filePath });
+      }
+    }
+
+    const validCount = expected - corrupt.length - missing.length;
+    console.log(`📊 QR Validation: ${validCount}/${expected} valid`);
+
+    if ((corrupt.length > 0 || missing.length > 0) && autoFix) {
+      const toFix = [...corrupt, ...missing];
+      console.warn(`♻️ Regenerating ${toFix.length} missing/corrupt files...`);
+
+      const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
+
+      for (const { filename } of toFix) {
+        const [symbol, amtRaw] = filename.replace(".png", "").split("_");
+        const amount = sanitizeAmount(parseFloat(amtRaw));
+        if (!amount || isNaN(amount) || amount <= 0) continue;
+
+        queue.add(async () => {
+          try {
+            const buffer = await generateQR(symbol, amount);
+            if (!buffer) {
+              console.warn(`❌ Invalid QR: ${symbol} ${amount}`);
+              return;
+            }
+            const filePath = path.join(FALLBACK_DIR, filename);
+            await fs.writeFile(filePath, buffer);
+            console.log(`✅ Regenerated: ${symbol} ${amount}`);
+          } catch (err) {
+            console.warn(`❌ Regeneration failed: ${symbol} ${amount} → ${err.message}`);
+          }
+        });
+      }
+
+      await queue.onIdle();
+      console.log(`🧬 Regeneration complete.`);
+    } else {
+      console.log("✅ All fallback QR codes are valid.");
+    }
+  } catch (err) {
+    console.error(`❌ Validation failed: ${err.message}`);
+  }
+}
+
+export async function getCachedQR(symbol, amount, address = null) {
+  try {
+    const filePath = getFallbackPath(symbol, amount);
+    if (!existsSync(filePath)) return null;
+    const buffer = await fs.readFile(filePath);
+    return Buffer.isBuffer(buffer) && buffer.length >= 300 ? buffer : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveCachedQR(symbol, amount, address = null, buffer) {
+  try {
+    const filePath = getFallbackPath(symbol, amount);
+    await fs.writeFile(filePath, buffer);
+    return true;
+  } catch (err) {
+    console.warn("⚠️ [saveCachedQR] Failed:", err.message);
+    return false;
   }
 }
