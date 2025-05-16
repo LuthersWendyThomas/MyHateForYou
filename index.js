@@ -139,23 +139,27 @@ process.on("unhandledRejection", async (reason) => {
     try {
       await BOT.INSTANCE.stopPolling();
       await BOT.INSTANCE.close();
-
-      console.log(`\x1b[42m\x1b[30m ✅ BOT SHUTDOWN COMPLETE — SAFE EXIT @ ${ts} \x1b[0m`);
-
-      try {
-        await sendAdminPing(
-          `🛑 *Bot shutdown signal received:* \`${sig}\`\n\n` +
-          `✅ *Polling stopped*\n📦 *FSM cleaned*\n🛡️ *System exited cleanly*\n🕒 ${ts}`
-        );
-      } catch (err) {
-        console.warn(`\x1b[43m\x1b[30m ⚠️ Admin ping during shutdown failed: ${err.message} \x1b[0m`);
-      }
-
     } catch (err) {
       console.warn(`\x1b[43m\x1b[30m ⚠️ Graceful shutdown error: ${err.message} \x1b[0m`);
     }
 
-    process.exit(0);
+    // 💚 VISADA parodyk shutdown success bloką
+    console.log(`\x1b[42m\x1b[30m ✅ BOT SHUTDOWN COMPLETE — SAFE EXIT @ ${ts} \x1b[0m`);
+
+    // 🛡️ Pabandyk siųsti pingą, bet neblokuok jei nepavyks
+    try {
+      setTimeout(() => {
+        sendAdminPing(
+          `🛑 *Bot shutdown signal received:* \`${sig}\`\n\n` +
+          `✅ *Polling stopped*\n📦 *FSM cleaned*\n🛡️ *System exited cleanly*\n🕒 ${ts}`
+        ).catch(() => {});
+      }, 250);
+    } catch {
+      // ⚠️ Nutylim – neverta trukdyti shutdown
+    }
+
+    // 💤 Duok laiko log'ams (ypač Render.com console)
+    setTimeout(() => process.exit(0), 1000);
   })
 );
 
