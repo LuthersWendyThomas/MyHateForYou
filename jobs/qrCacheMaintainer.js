@@ -1,45 +1,54 @@
-// qrCacheMaintainer.js v1.2.4 2025 deploy locked
+// 📦 qrCacheMaintainer.js | FINAL GODMODE IMMORTAL v999999999999x
 
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js"; // Correct imports for cache management
-import { FALLBACK_DIR, sanitizeAmount, normalizeSymbol, getAmountFilename } from "../utils/fallbackPathUtils.js"; // Importing helpers from fallbackPathUtils
-import { sendAdminPing } from "../core/handlers/paymentHandler.js"; // Admin ping notifications
-import { getAllQrScenarios } from "../utils/qrScenarios.js"; // Import for getting the list of QR scenarios
 
-// Importing necessary elements for rate fetching and wallet address resolution
-import { WALLETS } from "../config/config.js"; // WALLETS for address resolution
-import { fetchCryptoPrice } from "../utils/fetchCryptoPrice.js"; // Import for fetching crypto prices
+import {
+  generateFullQrCache,
+  initQrCacheDir,
+  validateQrFallbacks
+} from "../utils/qrCacheManager.js";
 
-const MAX_AGE_MS = 60 * 60 * 1000; // Maximum age of 1 hour for cache expiration
-const INTERVAL_HOURS = 4; // Cache will be cleaned and regenerated every 4 hours
+import {
+  FALLBACK_DIR,
+  sanitizeAmount,
+  normalizeSymbol,
+  getAmountFilename
+} from "../utils/fallbackPathUtils.js";
 
-let isRunning = false; // Flag to prevent overlapping maintenance tasks
+import { sendAdminPing } from "../core/handlers/paymentHandler.js";
+import { getAllQrScenarios } from "../utils/qrScenarios.js";
+import { WALLETS } from "../config/config.js";
+import { fetchCryptoPrice } from "../utils/fetchCryptoPrice.js";
+
+const MAX_AGE_MS = 60 * 60 * 1000;      // 1h expiry for fallback PNGs
+const INTERVAL_HOURS = 4;              // Repeat interval
+let isRunning = false;                 // Prevent overlapping executions
 
 /**
- * Start the QR cache maintenance process
+ * 🟢 Start the recurring QR maintenance engine
  */
 export function startQrCacheMaintenance() {
-  console.log(`🛠️ [qrCacheMaintainer] QR fallback maintenance scheduled every ${INTERVAL_HOURS}h`);
-  setTimeout(() => scheduleMaintenance(true), 3 * 60 * 1000); // Start maintenance after a 3-minute delay
-  setInterval(() => scheduleMaintenance(false), INTERVAL_HOURS * 60 * 60 * 1000); // Repeat every 4 hours
+  console.log(`🛠️ [qrCacheMaintainer] Scheduled every ${INTERVAL_HOURS}h`);
+  setTimeout(() => scheduleMaintenance(true), 3 * 60 * 1000); // First run after 3min
+  setInterval(() => scheduleMaintenance(false), INTERVAL_HOURS * 60 * 60 * 1000);
 }
 
 /**
- * Schedule maintenance if it's not already running
- * @param {boolean} isStartup - Flag to indicate if this is the startup maintenance
+ * 🔁 Schedule fallback refresh (startup or interval)
  */
 function scheduleMaintenance(isStartup = false) {
   if (isRunning) {
-    console.log("⏳ [qrCacheMaintainer] Skipping: previous maintenance still in progress.");
+    console.log("⏳ [qrCacheMaintainer] Skipping – already running.");
     return;
   }
 
   isRunning = true;
+
   tryMaintain(isStartup)
     .catch(err => {
-      console.error(`❌ [qrCacheMaintainer] Maintenance failure: ${err.message}`);
+      console.error(`❌ [qrCacheMaintainer] Failed: ${err.message}`);
     })
     .finally(() => {
       isRunning = false;
@@ -47,42 +56,41 @@ function scheduleMaintenance(isStartup = false) {
 }
 
 /**
- * Main maintenance process (cleaning and regenerating QR cache)
- * @param {boolean} isStartup - Flag indicating if this is the startup maintenance
+ * 🔧 Run full QR fallback maintenance cycle
  */
 async function tryMaintain(isStartup = false) {
-  const now = new Date().toLocaleTimeString("en-GB");
   const label = isStartup
-    ? "🔄 QR fallback maintenance on bot startup."
-    : "♻️ QR fallback cache auto-maintained (every 4h).";
+    ? "🔄 QR fallback maintenance on bot startup"
+    : "♻️ QR fallback cache auto-maintained (every 4h)";
+  const now = new Date().toLocaleTimeString("en-GB");
 
   try {
-    console.log(`🧹 [qrCacheMaintainer] Ensuring cache dir + cleaning expired PNGs...`);
+    console.log(`🧹 [qrCacheMaintainer] Cleaning expired fallback PNGs...`);
     await initQrCacheDir();
     const deletedCount = await cleanExpiredQRCodes();
 
-    const expected = await getExpectedQrCount(); // Get the expected number of QR codes
-
-    console.log(`🚀 [qrCacheMaintainer] Regenerating fallback QR cache (${expected} total)...`);
+    const expected = await getExpectedQrCount();
+    console.log(`🚀 [qrCacheMaintainer] Regenerating ${expected} QR fallbacks...`);
     await generateFullQrCache(true);
 
-    console.log(`🔍 [qrCacheMaintainer] Validating fallback QR files...`);
+    console.log(`🔍 [qrCacheMaintainer] Validating fallback files...`);
     await validateQrFallbacks(true);
 
-    console.log(`✅ [qrCacheMaintainer] All fallback QRs regenerated and validated.`);
-    await sendAdminPing(`✅ ${label}\n🗑️ Expired cleaned: *${deletedCount}*\n📦 ${expected} QRs regenerated + validated.`);
+    console.log(`✅ [qrCacheMaintainer] Done. QR cache valid and refreshed.`);
+    await sendAdminPing(`✅ ${label}\n🗑️ Expired cleaned: *${deletedCount}*\n📦 Regenerated: *${expected}*`);
+
   } catch (err) {
-    console.error(`❌ [qrCacheMaintainer] Error:`, err.message);
+    console.error(`❌ [qrCacheMaintainer] Critical error: ${err.message}`);
     try {
       await sendAdminPing(`❌ QR fallback maintenance failed: *${err.message}*`);
     } catch (e) {
-      console.warn("⚠️ [Admin ping error]:", e.message);
+      console.warn("⚠️ [Admin ping failed]:", e.message);
     }
   }
 }
 
 /**
- * Clean expired QR codes from the fallback directory
+ * 🗑️ Delete expired QR PNGs from fallback cache
  */
 async function cleanExpiredQRCodes() {
   try {
@@ -107,7 +115,7 @@ async function cleanExpiredQRCodes() {
           });
         }
       } catch (err) {
-        console.warn(`⚠️ [QR Cleaner] Stat/read fail for: ${file} → ${err.message}`);
+        console.warn(`⚠️ [QR Cleaner] Failed to check ${file}: ${err.message}`);
       }
     }
 
@@ -118,8 +126,9 @@ async function cleanExpiredQRCodes() {
       }
     }
 
-    console.log(`✅ [QR Cleaner] ${deletedEntries.length} expired QR files removed.`);
+    console.log(`✅ [QR Cleaner] ${deletedEntries.length} expired PNGs removed.`);
     return deletedEntries.length;
+
   } catch (err) {
     console.error(`❌ [QR Cleaner] Failed: ${err.message}`);
     return 0;
@@ -127,7 +136,7 @@ async function cleanExpiredQRCodes() {
 }
 
 /**
- * Get the expected QR count (based on scenarios)
+ * 📊 Get current expected QR fallback count
  */
 async function getExpectedQrCount() {
   const scenarios = await getAllQrScenarios();
