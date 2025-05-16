@@ -1,5 +1,4 @@
 // 📦 helpers/messageUtils.js | IMMORTAL FINAL v1.0.3•DIAMONDLOCK•SYNCED•QRREADY•BULLETPROOF
-// CHUNKED MESSAGES • AUTO-DELETE • BAN/SESSION INTEGRATION • FALLBACK-READY
 
 import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
