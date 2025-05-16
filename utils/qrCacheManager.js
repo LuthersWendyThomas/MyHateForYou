@@ -133,6 +133,7 @@ export async function validateQrFallbacks(autoFix = true) {
       try {
         const stat = await fs.stat(filePath);
         if (!stat.isFile() || stat.size < 300) {
+          await fs.unlink(filePath); // 💣 DELETE corrupted fallback file
           corrupt.push({ filename, filePath });
         }
       } catch {
