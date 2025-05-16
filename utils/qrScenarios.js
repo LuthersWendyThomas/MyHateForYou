@@ -1,7 +1,6 @@
 // 📦 utils/qrScenarios.js | FINAL IMMORTAL v3.0.0•GODMODE•SCENARIOLOCKED•SOURCEOFTRUTH
 
-import { NETWORKS, WALLETS } from "../config/config.js"; // Importing NETWORKS and WALLETS from config.js
-import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // Use fetchCryptoPrice for rate fetching
+import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js"; // Use fetchCryptoPrice for rate fetching
 import { sanitizeAmount, getAmountFilename, normalizeSymbol } from "./fallbackPathUtils.js"; // Necessary helpers
 
 /**
