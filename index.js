@@ -5,13 +5,13 @@ dotenv.config();
 
 import fs from "fs";
 import { readFile, writeFile } from "fs/promises";
-import { initBotInstance, startSafePolling, BOT } from "../config/config.js";
-import { registerMainHandler } from "../core/handlers/mainHandler.js";
-import { autoExpireSessions, cleanStalePaymentTimers } from "../core/sessionManager.js";
-import { sendAdminPing } from "../core/handlers/paymentHandler.js";
-import { startQrCacheMaintenance } from "../jobs/qrCacheMaintainer.js";
-import { initQrCacheDir, generateFullQrCache, validateQrFallbacks } from "../utils/qrCacheManager.js";
-import "../config/discountSync.js";
+import { initBotInstance, startSafePolling, BOT } from "./config/config.js";
+import { registerMainHandler } from "./core/handlers/mainHandler.js";
+import { autoExpireSessions, cleanStalePaymentTimers } from "./core/sessionManager.js";
+import { sendAdminPing } from "./core/handlers/paymentHandler.js";
+import { startQrCacheMaintenance } from "./jobs/qrCacheMaintainer.js";
+import { initQrCacheDir, generateFullQrCache, validateQrFallbacks } from "./utils/qrCacheManager.js";
+import "./config/discountSync.js";
 
 const NEW_USERS_FILE = "./.newusers.json";
 let newUserSet = new Set();
