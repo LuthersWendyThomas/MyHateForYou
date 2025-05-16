@@ -1,4 +1,4 @@
-// 📦 jobs/qrCacheMaintainer.js | IMMORTAL FINAL v2.0.0•GODMODE•LOCKED•SYNCED•SCENARIOCORE
+// 📦 jobs/qrCacheMaintainer.js | FINAL IMMORTAL v3.0.0•SYNCED•SCENARIOLOCKED•∞SAFE
 
 import fs from "fs/promises";
 import path from "path";
@@ -46,7 +46,9 @@ async function tryMaintain(isStartup = false) {
     await initQrCacheDir();
     const deletedCount = await cleanExpiredQRCodes();
 
-    const expected = getAllQrScenarios().length;
+    const scenarios = await getAllQrScenarios();
+    const expected = scenarios.length;
+
     console.log(`🚀 [qrCacheMaintainer] Regenerating fallback QR cache (${expected} total)...`);
     await generateFullQrCache(true);
 
