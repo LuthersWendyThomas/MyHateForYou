@@ -1,5 +1,3 @@
-// 📦 utils/generateQR.js | FINAL GODMODE v3.0.0•IMMORTAL•SYNCED•SCENARIOSAFE•FALLBACKREADY
-
 import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
@@ -10,6 +8,9 @@ import {
   sanitizeAmount,
   normalizeSymbol
 } from "./fallbackPathUtils.js";
+
+// Importuojame trūkstamus elementus
+import { getAllQrScenarios } from "../utils/qrScenarios.js"; // Pridėtas importas
 
 /**
  * 🔗 Resolve wallet address for a given symbol
