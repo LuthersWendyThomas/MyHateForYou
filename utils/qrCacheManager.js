@@ -38,7 +38,7 @@ async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, tot
 
       // Use generateQR to create a new QR if necessary
       const buffer = await generateQR(rawSymbol, expectedAmount);
-      if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 1000) {
+      if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 300) {
         throw new Error("Invalid QR buffer");
       }
 
