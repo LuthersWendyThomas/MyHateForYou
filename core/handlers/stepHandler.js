@@ -218,10 +218,12 @@ export async function handleStep(bot, id, text, userMessages, ctx = {}) {
   // 🧠 Per-user paspaudimų debounceris
   const now = Date.now();
   if (!session.lastActionTimestamp) session.lastActionTimestamp = 0;
-  if (now - session.lastActionTimestamp < 5000) {
-    await fullResetUserState(uid);
-    await sendAndTrack(bot, uid, "⚠️ Auto SPAM system is moving you back to START!", {}, userMessages);
-    return safeStart(bot, uid);
+
+  const debounceMs = 1000; // 💠 Sušvelninta: tik jei <1s
+  if (now - session.lastActionTimestamp < debounceMs) {
+    console.warn(`⚠️ Debounced: UID=${uid}, Δ=${now - session.lastActionTimestamp}ms`);
+    await sendAndTrack(bot, uid, "⚠️ *Auto SPAM Prevention!*\nPlease slow down.", { parse_mode: "Markdown" }, userMessages);
+    return; // ❌ Nereikia išmesti – tiesiog įspėjam
   }
   session.lastActionTimestamp = now;
 
