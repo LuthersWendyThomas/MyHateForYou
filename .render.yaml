@@ -8,6 +8,10 @@ services:
     startCommand: node index.js
     autoDeploy: true
     autoRestart: true
+    disks:
+      - name: data-disk
+        mountPath: /opt/render/project/src/data
+        sizeGB: 1
     envVars:
       - key: TELEGRAM_TOKEN
         sync: false
