@@ -81,6 +81,26 @@ async function safeSend(bot, uid, text, silent) {
       userMessages
     );
 
+    async function safeSend(bot, uid, text, silent) {
+  try {
+    await bot.sendChatAction(uid, "typing").catch(() => {});
+    await wait(500);
+
+    const msg = await sendAndTrack(
+      bot,
+      uid,
+      text,
+      {
+        parse_mode: "Markdown",
+        disable_notification: silent
+      },
+      userMessages
+    );
+
+    // ⏱️ Atnaujinti paskutinį veiksmą – debounce apsauga
+    const session = userSessions[uid];
+    if (session) session.lastActionTimestamp = Date.now();
+
     if (
       autodeleteEnabled.status &&
       !isAdmin(uid) &&
