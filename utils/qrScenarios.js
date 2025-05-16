@@ -1,36 +1,47 @@
 // 📦 utils/qrScenarios.js | FINAL IMMORTAL v3.0.0•GODMODE•SCENARIOLOCKED•SOURCEOFTRUTH
 
-import { ALIASES, WALLETS } from "../config/config.js"; // Importuojame ALIASES ir WALLETS iš config.js
-import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // Naudojame fetchCryptoPrice duomenims gauti
-import { sanitizeAmount, getAmountFilename, normalizeSymbol } from "./fallbackPathUtils.js"; // Helperiai
+import { ALIASES, WALLETS } from "../config/config.js"; // Importing ALIASES and WALLETS from config.js
+import { fetchCryptoPrice } from "./fetchCryptoPrice.js"; // Use fetchCryptoPrice for rate fetching
+import { sanitizeAmount, getAmountFilename, normalizeSymbol } from "./fallbackPathUtils.js"; // Necessary helpers
 
 /**
- * ⛓️ Gauk visus gyvus kripto kursus 1 kartą ir išsaugok map'e
+ * ⛓️ Fetch all live crypto rates once and store them in a map
  */
 export async function getLiveRatesMap() {
   const map = {};
   const networks = Object.keys(ALIASES); // Using ALIASES for all network symbols
+
+  // Loop through all network symbols
   for (const sym of networks) {
+    const normalizedSymbol = normalizeSymbol(sym); // Normalize symbol to ensure consistency
     try {
-      const rate = await fetchCryptoPrice(sym);  // Fetching the rate using the `fetchCryptoPrice`
-      if (!rate || rate <= 0) throw new Error(`❌ Invalid rate: ${rate}`);
-      map[sym] = rate;
+      // Try fetching the rate for the normalized symbol
+      const rate = await fetchCryptoPrice(normalizedSymbol);
+
+      if (!rate || rate <= 0) {
+        throw new Error(`❌ Invalid rate for ${normalizedSymbol}: ${rate}`);
+      }
+      map[normalizedSymbol] = rate; // Store the valid rate
     } catch (err) {
-      console.warn(`⚠️ [getLiveRatesMap] ${sym} → ${err.message}`);
+      console.warn(`⚠️ [getLiveRatesMap] Error fetching rate for ${normalizedSymbol}: ${err.message}`);
+      
+      // If the rate fetch failed, we can either skip this symbol or use a fallback approach
+      map[normalizedSymbol] = null; // Mark this symbol as unavailable
     }
   }
+
   return map;
 }
 
 /**
- * 🎯 Grąžina visas galimas QR scenarijų kombinacijas su realiais kursais ir amounts
- * Tai vienintelis tiesos šaltinis visai sistemai (generate + validate + check).
+ * 🎯 Return all possible QR scenarios with real-time rates and amounts
+ * This is the single source of truth for generating and validating QR codes
  */
 export async function getAllQrScenarios() {
   const result = [];
-  const rateMap = await getLiveRatesMap(); // Gausime kursus tik čia
+  const rateMap = await getLiveRatesMap(); // Get live rates map
 
-  // Iteruojame per produktus ir apskaičiuojame scenarijus
+  // Iterate over products and calculate scenarios
   for (const category in products) {
     for (const product of products[category]) {
       if (!product?.active || !product?.prices) continue;
@@ -39,16 +50,15 @@ export async function getAllQrScenarios() {
         const usd = Number(basePrice);
         if (!usd || usd <= 0) continue;
 
-        // Apskaičiuojame visus scenarijus su įvairiais mokesčiais
+        // Calculate all possible scenarios with various delivery fees
         for (const fee of deliveryFees) {
           const totalUSD = usd + fee;
 
-          // Iteruojame per kiekvieną valiutą ir generuojame QR kodus pagal kiekvieną simbolį
           for (const rawSymbol of Object.keys(rateMap)) {
             const rate = rateMap[rawSymbol];
-            if (!rate || rate <= 0) continue;
+            if (!rate || rate <= 0) continue; // Skip if the rate is invalid or unavailable
 
-            // Skaičiuojame kiek reikės kriptovaliutos už visą sumą
+            // Calculate how much crypto is needed for the total amount
             const expectedAmount = sanitizeAmount(totalUSD / rate);
             const filename = getAmountFilename(rawSymbol, expectedAmount);
 
@@ -74,8 +84,8 @@ export async function getAllQrScenarios() {
 }
 
 /**
- * 📈 Skaičiuoja kiek iš viso QR kombinacijų sistema turi turėti.
- * Naudoti validate/generate palyginimams ar admin pranešimams.
+ * 📈 Get the expected count of all QR scenarios the system should have.
+ * Used for validation/generation comparison and admin reporting
  */
 export async function getExpectedQrCount() {
   const scenarios = await getAllQrScenarios();
