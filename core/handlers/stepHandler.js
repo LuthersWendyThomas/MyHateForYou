@@ -466,7 +466,7 @@ async function handleOrderConfirm(bot, uid, input, session, userMessages) {
     console.debug(`[handlePayment] UID=${uid} AMOUNT=${amount} ${symbol}`);
   }
 
-  return handlePayment(bot, uid, userMessages);
+  return handlePayment(bot, uid, userMessages, qrBuffer); // 🟢 PRIDUODAM QR
 }
 
 // 🔧 IMMORTAL PATCHED CONFIRM/CANCEL FLOW (SYNCED)
