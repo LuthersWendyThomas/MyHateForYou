@@ -8,8 +8,8 @@ import {
   getFallbackPath,
   FALLBACK_DIR,
   normalizeSymbol,
-  getAmountFilename // Corrected the missing import
-} from "./fallbackPathUtils.js";  // Now includes getAmountFilename import
+  getAmountFilename
+} from "./fallbackPathUtils.js";  // Correct import for getAmountFilename
 import { getAllQrScenarios } from "./qrScenarios.js"; // Correct import for qrScenarios.js
 
 const MAX_CONCURRENCY = 10;
