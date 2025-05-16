@@ -1,4 +1,4 @@
-// 📦 generateQR.js v1.1.4 IMMORTAL FINAL • SYNCLOCKED • BULLETPROOF
+// 📦 generateQR.js v1.1.5 IMMORTAL FINAL • SYNCLOCKED • BULLETPROOF + FallbackFirst
 
 import QRCode from "qrcode";
 import fs from "fs";
@@ -46,8 +46,6 @@ function isValidBuffer(buffer) {
  */
 export async function generateQRBuffer(symbol, amount, address) {
   const formatted = sanitizeAmount(amount).toFixed(6);
-
-  // ✅ FIX: Backticks (`) added to enable template literal correctly
   const uri = `${symbol.toLowerCase()}:${address}?amount=${formatted}&label=${encodeURIComponent("BalticPharmacyBot")}&message=${encodeURIComponent("Order")}`;
 
   try {
@@ -116,6 +114,55 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
     return buffer;
   } catch (err) {
     console.error("❌ [generateQR fatal]", err.message);
+    return null;
+  }
+}
+
+/**
+ * ⚡ Main production-safe fallback-first fetcher
+ * → Always prefers fallback PNG if valid
+ * → Generates new QR if missing or corrupt
+ */
+export async function getOrCreateQRFromCache(symbolRaw, amountRaw, overrideAddress = null) {
+  const symbol = normalizeSymbol(symbolRaw);
+  const amount = sanitizeAmount(amountRaw);
+  const filePath = getFallbackPath(symbol, amount);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    console.warn(`❌ [getOrCreateQRFromCache] Invalid amount: ${amountRaw}`);
+    return null;
+  }
+
+  try {
+    if (fs.existsSync(filePath)) {
+      const buffer = fs.readFileSync(filePath);
+      if (isValidBuffer(buffer)) {
+        if (process.env.DEBUG_MESSAGES === "true") {
+          console.log(`⚡ [getOrCreateQRFromCache] Using fallback for ${symbol} ${amount}`);
+        }
+        return buffer;
+      } else {
+        fs.unlinkSync(filePath);
+        console.warn(`⚠️ Corrupted fallback PNG deleted: ${path.basename(filePath)}`);
+      }
+    }
+
+    const buffer = await generateQR(symbol, amount, overrideAddress);
+    if (isValidBuffer(buffer)) {
+      try {
+        fs.writeFileSync(filePath, buffer);
+        if (process.env.DEBUG_MESSAGES === "true") {
+          console.log(`💾 [getOrCreateQRFromCache] New fallback saved: ${path.basename(filePath)}`);
+        }
+      } catch (saveErr) {
+        console.warn(`⚠️ [getOrCreateQRFromCache] Save error: ${saveErr.message}`);
+      }
+      return buffer;
+    }
+
+    return null;
+  } catch (err) {
+    console.error(`❌ [getOrCreateQRFromCache] Fatal error: ${err.message}`);
     return null;
   }
 }
