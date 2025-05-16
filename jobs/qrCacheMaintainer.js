@@ -4,7 +4,7 @@ import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js"; // Tikslūs importai
-import { FALLBACK_DIR } from "../utils/fallbackPathUtils.js"; // Užtikriname, kad kelias į fallback dir būtų teisingas
+import { FALLBACK_DIR, sanitizeAmount, normalizeSymbol, getAmountFilename } from "../utils/fallbackPathUtils.js"; // Užtikriname, kad kelias į fallback dir būtų teisingas
 import { sendAdminPing } from "../core/handlers/paymentHandler.js";
 import { getExpectedQrCount } from "../utils/qrScenarios.js"; // ✅ FIXED: naudoti tiesos šaltinį
 
