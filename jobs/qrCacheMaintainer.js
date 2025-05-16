@@ -3,27 +3,34 @@
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js"; // Tikslūs importai
-import { FALLBACK_DIR, sanitizeAmount, normalizeSymbol, getAmountFilename } from "../utils/fallbackPathUtils.js"; // Užtikriname, kad kelias į fallback dir būtų teisingas
-import { sendAdminPing } from "../core/handlers/paymentHandler.js";
-import { getExpectedQrCount } from "../utils/qrScenarios.js"; // ✅ FIXED: naudoti tiesos šaltinį
+import { generateFullQrCache, initQrCacheDir, validateQrFallbacks } from "../utils/qrCacheManager.js"; // Correct imports for cache management
+import { FALLBACK_DIR, sanitizeAmount, normalizeSymbol, getAmountFilename } from "../utils/fallbackPathUtils.js"; // Importing helpers from fallbackPathUtils
+import { sendAdminPing } from "../core/handlers/paymentHandler.js"; // To send admin notifications
+import { getExpectedQrCount } from "../utils/qrScenarios.js"; // Importing the scenario data from qrScenarios.js
 
-// Importuojame NETWORKS iš config/networkConfig.js
-import { NETWORKS } from "../config/networkConfig.js"; // Import NETWORKS for currency symbol handling
-import { WALLETS } from "../config/config.js"; // WALLETS import for address resolution
-import { fetchCryptoPrice } from "../utils/fetchCryptoPrice.js"; // Importuojame fetchCryptoPrice iš fetchCryptoPrice.js, kad gauti kriptovaliutų kursus
+// Importing necessary elements for rate fetching and wallet address resolution
+import { NETWORKS } from "../config/networkConfig.js"; // To use NETWORKS for currency symbol handling
+import { WALLETS } from "../config/config.js"; // Importing wallet addresses from config
+import { fetchCryptoPrice } from "../utils/fetchCryptoPrice.js"; // Importing the fetchCryptoPrice module to get the latest crypto prices
 
-const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
-const INTERVAL_HOURS = 4;
+const MAX_AGE_MS = 60 * 60 * 1000; // Maximum age of 1 hour for cache expiration
+const INTERVAL_HOURS = 4; // Cache will be cleaned and regenerated every 4 hours
 
-let isRunning = false;
+let isRunning = false; // Prevent overlapping maintenance tasks
 
+/**
+ * Start QR cache maintenance process
+ */
 export function startQrCacheMaintenance() {
   console.log(`🛠️ [qrCacheMaintainer] QR fallback maintenance scheduled every ${INTERVAL_HOURS}h`);
-  setTimeout(() => scheduleMaintenance(true), 3 * 60 * 1000); // Delay on boot (3 minutes)
-  setInterval(() => scheduleMaintenance(false), INTERVAL_HOURS * 60 * 60 * 1000);
+  setTimeout(() => scheduleMaintenance(true), 3 * 60 * 1000); // Start maintenance 3 minutes after startup
+  setInterval(() => scheduleMaintenance(false), INTERVAL_HOURS * 60 * 60 * 1000); // Repeat every INTERVAL_HOURS
 }
 
+/**
+ * Schedule maintenance task to run if it's not already running
+ * @param {boolean} isStartup - Flag to indicate if this is the startup task
+ */
 function scheduleMaintenance(isStartup = false) {
   if (isRunning) {
     console.log("⏳ [qrCacheMaintainer] Skipping: previous maintenance still in progress.");
@@ -40,6 +47,10 @@ function scheduleMaintenance(isStartup = false) {
     });
 }
 
+/**
+ * Main maintenance process (cleaning and regenerating QR cache)
+ * @param {boolean} isStartup - Flag indicating whether this is the startup maintenance
+ */
 async function tryMaintain(isStartup = false) {
   const now = new Date().toLocaleTimeString("en-GB");
   const label = isStartup
@@ -51,7 +62,7 @@ async function tryMaintain(isStartup = false) {
     await initQrCacheDir();
     const deletedCount = await cleanExpiredQRCodes();
 
-    const expected = await getExpectedQrCount(); // ✅ FIXED: teisingas vienintelis šaltinis
+    const expected = await getExpectedQrCount(); // Retrieve the expected QR count (fresh from the scenarios)
 
     console.log(`🚀 [qrCacheMaintainer] Regenerating fallback QR cache (${expected} total)...`);
     await generateFullQrCache(true);
@@ -71,6 +82,9 @@ async function tryMaintain(isStartup = false) {
   }
 }
 
+/**
+ * Clean expired QR codes from the fallback directory
+ */
 async function cleanExpiredQRCodes() {
   try {
     const now = Date.now();
