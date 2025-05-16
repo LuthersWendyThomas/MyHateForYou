@@ -17,9 +17,9 @@ import { getAllQrScenarios } from "./qrScenarios.js"; // Import qrScenarios.js f
 import { NETWORKS } from "./fetchCryptoPrice.js"; // Use NETWORKS from fetchCryptoPrice.js for network rates
 import { WALLETS } from "../config/config.js"; // WALLETS from config for wallet address resolution
 
-const MAX_CONCURRENCY = 10;
-const MAX_RETRIES = 7;
-const BASE_DELAY_MS = 2000;
+const MAX_CONCURRENCY = 2;      // 🔒 Minimalus, kad neperkrautų CPU / disk I/O / rate limitų
+const MAX_RETRIES = 10;         // ♻️ Daugiau šansų kiekvienam scenarijui
+const BASE_DELAY_MS = 3000;     // 🛡️ Stabilesnis backoff’as (apie 3s → 6s → 12s → 24s... iki ~30s)
 
 function sleep(ms) {
   return new Promise(res => setTimeout(res, ms));
