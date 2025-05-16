@@ -1,19 +1,19 @@
-// 📦 generateQR.js v1.1.3 DIAMOND LOCK VERSION
+// 📦 generateQR.js v1.1.4 IMMORTAL FINAL • SYNCLOCKED • BULLETPROOF
 
 import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 import { WALLETS, ALIASES } from "../config/config.js";
+
 import {
   FALLBACK_DIR,
   getFallbackPath,
   sanitizeAmount,
   normalizeSymbol,
   getAmountFilename
-} from "./fallbackPathUtils.js"; // Importing essential helpers for file paths and sanitization
+} from "./fallbackPathUtils.js";
 
-// Importing necessary utilities for QR scenarios
-import { getAllQrScenarios } from "../utils/qrScenarios.js"; // Fetch all QR scenarios dynamically
+import { getAllQrScenarios } from "./qrScenarios.js"; // Ensures fallback consistency
 
 /**
  * 🔗 Resolve wallet address for a given symbol
@@ -85,11 +85,14 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
 
   try {
     if (process.env.DEBUG_MESSAGES === "true") {
-      console.log(`🔁 [generateQR] Generating: ${symbol} → $${amount}`);
+      console.log(`🔁 [generateQR] Generating: ${symbol} → $${amount.toFixed(6)}`);
     }
 
     const buffer = await generateQRBuffer(symbol, amount, address);
-    if (!isValidBuffer(buffer)) return null;
+    if (!isValidBuffer(buffer)) {
+      console.warn(`⚠️ [generateQR] Buffer invalid for ${symbol} ${amount}`);
+      return null;
+    }
 
     try {
       if (!fs.existsSync(FALLBACK_DIR)) {
