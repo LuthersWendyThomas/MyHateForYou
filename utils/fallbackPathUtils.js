@@ -1,7 +1,7 @@
 // 📦 fallbackPathUtils.js v1.1.3
 
 import path from "path";
-import { NETWORKS } from "../config/networkConfig.js"; // Naudojame NETWORKS iš networkConfig.js
+import { NETWORKS } from "./fetchCryptoPrice.js"; // Naudojame NETWORKS
 import { getAllQrScenarios } from "./qrScenarios.js"; // Importuojame qrScenarios.js
 
 // Tikslus kelias į QR fallback direktoriją
