@@ -10,12 +10,12 @@ import { sendAndTrack, sendKeyboard } from "../../helpers/messageUtils.js";
 import { handlePayment, handlePaymentConfirmation } from "./paymentHandler.js";
 import { resetSession, safeStart } from "./finalHandler.js";
 import { fullResetUserState } from "../sessionManager.js";
+import { getSafeRate } from "../../utils/fetchCryptoPrice.js";
 import { REGION_MAP, getRegionKeyboard, getCityKeyboard } from "../../config/regions.js";
 import { resolveDiscount } from "../../config/discountUtils.js";
 import { DISCOUNTS } from "../../config/discounts.js";
 import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
 import { isSpamming, handleFlood } from "../../utils/floodHandler.js";
-import { import { getSafeRate } from "../../utils/fetchCryptoPrice.js";
 
 async function renderStep(bot, uid, step, userMessages) {
   const session = userSessions[uid];
