@@ -1,5 +1,5 @@
-// 📦 core/handlers/mainHandler.js | IMMORTAL FINAL v999999999999.∞+SYNC+DIAMONDLOCK
-// 100% FSM SAFE • CALLBACK/TEXT BULLETPROOF • FLOOD+SPAM+MUTE SHIELD • STEP9-READY
+// 📦 core/handlers/mainHandler.js | FINAL IMMORTAL SOFTLOCK v1.0.0
+// FSM-SAFE • DEBOUNCE-AWARE • FLOOD+SPAM GUARD • CONFIRM/CANCEL READY • UX SYNCED
 
 import { BOT } from "../../config/config.js";
 import { userSessions, userMessages } from "../../state/userState.js";
@@ -12,11 +12,9 @@ import { sendOrders } from "../../utils/sendOrders.js";
 import { sendProfile } from "../../utils/sendProfile.js";
 import { openAdminPanel, handleAdminAction } from "../../utils/adminPanel.js";
 import { MENU_BUTTONS } from "../../helpers/keyboardConstants.js";
-import { sendKeyboard } from "../../helpers/messageUtils.js";
 import { getMainMenu } from "../../helpers/menu.js";
 import { markUserActive } from "../sessionManager.js";
 import { canProceed } from "../security.js";
-import { isSpamming, handleFlood } from "../../utils/floodHandler.js";
 
 export function registerMainHandler(bot) {
   if (!bot?.on) {
@@ -72,12 +70,6 @@ export function registerMainHandler(bot) {
     if (!uid || !raw) return;
 
     const text = normalizeText(raw);
-
-    if (text !== "/start") {
-      if (isSpamming(uid, msg)) return;
-      const muted = await handleFlood(uid, bot, userMessages[uid], msg);
-      if (muted) return;
-    }
 
     await markUserActive(uid);
     if (!(await canProceed(uid, bot, text))) return;
