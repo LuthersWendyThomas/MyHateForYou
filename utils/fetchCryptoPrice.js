@@ -1,10 +1,11 @@
 // 📦 utils/fetchCryptoPrice.js | IMMORTAL FINAL v3.1.9•DIAMONDLOCK+ULTRAFAST+QRFALLBACKSAFE
+
 import fetch from 'node-fetch';
 import { rateLimiter } from './rateLimiter.js';
-import { ALIASES }     from '../config/config.js';
+import { ALIASES } from '../config/config.js';
 
-const CACHE_TTL       = 5 * 60 * 1000;
-const MICRO_FALLBACK  = 30 * 1000;
+const CACHE_TTL = 5 * 60 * 1000;
+const MICRO_FALLBACK = 30 * 1000;
 const REQUEST_TIMEOUT = 10000;
 
 const cache = new Map(); // <symbol, { rate, ts }>
@@ -166,7 +167,6 @@ async function retry(fn, retries = 3, base = 300) {
     } catch (e) {
       err = e;
 
-      // 🛡️ Naujas saugiklis nuo AggregateError
       if (e.name === "AggregateError" || e instanceof AggregateError) {
         console.warn(`💥 AggregateError caught in retry: ${e.message}`);
         continue;
@@ -200,4 +200,3 @@ function isValid(n) {
 export async function getSafeRate(symbol) {
   return await fetchCryptoPrice(symbol);
 }
-
