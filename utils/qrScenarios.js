@@ -1,33 +1,35 @@
-// 📦 utils/qrScenarios.js | FINAL IMMORTAL v3.0.0•GODMODE•SCENARIOLOCKED•SOURCEOFTRUTH
+// 📦 utils/qrScenarios.js | FINAL IMMORTAL v3.0.1•GODMODE•SOURCEOFTRUTH+++
 
-import { products } from "../config/products.js"; // Import products from config
-import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js"; // Use fetchCryptoPrice for rate fetching
-import { sanitizeAmount, getAmountFilename, normalizeSymbol } from "./fallbackPathUtils.js"; // Necessary helpers
-import { deliveryMethods } from "../config/features.js"; // Importing delivery fees from config/features.js
+import { products } from "../config/products.js"; // All products with active flags and prices
+import { deliveryMethods } from "../config/features.js"; // Delivery fees per method
+import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js"; // Live rate fetching for each network
+
+// Core helpers for fallback filenames, normalization, sanitation
+import {
+  sanitizeAmount,
+  getFallbackPath,
+  FALLBACK_DIR,
+  normalizeSymbol,
+  getAmountFilename
+} from "./fallbackPathUtils.js";
 
 /**
  * ⛓️ Fetch all live crypto rates once and store them in a map
+ * Ensures one request per network with full normalization
  */
 export async function getLiveRatesMap() {
   const map = {};
-  const networks = Object.keys(NETWORKS); // Using NETWORKS for all network symbols (BTC, ETH, MATIC, SOL)
+  const networks = Object.keys(NETWORKS);
 
-  // Loop through all network symbols
   for (const sym of networks) {
-    const normalizedSymbol = normalizeSymbol(sym); // Normalize symbol to ensure consistency
+    const normalizedSymbol = normalizeSymbol(sym);
     try {
-      // Try fetching the rate for the normalized symbol
       const rate = await fetchCryptoPrice(normalizedSymbol);
-
-      if (!rate || rate <= 0) {
-        throw new Error(`❌ Invalid rate for ${normalizedSymbol}: ${rate}`);
-      }
-      map[normalizedSymbol] = rate; // Store the valid rate
+      if (!rate || rate <= 0) throw new Error(`Invalid rate for ${normalizedSymbol}: ${rate}`);
+      map[normalizedSymbol] = rate;
     } catch (err) {
-      console.warn(`⚠️ [getLiveRatesMap] Error fetching rate for ${normalizedSymbol}: ${err.message}`);
-      
-      // If the rate fetch failed, we can either skip this symbol or use a fallback approach
-      map[normalizedSymbol] = null; // Mark this symbol as unavailable
+      console.warn(`⚠️ [getLiveRatesMap] Failed for ${normalizedSymbol}: ${err.message}`);
+      map[normalizedSymbol] = null;
     }
   }
 
@@ -35,15 +37,14 @@ export async function getLiveRatesMap() {
 }
 
 /**
- * 🎯 Return all possible QR scenarios with real-time rates and amounts
- * This is the single source of truth for generating and validating QR codes
+ * 🎯 Return all possible QR fallback scenarios with unique PNG filenames
+ * Source of truth: products × quantity × delivery fee × network
  */
 export async function getAllQrScenarios() {
   const result = [];
-  const rateMap = await getLiveRatesMap(); // Get live rates map (BTC, ETH, MATIC, SOL)
+  const rateMap = await getLiveRatesMap();
 
-  // Iterate over products and calculate scenarios
-  for (const category in products) { // Access products here
+  for (const category in products) {
     for (const product of products[category]) {
       if (!product?.active || !product?.prices) continue;
 
@@ -51,20 +52,16 @@ export async function getAllQrScenarios() {
         const usd = Number(basePrice);
         if (!usd || usd <= 0) continue;
 
-        // Calculate all possible scenarios with various delivery fees
-        for (const { fee } of deliveryMethods) { // Use deliveryMethods from config/features.js
+        for (const { fee } of deliveryMethods) {
           const totalUSD = usd + fee;
 
-          // Iterate over all the networks (BTC, ETH, MATIC, SOL)
           for (const network of Object.keys(rateMap)) {
             const rate = rateMap[network];
-            if (!rate || rate <= 0) continue; // Skip if the rate is invalid or unavailable
+            if (!rate || rate <= 0) continue;
 
-            // Calculate how much crypto is needed for the total amount
             const expectedAmount = sanitizeAmount(totalUSD / rate);
-            const filename = getAmountFilename(network, expectedAmount); // Ensure the filename is unique for each network
+            const filename = getAmountFilename(network, expectedAmount);
 
-            // Push the scenario for the current network
             result.push({
               category,
               productName: product.name,
@@ -72,7 +69,7 @@ export async function getAllQrScenarios() {
               basePrice: usd,
               deliveryFee: fee,
               totalUSD,
-              rawSymbol: network, // Set the correct network symbol (BTC, ETH, MATIC, SOL)
+              rawSymbol: network,
               mockRate: rate,
               expectedAmount,
               filename
@@ -87,8 +84,8 @@ export async function getAllQrScenarios() {
 }
 
 /**
- * 📈 Get the expected count of all QR scenarios the system should have.
- * Used for validation/generation comparison and admin reporting
+ * 📈 Count of all QR scenarios to be generated
+ * Used in logging, progress bars, admin tools, etc.
  */
 export async function getExpectedQrCount() {
   const scenarios = await getAllQrScenarios();
