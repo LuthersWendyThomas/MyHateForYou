@@ -26,9 +26,11 @@ export async function startOrder(bot, id, msgs = userMessages) {
     await fullResetUserState(uid);
 
     // 🌀 Start fresh session
+    const now = Date.now();
     userSessions[uid] = {
       step: 1,
-      createdAt: Date.now()
+      createdAt: now,
+      lastActionTimestamp: now // 💠 Debounce apsaugai
     };
 
     if (process.env.DEBUG_MESSAGES === "true") {
