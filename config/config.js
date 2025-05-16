@@ -1,8 +1,9 @@
-// 📦 config/config.js — IMMORTAL FINAL v2025.9999999 — BULLETPROOF TITANLOCK SYNCED
+// 📦 config/config.js — IMMORTAL FINAL v2025.9999999 — BULLETPROOF TITANLOCK SYNCED + 409SAFE
 
 import { config } from "dotenv";
 config();
 
+import fs from "fs";
 import TelegramBot from "node-telegram-bot-api";
 
 // ==============================
@@ -27,6 +28,7 @@ export const BOT = {
   INSTANCE: null
 };
 
+// ——— INIT BOT INSTANCE (without polling yet)
 export function initBotInstance() {
   if (!BOT.TOKEN || typeof BOT.TOKEN !== "string") {
     console.error("❌ Invalid BOT TOKEN");
@@ -35,17 +37,38 @@ export function initBotInstance() {
 
   try {
     BOT.INSTANCE = new TelegramBot(BOT.TOKEN, {
-      polling: {
-        interval: 300,
-        autoStart: true,
-        params: { timeout: 10 }
-      }
+      polling: false // ⛔ Polling bus paleidžiamas saugiai atskirai
     });
 
     console.log("✅ BOT initialized @", BOT.VERSION);
   } catch (err) {
     console.error("❌ BOT INIT FAILED:", err.message || err);
     process.exit(1);
+  }
+}
+
+// ——— SAFE POLLING WRAPPER ✅ 409/429 protected
+export async function startSafePolling(bot) {
+  if (!bot || typeof bot.startPolling !== "function") {
+    console.error("❌ [startSafePolling] Invalid bot instance provided.");
+    process.exit(1);
+  }
+
+  try {
+    await bot.deleteWebhook();    // 🧹 Remove webhook if set
+    await bot.stopPolling();      // 🛑 Stop previous polling
+    await bot.startPolling();     // 🚀 Start polling cleanly
+    console.log("✅ [startSafePolling] Bot polling started safely.");
+  } catch (err) {
+    const msg = err?.message || String(err);
+    if (msg.includes("409") || msg.includes("ETELEGRAM: 429")) {
+      const now = new Date().toLocaleString("en-GB");
+      console.warn(`⚠️ [startSafePolling] Conflict detected → ${msg} | ${now}`);
+      process.exit(1); // 💥 Stop duplicate instance on Render
+    } else {
+      console.error("❌ [startSafePolling] Unknown polling error:", msg);
+      process.exit(1);
+    }
   }
 }
 
