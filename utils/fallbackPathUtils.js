@@ -1,12 +1,8 @@
-// 📦 utils/fallbackPathUtils.js | FINAL IMMORTAL v2.1.0•DIAMONDLOCK•SCENARIOLOCKED•∞SAFE
-
 import path from "path";
 import { ALIASES } from "../config/config.js";
-import { getAllQrScenarios } from "./qrScenarios.js";
+import { getAllQrScenarios } from "./qrScenarios.js"; // Pridėtas importas iš qrScenarios.js
 
-/**
- * 📁 Absolute fallback cache directory
- */
+// Tikslus kelias į QR fallback direktoriją
 export const FALLBACK_DIR = path.join(process.cwd(), "qr-cache");
 
 /**
