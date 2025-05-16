@@ -9,8 +9,8 @@ import { sendAdminPing } from "../core/handlers/paymentHandler.js"; // To send a
 import { getExpectedQrCount } from "../utils/qrScenarios.js"; // Importing the scenario data from qrScenarios.js
 
 // Importing necessary elements for rate fetching and wallet address resolution
-import { NETWORKS } from "../config/networkConfig.js"; // To use NETWORKS for currency symbol handling
-import { WALLETS } from "../config/config.js"; // Importing wallet addresses from config
+import { NETWORKS } from "../utils/fetchCryptoPrice.js"; // To use NETWORKS for currency symbol handling
+import { WALLETS } from "../config/config.js"; // WALLETS import for address resolution
 import { fetchCryptoPrice } from "../utils/fetchCryptoPrice.js"; // Importing the fetchCryptoPrice module to get the latest crypto prices
 
 const MAX_AGE_MS = 60 * 60 * 1000; // Maximum age of 1 hour for cache expiration
