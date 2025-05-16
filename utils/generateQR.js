@@ -20,7 +20,11 @@ import { getAllQrScenarios } from "./qrScenarios.js"; // Ensures fallback consis
  */
 export function resolveAddress(symbol, overrideAddress) {
   const normalized = normalizeSymbol(symbol);
-  return String(overrideAddress || WALLETS[normalized] || "").trim();
+  const resolved = String(overrideAddress || WALLETS[normalized] || "").trim();
+  if (!resolved) {
+    console.warn(`❗ [resolveAddress] MISSING wallet for: ${normalized}`);
+  }
+  return resolved;
 }
 
 /**
