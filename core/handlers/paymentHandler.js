@@ -59,7 +59,7 @@ async function safeSend(fn, ...args) {
   return null;
 }
 
-export async function handlePayment(bot, id, userMsgs) {
+export async function handlePayment(bot, id, userMsgs, preGeneratedQR) {
   const session = userSessions[id];
   if (!session || session.step !== 7 || session.paymentInProgress) {
     return safeStart(bot, id); // ✅ saugiau grąžinti
@@ -87,8 +87,8 @@ export async function handlePayment(bot, id, userMsgs) {
     session.expectedAmount = amount;
     session.step = 9;
 
-    const qrBuffer = await generateQR(symbol, amount, session.wallet);
-    if (!qrBuffer || !Buffer.isBuffer(qrBuffer) || qrBuffer.length < 1000) {
+    const qrBuffer = preGeneratedQR || await generateQR(symbol, amount, session.wallet); // 🧠 NAUDOJAM JEI YRA
+    if (!qrBuffer || !Buffer.isBuffer(qrBuffer) || qrBuffer.length < 300) {
       throw new Error("QR generation failed");
     }
 
