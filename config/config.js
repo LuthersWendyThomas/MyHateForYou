@@ -24,7 +24,7 @@ const adminId = requiredEnv(process.env.ADMIN_ID, "ADMIN_ID");
 export const BOT = {
   TOKEN: token,
   ADMIN_ID: adminId,
-  VERSION: "v2025.9999999",
+  VERSION: "v2025.1.0.7",
   INSTANCE: null
 };
 
