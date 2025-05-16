@@ -88,8 +88,8 @@ export function matchFallbackFilenameToScenario(fileName, scenario) {
  * @param {(sym: string) => number} getMockRate - function that returns USD→Crypto rate for a symbol
  * @returns {string[]} e.g. ["BTC_0.123456.png", "ETH_0.004321.png", ...]
  */
-export function getAllFallbackFilenames(getMockRate) {
-  const scenarios = getAllQrScenarios();
+export async function getAllFallbackFilenames(getMockRate) {
+  const scenarios = await getAllQrScenarios(); // FIXED: added await
   return scenarios.map(({ rawSymbol, totalUSD }) => {
     const rate = getMockRate(rawSymbol);
     const amount = sanitizeAmount(totalUSD / rate);
