@@ -1,4 +1,4 @@
-// 📦 utils/qrCacheMaintainer.js | FINAL IMMORTAL v3.0.0•GODMODE•MAINTENANCE
+// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v3.0.0•GODMODE•MANAGER
 
 import fs from "fs/promises";
 import path from "path";
@@ -10,13 +10,13 @@ import {
   getFallbackPath,
   FALLBACK_DIR,
   normalizeSymbol,
-  getAmountFilename // Added back missing helper
-} from "./fallbackPathUtils.js";  // Now includes getAmountFilename import
+  getAmountFilename // Corrected import from fallbackPathUtils.js
+} from "./fallbackPathUtils.js";  // Importing all necessary helpers from fallbackPathUtils.js
 import { getAllQrScenarios } from "./qrScenarios.js"; // Correct import for qrScenarios.js
 
-// Importing NETWORKS from config
-import { NETWORKS } from "../config/networkConfig.js"; // Imported NETWORKS from config
-import { WALLETS } from "../config/config.js"; // WALLETS import
+// Importing NETWORKS from config/networkConfig.js for network symbols and rates
+import { NETWORKS } from "../config/networkConfig.js"; // Import NETWORKS for currency symbol handling
+import { WALLETS } from "../config/config.js"; // Import WALLETS for wallet address resolution
 
 const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 7;
@@ -78,7 +78,7 @@ export async function cleanQrCacheDir() {
 export async function generateFullQrCache(forceComplete = true) {
   await initQrCacheDir();
 
-  const scenarios = await getAllQrScenarios();  // Generuojame scenarijus
+  const scenarios = await getAllQrScenarios();  // Get all the QR scenarios using getAllQrScenarios
   const totalCount = scenarios.length;
 
   console.log(`🚀 [QR Cache] Generating ${totalCount} fallback QR codes...`);
@@ -197,4 +197,3 @@ export async function saveCachedQR(symbol, amount, address = null, buffer) {
     return false;
   }
 }
-
