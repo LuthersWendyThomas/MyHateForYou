@@ -2,17 +2,21 @@
 
 import { products } from "../config/products.js";
 import { deliveryMethods } from "../config/features.js";
-import { ALIASES } from "../config/config.js"; // Imported ALIASES for network sync
+import { NETWORKS } from "../config/networkConfig.js"; // Imported NETWORKS from config
 import { fetchCryptoPrice } from "./fetchCryptoPrice.js";
-import { sanitizeAmount, getAmountFilename } from "./fallbackPathUtils.js";
+import {
+  sanitizeAmount, 
+  getAmountFilename, 
+  normalizeSymbol // Added normalizeSymbol here
+} from "./fallbackPathUtils.js"; // All necessary helpers are imported
 
 /**
  * ⛓️ Gauk visus gyvus kripto kursus 1 kartą ir išsaugok map'e
  */
 export async function getLiveRatesMap() {
   const map = {};
-  const symbols = Object.keys(ALIASES); // Using ALIASES for all network symbols
-  for (const sym of symbols) {
+  const networks = Object.keys(NETWORKS); // Using NETWORKS for all network symbols
+  for (const sym of networks) {
     try {
       const rate = await fetchCryptoPrice(sym);
       if (!rate || rate <= 0) throw new Error(`❌ Invalid rate: ${rate}`);
@@ -32,7 +36,7 @@ export async function getAllQrScenarios() {
   const result = [];
 
   const deliveryFees = deliveryMethods.map(method => Number(method.fee));
-  const networks = Object.keys(ALIASES); // Using ALIASES for network keys
+  const networks = Object.keys(NETWORKS); // Using NETWORKS for network keys
   const rateMap = await getLiveRatesMap();
 
   for (const category in products) {
@@ -50,6 +54,7 @@ export async function getAllQrScenarios() {
             const rate = rateMap[rawSymbol];
             if (!rate || rate <= 0) continue;
 
+            // Use sanitizeAmount for rounding the calculated amount
             const expectedAmount = sanitizeAmount(totalUSD / rate);
             const filename = getAmountFilename(rawSymbol, expectedAmount);
 
@@ -81,4 +86,42 @@ export async function getAllQrScenarios() {
 export async function getExpectedQrCount() {
   const scenarios = await getAllQrScenarios();
   return scenarios.length;
+}
+
+/**
+ * 💵 Normalize and sanitize amount 
+ * Added helper function to ensure proper amount formatting and rounding
+ */
+function sanitizeAmount(input) {
+  try {
+    const val = Number(input);
+    if (!Number.isFinite(val) || val <= 0) return 0;
+    const rounded = Math.floor(val * 1e6) / 1e6;
+    return +rounded.toFixed(6);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * 🔐 Normalize currency symbol (e.g., eth → ETH)
+ * We ensure that all network symbols are normalized to upper case
+ */
+function normalizeSymbol(raw) {
+  try {
+    const key = String(raw || "").trim().toLowerCase();
+    return (NETWORKS[key] || key).toUpperCase();
+  } catch {
+    return "UNKNOWN";
+  }
+}
+
+/**
+ * 💾 Standard fallback filename for scenario
+ * Added filename creation with network symbol and amount
+ */
+function getAmountFilename(symbol, amount) {
+  const sym = normalizeSymbol(symbol);
+  const amt = sanitizeAmount(amount);
+  return `${sym}_${amt.toFixed(6)}.png`;
 }
