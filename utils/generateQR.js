@@ -42,6 +42,8 @@ function isValidBuffer(buffer) {
  */
 export async function generateQRBuffer(symbol, amount, address) {
   const formatted = sanitizeAmount(amount).toFixed(6);
+
+  // ✅ FIX: Backticks (`) added to enable template literal correctly
   const uri = `${symbol.toLowerCase()}:${address}?amount=${formatted}&label=${encodeURIComponent("BalticPharmacyBot")}&message=${encodeURIComponent("Order")}`;
 
   try {
