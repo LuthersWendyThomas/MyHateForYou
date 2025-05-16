@@ -11,6 +11,7 @@ import { getExpectedQrCount } from "../utils/qrScenarios.js"; // ✅ FIXED: naud
 // Importuojame NETWORKS iš config/networkConfig.js
 import { NETWORKS } from "../config/networkConfig.js"; // Import NETWORKS for currency symbol handling
 import { WALLETS } from "../config/config.js"; // WALLETS import for address resolution
+import { fetchCryptoPrice } from "../utils/fetchCryptoPrice.js"; // Importuojame fetchCryptoPrice iš fetchCryptoPrice.js, kad gauti kriptovaliutų kursus
 
 const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
 const INTERVAL_HOURS = 4;
