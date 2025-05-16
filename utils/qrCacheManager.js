@@ -10,13 +10,13 @@ import {
   getFallbackPath,
   FALLBACK_DIR,
   normalizeSymbol,
-  getAmountFilename // Corrected import from fallbackPathUtils.js
-} from "./fallbackPathUtils.js";  // Importing all necessary helpers from fallbackPathUtils.js
-import { getAllQrScenarios } from "./qrScenarios.js"; // Correct import for qrScenarios.js
+  getAmountFilename
+} from "./fallbackPathUtils.js"; // Importuojame visus helperius iš fallbackPathUtils
+import { getAllQrScenarios } from "./qrScenarios.js"; // Importuojame qrScenarios.js
 
-// Importing NETWORKS from config/networkConfig.js for network symbols and rates
-import { NETWORKS } from "../config/networkConfig.js"; // Import NETWORKS for currency symbol handling
-import { WALLETS } from "../config/config.js"; // Import WALLETS for wallet address resolution
+// Importuojame NETWORKS iš config/networkConfig.js
+import { NETWORKS } from "../config/networkConfig.js"; // Importuojame NETWORKS
+import { WALLETS } from "../config/config.js"; // Importuojame WALLETS
 
 const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 7;
@@ -26,7 +26,6 @@ function sleep(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
-// 🔁 FIX: Pakeltas čia, kad būtų prieš naudojimą
 async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
@@ -78,7 +77,7 @@ export async function cleanQrCacheDir() {
 export async function generateFullQrCache(forceComplete = true) {
   await initQrCacheDir();
 
-  const scenarios = await getAllQrScenarios();  // Get all the QR scenarios using getAllQrScenarios
+  const scenarios = await getAllQrScenarios();  // Generuojame scenarijus
   const totalCount = scenarios.length;
 
   console.log(`🚀 [QR Cache] Generating ${totalCount} fallback QR codes...`);
