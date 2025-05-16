@@ -197,3 +197,4 @@ export async function saveCachedQR(symbol, amount, address = null, buffer) {
     return false;
   }
 }
+
