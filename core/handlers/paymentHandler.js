@@ -88,10 +88,14 @@ export async function handlePayment(bot, id, userMsgs, preGeneratedQR) {
     session.expectedAmount = amount;
     session.step = 9;
 
-    const qrBuffer = preGeneratedQR || await generateQR(symbol, amount, session.wallet); // 🧠 NAUDOJAM JEI YRA
-    if (!qrBuffer || !Buffer.isBuffer(qrBuffer) || qrBuffer.length < 300) {
-      throw new Error("QR generation failed");
+   let qrBuffer = preGeneratedQR || await getCachedQR(symbol, amount, session.wallet);
+
+  if (!qrBuffer) {
+    qrBuffer = await generateQR(symbol, amount, session.wallet);
+    if (qrBuffer && Buffer.isBuffer(qrBuffer) && qrBuffer.length >= 300) {
+      await saveCachedQR(symbol, amount, session.wallet, qrBuffer);
     }
+  }
 
     if (process.env.DEBUG_MESSAGES === "true") {
       console.debug(`[handlePayment] UID=${id} AMOUNT=${amount} ${symbol}`);
