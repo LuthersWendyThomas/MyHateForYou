@@ -1,20 +1,14 @@
 // 📦 utils/qrScenarios.js | GODMODE IMMORTAL FINAL v999999999999x
 
-import { products } from "../config/products.js"; // 🔗 Produktai su kategorijomis, kiekiais ir USD kainomis
-import { deliveryMethods } from "../config/features.js"; // 🚚 Pristatymo metodai su mokestine struktūra
-import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js"; // 🔄 Kripto kursų paėmimas iš CoinGecko + CoinCap
+import { products } from "../config/products.js";
+import { deliveryMethods } from "../config/features.js";
+import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js";
 
-// 🧩 Būtini helperiai QR fallback logikai
 import {
   sanitizeAmount,
-  FALLBACK_DIR,
   normalizeSymbol
 } from "./fallbackPathUtils.js";
 
-/**
- * 🔁 Gauna visų aktyvių tinklų (BTC, ETH, MATIC, SOL) kursus
- * Kursai sinchronizuojami ir kaupiami į map
- */
 export async function getLiveRatesMap() {
   const map = {};
   const networks = Object.keys(NETWORKS);
@@ -34,10 +28,6 @@ export async function getLiveRatesMap() {
   return map;
 }
 
-/**
- * 🎯 Sukuria VISUS fallback QR scenarijus:
- * Produkto kaina + pristatymo kaina → crypto kiekis → QR failo pavadinimas
- */
 export async function getAllQrScenarios() {
   const scenarios = [];
   const rateMap = await getLiveRatesMap();
@@ -58,8 +48,9 @@ export async function getAllQrScenarios() {
             if (!rate || rate <= 0) continue;
 
             const expectedAmount = sanitizeAmount(totalUSD / rate);
-            const filename = getAmountFilename(network, expectedAmount)
-              .replace(".png", "") + `__${category}__${product.name}__${quantity}.png`;
+            const sym = normalizeSymbol(network);
+            const amt = expectedAmount.toFixed(6);
+            const filename = `${sym}_${amt}__${category}__${product.name}__${quantity}.png`;
 
             scenarios.push({
               category,
@@ -82,10 +73,6 @@ export async function getAllQrScenarios() {
   return scenarios;
 }
 
-/**
- * 📊 Kiek fallback QR failų sistema turėtų turėti
- * Naudojama progresui, validacijai ir UI monitoringui
- */
 export async function getExpectedQrCount() {
   const all = await getAllQrScenarios();
   return all.length;
