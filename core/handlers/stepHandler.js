@@ -360,7 +360,11 @@ async function handleProduct(bot, uid, input, session, userMessages) {
   const prod = products[session.category]?.find(p => p.name.toLowerCase() === input);
   if (!prod) return renderStep(bot, uid, 4, userMessages);
   session.product = prod;
-  session.step    = 5;
+
+  // 🧠 Užtikrinam tikslų kategorijos žymėjimą fallbackui
+  session.category = findCategoryByProductName(prod.name);
+
+  session.step = 5;
   return renderStep(bot, uid, 5, userMessages);
 }
 
