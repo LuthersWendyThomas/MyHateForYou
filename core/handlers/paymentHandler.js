@@ -2,6 +2,7 @@
 // FULL AI-DRIVEN QR LOGIC • STEP-SAFE • SESSION-SYNC • BULLETPROOF • FULLRESET INTEGRATED
 
 import { getOrCreateQR } from "../../utils/generateQR.js"; // ✅ Tik šitą naudok
+import { isValidBuffer } from "../../utils/generateQR.js"; // ✅ Naudojamas QR patikrinimui
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
 import { saveOrder } from "../../utils/saveOrder.js";
