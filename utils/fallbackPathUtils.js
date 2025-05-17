@@ -94,3 +94,9 @@ export async function getAllFallbackFilenames(getMockRate) {
     return getAmountFilename(rawSymbol, amount);
   });
 }
+
+export function getFallbackPathByScenario(symbol, amount, category, productName, quantity) {
+  const baseName = getAmountFilename(symbol, amount).replace(".png", "");
+  const filename = `${baseName}__${category}__${productName}__${quantity}.png`;
+  return path.join(FALLBACK_DIR, filename);
+}
