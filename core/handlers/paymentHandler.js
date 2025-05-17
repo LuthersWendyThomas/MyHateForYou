@@ -1,8 +1,7 @@
 // 📦 paymentHandler.js | FINAL IMMORTAL v999999999.∞+SKYLOCK
 // FULL AI-DRIVEN QR LOGIC • STEP-SAFE • SESSION-SYNC • BULLETPROOF • FULLRESET INTEGRATED
 
-import { getOrCreateQR } from "../../utils/generateQR.js"; // ✅ Tik šitą naudok
-import { isValidBuffer } from "../../utils/generateQR.js"; // ✅ Naudojamas QR patikrinimui
+import { getOrCreateQR, isValidBuffer, generateQR } from "../../utils/generateQR.js";
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
 import { saveOrder } from "../../utils/saveOrder.js";
@@ -89,9 +88,10 @@ export async function handlePayment(bot, id, userMsgs, preGeneratedQR) {
     session.step = 9;
 
     // ✅ Inform client instantly (no waiting lag)
-    await sendAndTrack(bot, id, "💡 Preparing payment info...", {}, userMsgs);
+await sendAndTrack(bot, id, "💡 Preparing payment info...", {}, userMsgs);
 
-    const qrBuffer = preGeneratedQR || await getOrCreateQR(
+// 🧠 Pirmiausia bandome gauti fallback QR
+let qrBuffer = preGeneratedQR || await getOrCreateQR(
   symbol,
   amount,
   session.wallet,
@@ -100,9 +100,15 @@ export async function handlePayment(bot, id, userMsgs, preGeneratedQR) {
   session.category
 );
 
-    if (!isValidBuffer(qrBuffer)) {
-      throw new Error(`QR code unavailable. Try again later.`);
-    }
+// 🔁 Jei fallbackas nerastas, bandome generuoti gyvai
+if (!isValidBuffer(qrBuffer)) {
+  console.warn("⚠️ [handlePayment] Fallback not found — generating live QR...");
+  qrBuffer = await generateQR(symbol, amount, session.wallet);
+}
+
+if (!isValidBuffer(qrBuffer)) {
+  throw new Error(`QR code unavailable. Try again later.`);
+}
 
     if (process.env.DEBUG_MESSAGES === "true") {
       console.debug(`[handlePayment] UID=${id} AMOUNT=${amount} ${symbol}`);
