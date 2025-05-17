@@ -1,19 +1,17 @@
-// 📦 generateQR.js v1.1.5 IMMORTAL FINAL • SYNCLOCKED • BULLETPROOF + FallbackFirst
+// 📦 generateQR.js | IMMORTAL FINAL v2.0.0 • PLAN-C LOCK • GODMODE
 
 import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 import { WALLETS, ALIASES } from "../config/config.js";
-
 import {
   FALLBACK_DIR,
-  getFallbackPath,
+  getFallbackPathByScenario,
   sanitizeAmount,
   normalizeSymbol,
-  getAmountFilename
+  isValidBuffer
 } from "./fallbackPathUtils.js";
-
-import { getAllQrScenarios } from "./qrScenarios.js"; // Ensures fallback consistency
+import { getAllQrScenarios } from "./qrScenarios.js";
 
 /**
  * 🔗 Resolve wallet address for a given symbol
@@ -32,13 +30,6 @@ export function resolveAddress(symbol, overrideAddress) {
  */
 function isValidAddress(addr) {
   return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
-}
-
-/**
- * 🧪 Validate buffer (basic check)
- */
-export function isValidBuffer(buffer) {
-  return Buffer.isBuffer(buffer) && buffer.length >= 256;
 }
 
 /**
@@ -75,7 +66,6 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
   const symbol = normalizeSymbol(symbolRaw);
   const amount = sanitizeAmount(amountRaw);
   const address = resolveAddress(symbol, overrideAddress);
-  const filePath = getFallbackPath(symbol, amount);
 
   if (!isValidAddress(address)) {
     console.warn(`⚠️ [generateQR] Invalid wallet for ${symbol}: "${address}"`);
@@ -88,29 +78,8 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
   }
 
   try {
-    if (process.env.DEBUG_MESSAGES === "true") {
-      console.log(`🔁 [generateQR] Generating: ${symbol} → $${amount.toFixed(6)}`);
-    }
-
     const buffer = await generateQRBuffer(symbol, amount, address);
-    if (!isValidBuffer(buffer)) {
-      console.warn(`⚠️ [generateQR] Buffer invalid for ${symbol} ${amount}`);
-      return null;
-    }
-
-    try {
-      if (!fs.existsSync(FALLBACK_DIR)) {
-        fs.mkdirSync(FALLBACK_DIR, { recursive: true });
-      }
-
-      fs.writeFileSync(filePath, buffer);
-      if (process.env.DEBUG_MESSAGES === "true") {
-        console.log(`💾 [generateQR] Fallback saved: ${path.basename(filePath)}`);
-      }
-    } catch (saveErr) {
-      console.warn(`⚠️ [generateQR] Save failed: ${saveErr.message}`);
-    }
-
+    if (!isValidBuffer(buffer)) return null;
     return buffer;
   } catch (err) {
     console.error("❌ [generateQR fatal]", err.message);
@@ -119,31 +88,36 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
 }
 
 /**
- * ⚡ Main production-safe fallback-first fetcher
- * → Always prefers fallback PNG if valid
- * → Generates new QR if missing or corrupt
+ * ⚡ Plan-C: Always use scenario-based fallback PNG with full filename
  */
-export async function getOrCreateQRFromCache(symbolRaw, amountRaw, overrideAddress = null) {
-  const symbol = normalizeSymbol(symbolRaw);
-  const amount = sanitizeAmount(amountRaw);
-  const filePath = getFallbackPath(symbol, amount);
+export async function getOrCreateQR(symbol, amount, overrideAddress = null, product = null, quantity = null, category = null) {
+  const all = await getAllQrScenarios();
+  const match = all.find(s =>
+    s.rawSymbol === symbol &&
+    s.expectedAmount === sanitizeAmount(amount) &&
+    s.productName === product &&
+    s.quantity === String(quantity) &&
+    s.category === category
+  );
 
-  if (!Number.isFinite(amount) || amount <= 0) {
-    console.warn(`❌ [getOrCreateQRFromCache] Invalid amount: ${amountRaw}`);
+  if (!match) {
+    console.warn(`❌ [getOrCreateQR] No scenario for ${symbol} ${amount} ${product} x${quantity}`);
     return null;
   }
+
+  const filePath = getFallbackPathByScenario(symbol, amount, category, product, quantity);
 
   try {
     if (fs.existsSync(filePath)) {
       const buffer = fs.readFileSync(filePath);
       if (isValidBuffer(buffer)) {
         if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`⚡ [getOrCreateQRFromCache] Using fallback for ${symbol} ${amount}`);
+          console.log(`⚡ [getOrCreateQR] Using fallback: ${path.basename(filePath)}`);
         }
         return buffer;
       } else {
         fs.unlinkSync(filePath);
-        console.warn(`⚠️ Corrupted fallback PNG deleted: ${path.basename(filePath)}`);
+        console.warn(`⚠️ Corrupted fallback deleted: ${path.basename(filePath)}`);
       }
     }
 
@@ -152,17 +126,17 @@ export async function getOrCreateQRFromCache(symbolRaw, amountRaw, overrideAddre
       try {
         fs.writeFileSync(filePath, buffer);
         if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`💾 [getOrCreateQRFromCache] New fallback saved: ${path.basename(filePath)}`);
+          console.log(`💾 [getOrCreateQR] New fallback saved: ${path.basename(filePath)}`);
         }
-      } catch (saveErr) {
-        console.warn(`⚠️ [getOrCreateQRFromCache] Save error: ${saveErr.message}`);
+      } catch (err) {
+        console.warn(`⚠️ [getOrCreateQR] Save failed: ${err.message}`);
       }
       return buffer;
     }
 
     return null;
   } catch (err) {
-    console.error(`❌ [getOrCreateQRFromCache] Fatal error: ${err.message}`);
+    console.error(`❌ [getOrCreateQR] Error: ${err.message}`);
     return null;
   }
 }
@@ -192,35 +166,4 @@ export function generatePaymentMessageWithButton(currency, amount, overrideAddre
       inline_keyboard: [[{ text: "📋 Copy address", callback_data: `copy:${validAddr}` }]]
     }
   };
-}
-
-// ✅ Universalus fallback-first QR retriever
-export async function getOrCreateQR(symbol, amount, overrideAddress = null) {
-  const path = getFallbackPath(symbol, amount);
-
-  try {
-    if (fs.existsSync(path)) {
-      const buffer = fs.readFileSync(path);
-      if (isValidBuffer(buffer)) {
-        if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`⚡ [getOrCreateQR] Using cached PNG: ${path}`);
-        }
-        return buffer;
-      } else {
-        fs.unlinkSync(path);
-        console.warn(`⚠️ Corrupt fallback deleted: ${path}`);
-      }
-    }
-
-    const buffer = await generateQR(symbol, amount, overrideAddress);
-    if (isValidBuffer(buffer)) {
-      fs.writeFileSync(path, buffer);
-      return buffer;
-    }
-
-    return null;
-  } catch (err) {
-    console.error(`❌ [getOrCreateQR] Failed: ${err.message}`);
-    return null;
-  }
 }
