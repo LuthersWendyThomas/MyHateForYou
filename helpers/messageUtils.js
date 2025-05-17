@@ -4,7 +4,6 @@ import { autobanEnabled, autodeleteEnabled } from "../config/features.js";
 import { userSessions, userMessages } from "../state/userState.js";
 import { banUser } from "../utils/bans.js";
 import { BOT } from "../config/config.js";
-import { getAmountFilename } from "../utils/fallbackPathUtils.js"; // ✅ fallback-based tracking
 
 const CLEANUP_DELAY_MS = 27 * 60 * 1000;
 const MAX_TELEGRAM_LENGTH = 4096;
