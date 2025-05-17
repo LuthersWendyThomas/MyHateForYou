@@ -10,7 +10,7 @@ import {
   sanitizeAmount,
   normalizeSymbol
 } from "./fallbackPathUtils.js";
-import { getAllQrScenarios } from "./qrScenarios.js";
+import { getAllQrScenarios, getScenarioPath } from "./qrScenarios.js";
 
 /**
  * 🔗 Resolve wallet address for a given symbol
