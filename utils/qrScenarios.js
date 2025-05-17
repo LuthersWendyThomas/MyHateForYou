@@ -98,3 +98,8 @@ export async function getExpectedQrCount() {
 
 // ✅ Eksportuojamas bendras fallback katalogo kelias
 export { FALLBACK_DIR };
+
+export function getScenarioPath(scenario) {
+  return path.join(FALLBACK_DIR, scenario.filename);
+}
+
