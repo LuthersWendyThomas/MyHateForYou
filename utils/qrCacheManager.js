@@ -85,6 +85,10 @@ export async function generateFullQrCache(forceComplete = true) {
   let pending = [...scenarios];
   let cycle = 0;
 
+  // ✅ Metrika sėkmingų/nesėkmingų bandymų (globaliai šitam run'ui)
+  let totalSuccess = 0;
+  let totalFailures = 0;
+
   while (pending.length > 0 && cycle < 10) {
     cycle++;
     console.log(`🔁 [Cycle ${cycle}] Pending: ${pending.length}...`);
@@ -97,18 +101,26 @@ export async function generateFullQrCache(forceComplete = true) {
       const scenario = pending[i];
       const index = offset + i + 1;
 
-      queue.add(() =>
-        attemptGenerate({ ...scenario, index, total: totalCount }, successful, failed).catch(err => {
-          console.warn(`❌ [queueTaskFailed] ${scenario.filename}: ${err.message}`);
+      queue.add(async () => {
+        try {
+          await attemptGenerate({ ...scenario, index, total: totalCount }, successful, failed);
+          totalSuccess++; // ✅ Jei viskas pavyksta
+        } catch (err) {
           failed.push(scenario);
-        })
-      );
+          totalFailures++; // ❌ Nepavyksta
+        }
+      });
     }
 
     await queue.onIdle();
     pending = failed;
     if (!forceComplete) break;
   }
+
+  console.log(`📊 [QR Cache Summary]`);
+  console.log(`✅ Total successful: ${totalSuccess}`);
+  console.log(`❌ Total failed: ${totalFailures}`);
+  console.log(`📂 Fallbacks generated: ${successful.size}`);
 }
 
 export async function validateQrFallbacks(autoFix = true) {
