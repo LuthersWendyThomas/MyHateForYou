@@ -1,4 +1,4 @@
-// 📦 utils/qrCacheManager.js | FINAL IMMORTAL v3.0.1 GODMODE MANAGER
+// 📦 utils/qrCacheManager.js | IMMORTAL FINAL v3.1.0 • PLAN-C • NAMED-ONLY • BULLETPROOF
 
 import fs from "fs/promises";
 import path from "path";
@@ -7,15 +7,10 @@ import PQueue from "p-queue";
 import { generateQR } from "./generateQR.js";
 import {
   sanitizeAmount,
-  getFallbackPath,
-  FALLBACK_DIR,
-  normalizeSymbol,
-  getAmountFilename
+  getFallbackPathByScenario,
+  FALLBACK_DIR
 } from "./fallbackPathUtils.js";
 import { getAllQrScenarios } from "./qrScenarios.js";
-
-import { NETWORKS } from "./fetchCryptoPrice.js";
-import { WALLETS } from "../config/config.js";
 
 const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 10;
@@ -25,51 +20,44 @@ function sleep(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
-async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
+async function attemptGenerate(scenario, index, total, successful, failed) {
+  const filePath = getFallbackPathByScenario(
+    scenario.rawSymbol,
+    scenario.expectedAmount,
+    scenario.category,
+    scenario.productName,
+    scenario.quantity
+  );
+
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      const filePath = path.join(FALLBACK_DIR, filename);
-
       if (existsSync(filePath)) {
         await fs.unlink(filePath);
-        console.log(`♻️ [${index}/${total}] Overwriting: ${filename}`);
+        console.log(`♻️ [${index}/${total}] Overwriting: ${path.basename(filePath)}`);
       }
 
-      const buffer = await generateQR(rawSymbol, expectedAmount);
+      const buffer = await generateQR(scenario.rawSymbol, scenario.expectedAmount);
       if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 300) {
         throw new Error("Invalid QR buffer");
       }
 
       await fs.writeFile(filePath, buffer);
       successful.add(filePath);
-      console.log(`✅ [${index}/${total}] ${rawSymbol} → ${expectedAmount}`);
+      console.log(`✅ [${index}/${total}] ${scenario.rawSymbol} → ${scenario.expectedAmount}`);
       return;
     } catch (err) {
       const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${rawSymbol}: ${err.message}`);
+      console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${scenario.rawSymbol}: ${err.message}`);
       await sleep(delay);
     }
   }
 
-  failed.push({ rawSymbol, expectedAmount, filename });
+  failed.push(scenario);
 }
 
 export async function initQrCacheDir() {
   if (!existsSync(FALLBACK_DIR)) {
     await fs.mkdir(FALLBACK_DIR, { recursive: true });
-  }
-}
-
-export async function cleanQrCacheDir() {
-  try {
-    const files = await fs.readdir(FALLBACK_DIR);
-    const targets = files.filter(f => f.endsWith(".png"));
-    for (const f of targets) {
-      await fs.unlink(path.join(FALLBACK_DIR, f));
-    }
-    console.log(`🧹 [cleanQrCacheDir] Deleted ${targets.length} fallback PNGs.`);
-  } catch (err) {
-    console.warn("⚠️ [cleanQrCacheDir]", err.message);
   }
 }
 
@@ -85,7 +73,6 @@ export async function generateFullQrCache(forceComplete = true) {
   let pending = [...scenarios];
   let cycle = 0;
 
-  // ✅ Metrika sėkmingų/nesėkmingų bandymų (globaliai šitam run'ui)
   let totalSuccess = 0;
   let totalFailures = 0;
 
@@ -102,13 +89,9 @@ export async function generateFullQrCache(forceComplete = true) {
       const index = offset + i + 1;
 
       queue.add(async () => {
-        try {
-          await attemptGenerate({ ...scenario, index, total: totalCount }, successful, failed);
-          totalSuccess++; // ✅ Jei viskas pavyksta
-        } catch (err) {
-          failed.push(scenario);
-          totalFailures++; // ❌ Nepavyksta
-        }
+        await attemptGenerate(scenario, index, totalCount, successful, failed);
+        if (!failed.includes(scenario)) totalSuccess++;
+        else totalFailures++;
       });
     }
 
@@ -125,36 +108,28 @@ export async function generateFullQrCache(forceComplete = true) {
 
 export async function validateQrFallbacks(autoFix = true) {
   try {
-    const files = await fs.readdir(FALLBACK_DIR);
-    const pngs = files.filter(f => f.endsWith(".png"));
     const scenarios = await getAllQrScenarios();
     const expected = scenarios.length;
 
-    const expectedSet = new Set(scenarios.map(s => s.filename));
-    const foundSet = new Set(pngs);
     const corrupt = [];
     const missing = [];
 
-    if (expectedSet.size !== scenarios.length) {
-      console.warn(`⚠️ Duplicate filenames detected! Unique: ${expectedSet.size}, Raw: ${scenarios.length}`);
-      const filenameCount = {};
-      for (const s of scenarios) {
-        filenameCount[s.filename] = (filenameCount[s.filename] || 0) + 1;
-      }
-      const duplicates = Object.entries(filenameCount).filter(([_, count]) => count > 1);
-      if (duplicates.length) {
-        console.warn("❗️ Duplicate filenames:", duplicates.map(([f]) => f));
-      }
-    }
+    for (const s of scenarios) {
+      const filePath = getFallbackPathByScenario(
+        s.rawSymbol,
+        s.expectedAmount,
+        s.category,
+        s.productName,
+        s.quantity
+      );
+      const filename = path.basename(filePath);
 
-    for (const filename of expectedSet) {
-      const filePath = path.join(FALLBACK_DIR, filename);
       try {
         const stat = await fs.stat(filePath);
         if (!stat.isFile() || stat.size < 256) {
           console.warn(`⚠️ Stat fail or too small [${stat.size}B]: ${filename}`);
           await fs.unlink(filePath);
-          corrupt.push({ filename, filePath });
+          corrupt.push({ ...s, filePath });
           continue;
         }
 
@@ -162,10 +137,10 @@ export async function validateQrFallbacks(autoFix = true) {
         if (!Buffer.isBuffer(buffer) || buffer.length < 256) {
           console.warn(`⚠️ Corrupt buffer [${buffer?.length || 0}B]: ${filename}`);
           await fs.unlink(filePath);
-          corrupt.push({ filename, filePath });
+          corrupt.push({ ...s, filePath });
         }
       } catch {
-        missing.push({ filename, filePath });
+        missing.push({ ...s, filePath });
       }
     }
 
@@ -183,32 +158,26 @@ export async function validateQrFallbacks(autoFix = true) {
 
       const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
 
-      for (const { filename } of toFix) {
-        const base = filename.replace(".png", "").split("__")[0];
-        const [symbol, amtRaw] = base.split("_");
-        const amount = sanitizeAmount(parseFloat(amtRaw));
-        if (!amount || isNaN(amount) || amount <= 0) continue;
-
+      for (const s of toFix) {
         queue.add(async () => {
           for (let attempt = 0; attempt < 3; attempt++) {
             try {
-              const buffer = await generateQR(symbol, amount);
+              const buffer = await generateQR(s.rawSymbol, s.expectedAmount);
               if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 256) {
                 throw new Error(`Invalid buffer on attempt ${attempt + 1}`);
               }
 
-              const filePath = path.join(FALLBACK_DIR, filename);
-              await fs.writeFile(filePath, buffer);
-              console.log(`✅ Regenerated: ${symbol} ${amount}`);
+              await fs.writeFile(s.filePath, buffer);
+              console.log(`✅ Regenerated: ${path.basename(s.filePath)}`);
               return;
             } catch (err) {
               const delay = 1000 * (attempt + 1);
-              console.warn(`⏳ Retry #${attempt + 1} for ${filename} → ${err.message}`);
+              console.warn(`⏳ Retry #${attempt + 1} for ${s.filePath} → ${err.message}`);
               await sleep(delay);
             }
           }
 
-          console.warn(`❌ Final failure after retries: ${filename}`);
+          console.warn(`❌ Final failure after retries: ${path.basename(s.filePath)}`);
         });
       }
 
