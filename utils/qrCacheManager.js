@@ -204,3 +204,27 @@ export async function validateQrFallbacks(autoFix = true) {
     console.error(`❌ Validation failed: ${err.message}`);
   }
 }
+
+// ✅ Retrieve fallback PNG from disk, if exists
+export async function getCachedQR(symbol, amount, address = null) {
+  try {
+    const filePath = getFallbackPath(symbol, amount);
+    if (!existsSync(filePath)) return null;
+    const buffer = await fs.readFile(filePath);
+    return Buffer.isBuffer(buffer) && buffer.length >= 300 ? buffer : null;
+  } catch {
+    return null;
+  }
+}
+
+// ✅ Save fallback PNG to disk (used for live QR fallback caching)
+export async function saveCachedQR(symbol, amount, address = null, buffer) {
+  try {
+    const filePath = getFallbackPath(symbol, amount);
+    await fs.writeFile(filePath, buffer);
+    return true;
+  } catch (err) {
+    console.warn("⚠️ [saveCachedQR] Failed:", err.message);
+    return false;
+  }
+}
