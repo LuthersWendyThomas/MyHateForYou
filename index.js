@@ -147,4 +147,4 @@ process.on("unhandledRejection", async (reason) => {
   })
 );
 
-console.log("\x1b[44m\x1b[30m ✅ BALTICPHARMACYBOT READY • LOCKED • BULLETPROOF • ∞ \x1b[0m");
+console.log("\x1b[44m\x1b[30m ✅ BALTICPHARMACYBOT READY • LOCKED • BULLETPROOF • v1.3.1 \x1b[0m");
