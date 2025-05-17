@@ -1,18 +1,10 @@
-// 📦 jobs/validateAndRefresh.js | IMMORTAL FINAL v1.1.1 • PLAN-C LOCK • NAMED ONLY • BULLETPROOF
+// 📦 jobs/validateAndRefresh.js | IMMORTAL FINAL v1.2.0 • PLAN-C LOCK • NAMED ONLY • CLEANED
 
-import path from "path";
 import {
   generateFullQrCache,
   validateQrFallbacks,
   initQrCacheDir
 } from "../utils/qrCacheManager.js";
-
-import {
-  FALLBACK_DIR,
-  sanitizeAmount,
-  normalizeSymbol,
-  getFallbackPathByScenario
-} from "../utils/fallbackPathUtils.js"; // ✅ PLAN-C importas pridėtas
 
 import { getAllQrScenarios } from "../utils/qrScenarios.js";
 import { sendAdminPing } from "../core/handlers/paymentHandler.js";
