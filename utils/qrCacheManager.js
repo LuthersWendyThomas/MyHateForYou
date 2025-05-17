@@ -17,7 +17,7 @@ import { getAllQrScenarios } from "./qrScenarios.js";
 import { NETWORKS } from "./fetchCryptoPrice.js";
 import { WALLETS } from "../config/config.js";
 
-const MAX_CONCURRENCY = 2;
+const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 10;
 const BASE_DELAY_MS = 3000;
 
