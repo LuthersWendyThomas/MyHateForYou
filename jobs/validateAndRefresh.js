@@ -9,6 +9,8 @@ import {
 import { getAllQrScenarios } from "../utils/qrScenarios.js";
 import { sendAdminPing } from "../core/handlers/paymentHandler.js";
 
+const DEBUG = process.env.DEBUG_MESSAGES === "true";
+
 const INTERVAL_HOURS = 6;
 let isRunning = false;
 
