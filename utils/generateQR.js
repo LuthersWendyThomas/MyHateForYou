@@ -37,8 +37,8 @@ function isValidAddress(addr) {
 /**
  * 🧪 Validate buffer (basic check)
  */
-function isValidBuffer(buffer) {
-  return Buffer.isBuffer(buffer) && buffer.length >= 300;
+export function isValidBuffer(buffer) {
+  return Buffer.isBuffer(buffer) && buffer.length >= 256;
 }
 
 /**
