@@ -1,4 +1,4 @@
-// 📦 jobs/validateAndRefresh.js | IMMORTAL FINAL v1.2.0 • PLAN-C LOCK • NAMED ONLY • CLEANED
+// 📦 jobs/validateAndRefresh.js | IMMORTAL FINAL v1.2.1 • PLAN-C LOCK • NAMED ONLY • DEBUG-AWARE • BULLETPROOF
 
 import {
   generateFullQrCache,
@@ -18,7 +18,7 @@ let isRunning = false;
  * 🟢 Start the recurring QR fallback refresh engine
  */
 export function startQrValidationAndRefresh() {
-  console.log(`🛠️ [validateAndRefresh] Scheduled every ${INTERVAL_HOURS}h`);
+  if (DEBUG) console.log(`🛠️ [validateAndRefresh] Scheduled every ${INTERVAL_HOURS}h`);
   setTimeout(() => scheduleRefresh(true), 3 * 60 * 1000); // ⏱️ Delay 3min on startup
   setInterval(() => scheduleRefresh(false), INTERVAL_HOURS * 60 * 60 * 1000);
 }
@@ -28,7 +28,7 @@ export function startQrValidationAndRefresh() {
  */
 function scheduleRefresh(isStartup = false) {
   if (isRunning) {
-    console.log("⏳ [validateAndRefresh] Skipping — already running.");
+    if (DEBUG) console.log("⏳ [validateAndRefresh] Skipping — already running.");
     return;
   }
 
@@ -56,13 +56,13 @@ async function runRefreshCycle(isStartup) {
     await initQrCacheDir();
 
     const expected = await getExpectedQrCount();
-    console.log(`🚀 [validateAndRefresh] Generating ${expected} fallback QR codes...`);
+    if (DEBUG) console.log(`🚀 [validateAndRefresh] Generating ${expected} fallback QR codes...`);
     await generateFullQrCache(true);
 
-    console.log(`🔍 [validateAndRefresh] Validating fallback QR cache...`);
+    if (DEBUG) console.log(`🔍 [validateAndRefresh] Validating fallback QR cache...`);
     await validateQrFallbacks(true);
 
-    console.log(`✅ [validateAndRefresh] QR cache updated and validated.`);
+    if (DEBUG) console.log(`✅ [validateAndRefresh] QR cache updated and validated.`);
     await sendAdminPing(
       `✅ *QR fallback system refreshed*\n` +
       `⏱ Trigger: ${label}\n` +
@@ -73,7 +73,7 @@ async function runRefreshCycle(isStartup) {
     try {
       await sendAdminPing(`❌ QR refresh failed: *${err.message}*`);
     } catch (pingErr) {
-      console.warn("⚠️ Admin ping failed:", pingErr.message);
+      if (DEBUG) console.warn("⚠️ Admin ping failed:", pingErr.message);
     }
   }
 }
