@@ -63,7 +63,8 @@ async function runRefreshCycle(isStartup) {
   try {
     console.log(`🧹 [validateAndRefresh] Cleaning expired PNGs...`);
     await initQrCacheDir();
-    const expiredCount = await cleanExpiredQRCodes();
+    // ⏩ Expired QR cleanup removed — now using full overwrite
+    const expiredCount = 0;
 
     const expected = await getExpectedQrCount();
     console.log(`🚀 [validateAndRefresh] Generating ${expected} fallback QR codes...`);
@@ -74,10 +75,11 @@ async function runRefreshCycle(isStartup) {
 
     console.log(`✅ [validateAndRefresh] QR cache updated and validated.`);
     await sendAdminPing(
-      `✅ *QR fallback system refreshed*\n` +
-      `⏱ Trigger: ${label}\n` +
-      `🗑️ Expired: *${expiredCount}*\n📦 Total: *${expected}*\n🕒 ${now}`
-    );
+  `✅ *QR fallback system refreshed*\n` +
+  `⏱ Trigger: ${label}\n` +
+  `🗑️ Expired: *0* _(cleanup disabled)_\n📦 Total: *${expected}*\n🕒 ${now}`
+);
+
   } catch (err) {
     console.error(`❌ [validateAndRefresh] Exception: ${err.message}`);
     try {
@@ -85,38 +87,6 @@ async function runRefreshCycle(isStartup) {
     } catch (pingErr) {
       console.warn("⚠️ Admin ping failed:", pingErr.message);
     }
-  }
-}
-
-/**
- * 🗑️ Delete expired fallback PNGs older than MAX_AGE_MS
- */
-async function cleanExpiredQRCodes() {
-  try {
-    const now = Date.now();
-    const files = await fs.readdir(FALLBACK_DIR);
-    const targets = files.filter(f => f.endsWith(".png"));
-
-    let deleted = 0;
-    for (const file of targets) {
-      const fullPath = path.join(FALLBACK_DIR, file);
-      try {
-        const stat = await fs.stat(fullPath);
-        const age = now - stat.mtimeMs;
-        if (age > MAX_AGE_MS) {
-          await fs.unlink(fullPath);
-          deleted++;
-        }
-      } catch (err) {
-        console.warn(`⚠️ [cleanExpiredQRCodes] Error on ${file}: ${err.message}`);
-      }
-    }
-
-    console.log(`✅ [cleanExpiredQRCodes] ${deleted} expired PNGs removed.`);
-    return deleted;
-  } catch (err) {
-    console.error(`❌ [cleanExpiredQRCodes] Failed: ${err.message}`);
-    return 0;
   }
 }
 
