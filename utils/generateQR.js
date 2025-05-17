@@ -8,8 +8,7 @@ import {
   FALLBACK_DIR,
   getFallbackPathByScenario,
   sanitizeAmount,
-  normalizeSymbol,
-  isValidBuffer
+  normalizeSymbol
 } from "./fallbackPathUtils.js";
 import { getAllQrScenarios } from "./qrScenarios.js";
 
@@ -30,6 +29,13 @@ export function resolveAddress(symbol, overrideAddress) {
  */
 function isValidAddress(addr) {
   return typeof addr === "string" && /^[a-zA-Z0-9]{8,}$/.test(addr);
+}
+
+/**
+ * 🧪 Validate buffer (basic check)
+ */
+export function isValidBuffer(buffer) {
+  return Buffer.isBuffer(buffer) && buffer.length >= 256;
 }
 
 /**
