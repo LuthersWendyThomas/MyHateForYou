@@ -39,6 +39,13 @@ export function isValidBuffer(buffer) {
 }
 
 /**
+ * 🛡️ Skirtumo Taisymas
+ */
+function amountsRoughlyEqual(a, b, tolerance = 0.000001) {
+  return Math.abs(sanitizeAmount(a) - sanitizeAmount(b)) < tolerance;
+}
+
+/**
  * 🎨 Generate QR buffer from URI
  */
 export async function generateQRBuffer(symbol, amount, address) {
@@ -99,8 +106,8 @@ export async function getOrCreateQR(symbol, amount, overrideAddress = null, prod
   const all = await getAllQrScenarios();
   const match = all.find(s =>
     s.rawSymbol === symbol &&
-    s.expectedAmount === sanitizeAmount(amount) &&
-    s.productName === productName &&
+    amountsRoughlyEqual(s.expectedAmount, amount) &&
+    s.productName === product &&
     s.quantity === String(quantity) &&
     s.category === category
   );
