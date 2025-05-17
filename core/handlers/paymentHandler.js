@@ -1,4 +1,4 @@
-// 📦 core/handlers/paymentHandler.js | FINAL IMMORTAL v999999999
+// 📦 paymentHandler.js | FINAL IMMORTAL v999999999.∞+SKYLOCK
 // FULL AI-DRIVEN QR LOGIC • STEP-SAFE • SESSION-SYNC • BULLETPROOF • FULLRESET INTEGRATED
 
 import { getOrCreateQR } from "../../utils/generateQR.js"; // ✅ Tik šitą naudok
