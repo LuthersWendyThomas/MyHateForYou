@@ -8,7 +8,7 @@ import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js"; // 🔄 Krip
 import {
   sanitizeAmount,
   FALLBACK_DIR,
-  normalizeSymbol,
+  normalizeSymbol
 } from "./fallbackPathUtils.js";
 
 /**
