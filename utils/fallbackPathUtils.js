@@ -35,14 +35,3 @@ export function sanitizeAmount(input) {
     return 0;
   }
 }
-
-/**
- * 📂 Path to full scenario-based fallback PNG
- * e.g., ETH_0.004256__vapes__juicy_berry__2.png
- */
-export function getFallbackPathByScenario(symbol, amount, category, productName, quantity) {
-  const sym = normalizeSymbol(symbol);
-  const amt = sanitizeAmount(amount).toFixed(6);
-  const filename = `${sym}_${amt}__${category}__${productName}__${quantity}.png`;
-  return path.join(FALLBACK_DIR, filename);
-}
