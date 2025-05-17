@@ -1,8 +1,7 @@
-// 📦 fallbackPathUtils.js v1.1.3
+// 📦 fallbackPathUtils.js | IMMORTAL FINAL v2.0.0 • PLAN C LOCK • ONLY NAMED FALLBACKS
 
 import path from "path";
-import { NETWORKS } from "./fetchCryptoPrice.js"; // Naudojame NETWORKS
-import { getAllQrScenarios } from "./qrScenarios.js"; // Importuojame qrScenarios.js
+import { NETWORKS } from "./fetchCryptoPrice.js";
 
 // Tikslus kelias į QR fallback direktoriją
 export const FALLBACK_DIR = path.join(process.cwd(), "qr-cache");
@@ -15,7 +14,7 @@ export const FALLBACK_DIR = path.join(process.cwd(), "qr-cache");
 export function normalizeSymbol(raw) {
   try {
     const key = String(raw || "").trim().toLowerCase();
-    return (NETWORKS[key] || key).toUpperCase(); // Naudojame NETWORKS vietoje ALIASES
+    return (NETWORKS[key] || key).toUpperCase();
   } catch {
     return "UNKNOWN";
   }
@@ -38,65 +37,12 @@ export function sanitizeAmount(input) {
 }
 
 /**
- * 💾 Standard fallback filename: SYMBOL_0.123456.png
- * @param {string} symbol - e.g. "BTC" or "eth"
- * @param {number|string} amount - e.g. 0.123456
- * @returns {string}
+ * 📂 Path to full scenario-based fallback PNG
+ * e.g., ETH_0.004256__vapes__juicy_berry__2.png
  */
-export function getAmountFilename(symbol, amount) {
-  const sym = normalizeSymbol(symbol);
-  const amt = sanitizeAmount(amount);
-  return `${sym}_${amt.toFixed(6)}.png`;
-}
-
-/**
- * 📂 Full absolute path to fallback PNG file
- * @param {string} symbol
- * @param {number|string} amount
- * @returns {string}
- */
-export function getFallbackPath(symbol, amount) {
-  return path.join(FALLBACK_DIR, getAmountFilename(symbol, amount));
-}
-
-/**
- * 🔎 Match filename like BTC_0.123456.png against scenario
- * @param {string} fileName
- * @param {object} scenario
- * @returns {boolean}
- */
-export function matchFallbackFilenameToScenario(fileName, scenario) {
-  try {
-    const [symbol, amtRaw] = fileName.replace(".png", "").split("_");
-    const fileSymbol = normalizeSymbol(symbol);
-    const fileAmount = sanitizeAmount(amtRaw);
-
-    const scenarioSymbol = normalizeSymbol(scenario.rawSymbol);
-    const expectedAmount = sanitizeAmount(scenario.totalUSD / scenario.mockRate || 1); // default fallback
-
-    return fileSymbol === scenarioSymbol && fileAmount === expectedAmount;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * 📜 List of all expected fallback filenames based on all scenarios
- * (requires rate fetching in real execution)
- * @param {(sym: string) => number} getMockRate - function that returns USD→Crypto rate for a symbol
- * @returns {string[]} e.g. ["BTC_0.123456.png", "ETH_0.004321.png", ...]
- */
-export async function getAllFallbackFilenames(getMockRate) {
-  const scenarios = await getAllQrScenarios(); // FIXED: added await
-  return scenarios.map(({ rawSymbol, totalUSD }) => {
-    const rate = getMockRate(rawSymbol);
-    const amount = sanitizeAmount(totalUSD / rate);
-    return getAmountFilename(rawSymbol, amount);
-  });
-}
-
 export function getFallbackPathByScenario(symbol, amount, category, productName, quantity) {
-  const baseName = getAmountFilename(symbol, amount).replace(".png", "");
-  const filename = `${baseName}__${category}__${productName}__${quantity}.png`;
+  const sym = normalizeSymbol(symbol);
+  const amt = sanitizeAmount(amount).toFixed(6);
+  const filename = `${sym}_${amt}__${category}__${productName}__${quantity}.png`;
   return path.join(FALLBACK_DIR, filename);
 }
