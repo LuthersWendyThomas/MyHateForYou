@@ -9,7 +9,6 @@ import {
   sanitizeAmount,
   FALLBACK_DIR,
   normalizeSymbol,
-  getAmountFilename
 } from "./fallbackPathUtils.js";
 
 /**
