@@ -104,20 +104,21 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
  */
 export async function getOrCreateQR(symbol, amount, overrideAddress = null, productName = null, quantity = null, category = null) {
   const all = await getAllQrScenarios();
-  const match = all.find(s =>
-    s.rawSymbol === symbol &&
-    amountsRoughlyEqual(s.expectedAmount, amount) &&
-    s.productName === product &&
-    s.quantity === String(quantity) &&
-    s.category === category
-  );
+    const match = all.find(s =>
+      s.rawSymbol === symbol &&
+      amountsRoughlyEqual(s.expectedAmount, amount) &&
+      s.productName === productName &&
+      s.quantity === String(quantity) &&
+      s.category === category
+    );
 
-  if (!match) {
-    console.warn(`❌ [getOrCreateQR] No scenario for ${symbol} ${amount} ${productName} x${quantity}`);
-    return null;
-  }
+    if (!match) {
+      const expectedFilename = `${symbol}_${sanitizeAmount(amount).toFixed(6)}__${category}__${productName}__${quantity}.png`;
+      console.warn(`❌ [getOrCreateQR] No scenario match for: ${expectedFilename}`);
+      return null;
+    }
 
-  const filePath = getFallbackPathByScenario(symbol, amount, category, productName, quantity);
+    const filePath = getScenarioPath(match); // ✅ Tikslus failo kelias iš scenarijaus
 
   try {
     if (fs.existsSync(filePath)) {
