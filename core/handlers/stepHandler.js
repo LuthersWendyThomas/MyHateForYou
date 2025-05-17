@@ -504,3 +504,11 @@ function sanitizeId(id) {
   const s = String(id || "").trim();
   return s && s !== "undefined" && s !== "null" ? s : null;
 }
+
+function findCategoryByProductName(productName) {
+  for (const category in products) {
+    const match = products[category].find(p => p.name === productName);
+    if (match) return category;
+  }
+  return null;
+}
