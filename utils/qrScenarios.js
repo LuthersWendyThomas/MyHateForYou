@@ -1,14 +1,19 @@
-// 📦 utils/qrScenarios.js | GODMODE IMMORTAL FINAL v999999999999x
+// 📦 utils/qrScenarios.js | GODMODE IMMORTAL FINAL v999999999999x • PLAN-C EXPORT SYNC
 
+import path from "path";
 import { products } from "../config/products.js";
 import { deliveryMethods } from "../config/features.js";
 import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js";
 
 import {
   sanitizeAmount,
-  normalizeSymbol
-} from "./fallbackPathUtils.js";
+  normalizeSymbol,
+  FALLBACK_DIR
+} from "./fallbackPathUtils.js"; // ✅ Vieningas kelias
 
+/**
+ * 🔁 Gauna visų aktyvių tinklų (BTC, ETH, MATIC, SOL) kursus
+ */
 export async function getLiveRatesMap() {
   const map = {};
   const networks = Object.keys(NETWORKS);
@@ -28,6 +33,9 @@ export async function getLiveRatesMap() {
   return map;
 }
 
+/**
+ * 🎯 Sugeneruoja VISUS PLAN-C fallback QR scenarijus
+ */
 export async function getAllQrScenarios() {
   const scenarios = [];
   const rateMap = await getLiveRatesMap();
@@ -73,7 +81,20 @@ export async function getAllQrScenarios() {
   return scenarios;
 }
 
+/**
+ * 📦 Grąžina pilną absoliutų scenarijaus fallback failo kelią
+ */
+export function getScenarioPath(scenario) {
+  return path.join(FALLBACK_DIR, scenario.filename);
+}
+
+/**
+ * 📊 Grąžina kiek fallback QR failų tikimasi
+ */
 export async function getExpectedQrCount() {
   const all = await getAllQrScenarios();
   return all.length;
 }
+
+// ✅ Eksportuojamas bendras fallback katalogo kelias
+export { FALLBACK_DIR };
