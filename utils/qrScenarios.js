@@ -7,7 +7,6 @@ import { fetchCryptoPrice, NETWORKS } from "./fetchCryptoPrice.js"; // 🔄 Krip
 // 🧩 Būtini helperiai QR fallback logikai
 import {
   sanitizeAmount,
-  getFallbackPath,
   FALLBACK_DIR,
   normalizeSymbol,
   getAmountFilename
