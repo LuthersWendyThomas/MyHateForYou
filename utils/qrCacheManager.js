@@ -204,34 +204,3 @@ export async function validateQrFallbacks(autoFix = true) {
     console.error(`❌ Validation failed: ${err.message}`);
   }
 }
-
-// ✅ Universalus fallback-first QR retriever
-export async function getOrCreateQR(symbol, amount, overrideAddress = null) {
-  const path = getFallbackPath(symbol, amount);
-
-  try {
-    if (fs.existsSync(path)) {
-      const buffer = fs.readFileSync(path);
-      if (isValidBuffer(buffer)) {
-        if (process.env.DEBUG_MESSAGES === "true") {
-          console.log(`⚡ [getOrCreateQR] Using cached PNG: ${path}`);
-        }
-        return buffer;
-      } else {
-        fs.unlinkSync(path);
-        console.warn(`⚠️ Corrupt fallback deleted: ${path}`);
-      }
-    }
-
-    const buffer = await generateQR(symbol, amount, overrideAddress);
-    if (isValidBuffer(buffer)) {
-      fs.writeFileSync(path, buffer);
-      return buffer;
-    }
-
-    return null;
-  } catch (err) {
-    console.error(`❌ [getOrCreateQR] Failed: ${err.message}`);
-    return null;
-  }
-}
