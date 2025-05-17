@@ -60,7 +60,8 @@ export async function getAllQrScenarios() {
             if (!rate || rate <= 0) continue;
 
             const expectedAmount = sanitizeAmount(totalUSD / rate);
-            const filename = getAmountFilename(network, expectedAmount);
+            const filename = getAmountFilename(network, expectedAmount)
+              .replace(".png", "") + `__${category}__${product.name}__${quantity}.png`;
 
             scenarios.push({
               category,
