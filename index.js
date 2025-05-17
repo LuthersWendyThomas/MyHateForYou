@@ -9,7 +9,7 @@ import { initBotInstance, startSafePolling, BOT } from "./config/config.js";
 import { registerMainHandler } from "./core/handlers/mainHandler.js";
 import { autoExpireSessions, cleanStalePaymentTimers } from "./core/sessionManager.js";
 import { sendAdminPing } from "./core/handlers/paymentHandler.js";
-import { startQrCacheMaintenance } from "./jobs/qrCacheMaintainer.js";
+import { startQrValidationAndRefresh } from "./jobs/validateAndRefresh.js";
 import { initQrCacheDir, generateFullQrCache, validateQrFallbacks } from "./utils/qrCacheManager.js";
 import "./config/discountSync.js";
 
@@ -96,7 +96,7 @@ function logSoft409Conflict(message) {
       }
     }, 5 * 60 * 1000);
 
-    startQrCacheMaintenance();
+    startQrValidationAndRefresh();
 
     setTimeout(async () => {
       console.log("\x1b[44m\x1b[30m ⏳ Delayed QR fallback generation starting... \x1b[0m");
