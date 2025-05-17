@@ -1,9 +1,6 @@
-// 📦 jobs/validateAndRefresh.js | IMMORTAL FINAL v1.0.0 • GODMODE • BULLETPROOF
+// 📦 jobs/validateAndRefresh.js | IMMORTAL FINAL v1.1.1 • PLAN-C LOCK • NAMED ONLY • BULLETPROOF
 
-import fs from "fs/promises";
 import path from "path";
-import { existsSync } from "fs";
-
 import {
   generateFullQrCache,
   validateQrFallbacks,
@@ -12,13 +9,14 @@ import {
 
 import {
   FALLBACK_DIR,
-  sanitizeAmount
-} from "../utils/fallbackPathUtils.js";
+  sanitizeAmount,
+  normalizeSymbol,
+  getFallbackPathByScenario
+} from "../utils/fallbackPathUtils.js"; // ✅ PLAN-C importas pridėtas
 
 import { getAllQrScenarios } from "../utils/qrScenarios.js";
 import { sendAdminPing } from "../core/handlers/paymentHandler.js";
 
-const MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6h expiry
 const INTERVAL_HOURS = 6;
 let isRunning = false;
 
@@ -52,7 +50,7 @@ function scheduleRefresh(isStartup = false) {
 }
 
 /**
- * 🚀 Full fallback refresh + validation pipeline
+ * 🚀 Full fallback refresh + validation pipeline (PLAN-C)
  */
 async function runRefreshCycle(isStartup) {
   const label = isStartup
@@ -61,10 +59,7 @@ async function runRefreshCycle(isStartup) {
   const now = new Date().toLocaleTimeString("en-GB");
 
   try {
-    console.log(`🧹 [validateAndRefresh] Cleaning expired PNGs...`);
     await initQrCacheDir();
-    // ⏩ Expired QR cleanup removed — now using full overwrite
-    const expiredCount = 0;
 
     const expected = await getExpectedQrCount();
     console.log(`🚀 [validateAndRefresh] Generating ${expected} fallback QR codes...`);
@@ -75,11 +70,10 @@ async function runRefreshCycle(isStartup) {
 
     console.log(`✅ [validateAndRefresh] QR cache updated and validated.`);
     await sendAdminPing(
-  `✅ *QR fallback system refreshed*\n` +
-  `⏱ Trigger: ${label}\n` +
-  `🗑️ Expired: *0* _(cleanup disabled)_\n📦 Total: *${expected}*\n🕒 ${now}`
-);
-
+      `✅ *QR fallback system refreshed*\n` +
+      `⏱ Trigger: ${label}\n` +
+      `📦 Total: *${expected}*\n🕒 ${now}`
+    );
   } catch (err) {
     console.error(`❌ [validateAndRefresh] Exception: ${err.message}`);
     try {
@@ -91,7 +85,7 @@ async function runRefreshCycle(isStartup) {
 }
 
 /**
- * 📊 Fetch expected fallback scenario count
+ * 📊 Fetch expected fallback scenario count (based on all products/categories/qty)
  */
 async function getExpectedQrCount() {
   const scenarios = await getAllQrScenarios();
