@@ -91,7 +91,14 @@ export async function handlePayment(bot, id, userMsgs, preGeneratedQR) {
     // ✅ Inform client instantly (no waiting lag)
     await sendAndTrack(bot, id, "💡 Preparing payment info...", {}, userMsgs);
 
-    const qrBuffer = preGeneratedQR || await getOrCreateQR(symbol, amount, session.wallet);
+    const qrBuffer = preGeneratedQR || await getOrCreateQR(
+  symbol,
+  amount,
+  session.wallet,
+  session.product?.name,
+  session.quantity,
+  session.category
+);
 
     if (!isValidBuffer(qrBuffer)) {
       throw new Error(`QR code unavailable. Try again later.`);
