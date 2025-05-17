@@ -36,7 +36,7 @@ export function isValidBuffer(buffer) {
 /**
  * 🛡️ Skirtumo Taisymas
  */
-export function amountsRoughlyEqual(a, b, tolerance = 0.000001) {
+export function amountsRoughlyEqual(a, b, tolerance = 0.00001) {
   return Math.abs(sanitizeAmount(a) - sanitizeAmount(b)) < tolerance;
 }
 
