@@ -108,7 +108,7 @@ export async function getOrCreateQR(symbol, amount, overrideAddress = null, prod
     );
 
     if (!match) {
-      const expectedFilename = `${symbol}_${sanitizeAmount(amount).toFixed(6)}__${category}__${productName}__${quantity}.png`;
+      const expectedFilename = `${normalizeSymbol(symbol)}_${sanitizeAmount(amount).toFixed(6)}__${category}__${productName}__${quantity}.png`;
       console.warn(`❌ [getOrCreateQR] No scenario match for: ${expectedFilename}`);
       return null;
     }
