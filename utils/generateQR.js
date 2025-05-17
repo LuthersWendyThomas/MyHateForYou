@@ -1,4 +1,4 @@
-// 📦 generateQR.js | IMMORTAL FINAL v2.0.0 • PLAN-C LOCK • GODMODE
+// 📦 generateQR.js | IMMORTAL FINAL v3.0.0 • PLAN-C LOCK • NAMED-ONLY • ZERO-FILE-ERRORS
 
 import QRCode from "qrcode";
 import fs from "fs";
@@ -66,7 +66,7 @@ export async function generateQRBuffer(symbol, amount, address) {
 }
 
 /**
- * 🧾 Generate QR and save fallback PNG to disk (used by fallback system)
+ * 🧾 Generate QR and return buffer (used both for fallback and live)
  */
 export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
   const symbol = normalizeSymbol(symbolRaw);
@@ -85,8 +85,7 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
 
   try {
     const buffer = await generateQRBuffer(symbol, amount, address);
-    if (!isValidBuffer(buffer)) return null;
-    return buffer;
+    return isValidBuffer(buffer) ? buffer : null;
   } catch (err) {
     console.error("❌ [generateQR fatal]", err.message);
     return null;
@@ -94,24 +93,24 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
 }
 
 /**
- * ⚡ Plan-C: Always use scenario-based fallback PNG with full filename
+ * ⚡ PLAN-C NAMED FALLBACK RESOLUTION
  */
-export async function getOrCreateQR(symbol, amount, overrideAddress = null, product = null, quantity = null, category = null) {
+export async function getOrCreateQR(symbol, amount, overrideAddress = null, productName = null, quantity = null, category = null) {
   const all = await getAllQrScenarios();
   const match = all.find(s =>
     s.rawSymbol === symbol &&
     s.expectedAmount === sanitizeAmount(amount) &&
-    s.productName === product &&
+    s.productName === productName &&
     s.quantity === String(quantity) &&
     s.category === category
   );
 
   if (!match) {
-    console.warn(`❌ [getOrCreateQR] No scenario for ${symbol} ${amount} ${product} x${quantity}`);
+    console.warn(`❌ [getOrCreateQR] No scenario for ${symbol} ${amount} ${productName} x${quantity}`);
     return null;
   }
 
-  const filePath = getFallbackPathByScenario(symbol, amount, category, product, quantity);
+  const filePath = getFallbackPathByScenario(symbol, amount, category, productName, quantity);
 
   try {
     if (fs.existsSync(filePath)) {
@@ -127,6 +126,7 @@ export async function getOrCreateQR(symbol, amount, overrideAddress = null, prod
       }
     }
 
+    // Fallback not found → generate live QR and save as fallback
     const buffer = await generateQR(symbol, amount, overrideAddress);
     if (isValidBuffer(buffer)) {
       try {
@@ -148,7 +148,7 @@ export async function getOrCreateQR(symbol, amount, overrideAddress = null, prod
 }
 
 /**
- * 💬 Generate full payment message with "copy" button
+ * 💬 Generate payment message with "Copy" button
  */
 export function generatePaymentMessageWithButton(currency, amount, overrideAddress = null) {
   const symbol = normalizeSymbol(currency);
