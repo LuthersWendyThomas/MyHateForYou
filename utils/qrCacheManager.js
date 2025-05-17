@@ -1,15 +1,11 @@
 // 📦 utils/qrCacheManager.js | IMMORTAL FINAL v3.2.0 • PLAN-C • ONLY SCENARIOS • BULLETPROOF
-
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import PQueue from "p-queue";
 import { generateQR, isValidBuffer } from "./generateQR.js";
-import {
-  getFallbackPathByScenario,
-  FALLBACK_DIR
-} from "./fallbackPathUtils.js";
-import { getAllQrScenarios } from "./qrScenarios.js";
+import { FALLBACK_DIR } from "./fallbackPathUtils.js";
+import { getAllQrScenarios, getScenarioPath } from "./qrScenarios.js"; // ✅ NAUJAS IMPORTAS
 
 const MAX_CONCURRENCY = 10;
 const MAX_RETRIES = 10;
@@ -20,13 +16,7 @@ function sleep(ms) {
 }
 
 async function attemptGenerate(scenario, index, total, successful, failed) {
-  const filePath = getFallbackPathByScenario(
-    scenario.rawSymbol,
-    scenario.expectedAmount,
-    scenario.category,
-    scenario.productName,
-    scenario.quantity
-  );
+  const filePath = getScenarioPath(scenario);
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
@@ -104,13 +94,8 @@ export async function validateQrFallbacks(autoFix = true) {
     const missing = [];
 
     for (const s of scenarios) {
-      const filePath = getFallbackPathByScenario(
-        s.rawSymbol,
-        s.expectedAmount,
-        s.category,
-        s.productName,
-        s.quantity
-      );
+      const filePath = getScenarioPath(s);
+
       const filename = path.basename(filePath);
 
       try {
@@ -145,13 +130,7 @@ export async function validateQrFallbacks(autoFix = true) {
       const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
 
       for (const s of toFix) {
-        const filePath = getFallbackPathByScenario(
-          s.rawSymbol,
-          s.expectedAmount,
-          s.category,
-          s.productName,
-          s.quantity
-        );
+        const filePath = getScenarioPath(s);
 
         queue.add(async () => {
           for (let attempt = 0; attempt < 3; attempt++) {
