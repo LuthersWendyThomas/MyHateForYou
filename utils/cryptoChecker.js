@@ -61,10 +61,10 @@ async function _checkWithTimeout(fn) {
 }
 
 async function _checkBTC(address, expected) {
-  const res = await fetch(`${API.BTC_RPC}${address}`);
+  const res = await fetch(`https://blockstream.info/api/address/${address}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const txt = await res.text();
-  const sats = parseInt(txt, 10);
+  const json = await res.json();
+  const sats = json?.chain_stats?.funded_txo_sum - json?.chain_stats?.spent_txo_sum;
   if (!Number.isFinite(sats)) throw new Error("Invalid satoshi value");
   return sats / 1e8 >= expected;
 }
