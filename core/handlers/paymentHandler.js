@@ -1,8 +1,7 @@
 // 📦 core/handlers/paymentHandler.js | FINAL IMMORTAL v999999999
 // FULL AI-DRIVEN QR LOGIC • STEP-SAFE • SESSION-SYNC • BULLETPROOF • FULLRESET INTEGRATED
 
-import { getCachedQR, saveCachedQR } from "../../utils/qrCacheManager.js";
-import { getOrCreateQRFromCache } from "../../utils/generateQR.js"; // ✅ NAUJAS IMPORTAS
+import { getOrCreateQR } from "../../utils/generateQR.js"; // ✅ Tik šitą naudok
 import { checkPayment } from "../../utils/cryptoChecker.js";
 import { fetchCryptoPrice } from "../../utils/fetchCryptoPrice.js";
 import { saveOrder } from "../../utils/saveOrder.js";
