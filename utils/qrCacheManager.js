@@ -4,11 +4,10 @@ import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import PQueue from "p-queue";
-import { generateQR } from "./generateQR.js";
+import { generateQR, isValidBuffer } from "./generateQR.js";
 import {
   getFallbackPathByScenario,
-  FALLBACK_DIR,
-  isValidBuffer
+  FALLBACK_DIR
 } from "./fallbackPathUtils.js";
 import { getAllQrScenarios } from "./qrScenarios.js";
 
