@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 import { WALLETS, ALIASES } from "../config/config.js";
-import { amountsRoughlyEqual, normalizeSymbol, sanitizeAmount } from "./fallbackPathUtils.js";
+import { normalizeSymbol, sanitizeAmount } from "./fallbackPathUtils.js";
 import { getAllQrScenarios, getScenarioPath } from "./qrScenarios.js";
 
 /**
@@ -36,7 +36,7 @@ export function isValidBuffer(buffer) {
 /**
  * 🛡️ Skirtumo Taisymas
  */
-function amountsRoughlyEqual(a, b, tolerance = 0.000001) {
+export function amountsRoughlyEqual(a, b, tolerance = 0.000001) {
   return Math.abs(sanitizeAmount(a) - sanitizeAmount(b)) < tolerance;
 }
 
