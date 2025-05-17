@@ -132,11 +132,24 @@ export async function validateQrFallbacks(autoFix = true) {
     const corrupt = [];
     const missing = [];
 
+    // ✅ DUPLICATE CHECK
+    if (expectedSet.size !== scenarios.length) {
+      console.warn(`⚠️ Duplicate filenames detected! Unique: ${expectedSet.size}, Raw: ${scenarios.length}`);
+      const filenameCount = {};
+      for (const s of scenarios) {
+        filenameCount[s.filename] = (filenameCount[s.filename] || 0) + 1;
+      }
+      const duplicates = Object.entries(filenameCount).filter(([_, count]) => count > 1);
+      if (duplicates.length) {
+        console.warn("❗️ Duplicate filenames:", duplicates.map(([f]) => f));
+      }
+    }
+
     for (const filename of expectedSet) {
       const filePath = path.join(FALLBACK_DIR, filename);
       try {
         const stat = await fs.stat(filePath);
-        if (!stat.isFile() || stat.size < 300) {
+        if (!stat.isFile() || stat.size < 256) {
           console.warn(`⚠️ Stat fail or too small [${stat.size}B]: ${filename}`);
           await fs.unlink(filePath);
           corrupt.push({ filename, filePath });
@@ -144,7 +157,7 @@ export async function validateQrFallbacks(autoFix = true) {
         }
 
         const buffer = await fs.readFile(filePath);
-        if (!Buffer.isBuffer(buffer) || buffer.length < 300) {
+        if (!Buffer.isBuffer(buffer) || buffer.length < 256) {
           console.warn(`⚠️ Corrupt buffer [${buffer?.length || 0}B]: ${filename}`);
           await fs.unlink(filePath);
           corrupt.push({ filename, filePath });
@@ -154,7 +167,6 @@ export async function validateQrFallbacks(autoFix = true) {
       }
     }
 
-    const trulyMissing = [...expectedSet].filter(f => !foundSet.has(f));
     const validCount = expected - corrupt.length - missing.length;
 
     console.log(`📊 QR Validation Summary:`);
@@ -170,30 +182,32 @@ export async function validateQrFallbacks(autoFix = true) {
       const queue = new PQueue({ concurrency: MAX_CONCURRENCY });
 
       for (const { filename } of toFix) {
-        const [symbol, amtRaw] = filename.replace(".png", "").split("_");
+        const base = filename.replace(".png", "").split("__")[0];
+        const [symbol, amtRaw] = base.split("_");
         const amount = sanitizeAmount(parseFloat(amtRaw));
         if (!amount || isNaN(amount) || amount <= 0) continue;
 
-        queue.add(async () => {
-          try {
-            const buffer = await generateQR(symbol, amount);
-            if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 300) {
-              console.warn(`❌ Invalid regenerated buffer: ${symbol} ${amount}`);
-              return;
-            }
-
-            const filePath = path.join(FALLBACK_DIR, filename);
-            try {
-              await fs.writeFile(filePath, buffer);
-              console.log(`✅ Regenerated: ${symbol} ${amount}`);
-            } catch (writeErr) {
-              console.warn(`❌ Failed to write QR: ${filename} → ${writeErr.message}`);
-            }
-          } catch (err) {
-            console.warn(`❌ Regeneration failed: ${symbol} ${amount} → ${err.message}`);
-          }
-        });
+queue.add(async () => {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const buffer = await generateQR(symbol, amount);
+      if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 256) {
+        throw new Error(`Invalid buffer on attempt ${attempt + 1}`);
       }
+
+      const filePath = path.join(FALLBACK_DIR, filename);
+      await fs.writeFile(filePath, buffer);
+      console.log(`✅ Regenerated: ${symbol} ${amount}`);
+      return; // 🎯 Sėkmė – sustabdyti ciklą
+    } catch (err) {
+      const delay = 1000 * (attempt + 1);
+      console.warn(`⏳ Retry #${attempt + 1} for ${filename} → ${err.message}`);
+      await sleep(delay);
+    }
+  }
+
+  console.warn(`❌ Final failure after retries: ${filename}`);
+});
 
       await queue.onIdle();
       console.log(`🧬 Regeneration complete.`);
