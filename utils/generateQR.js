@@ -4,12 +4,7 @@ import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 import { WALLETS, ALIASES } from "../config/config.js";
-import {
-  FALLBACK_DIR,
-  getFallbackPathByScenario,
-  sanitizeAmount,
-  normalizeSymbol
-} from "./fallbackPathUtils.js";
+import { amountsRoughlyEqual, normalizeSymbol, sanitizeAmount } from "./fallbackPathUtils.js";
 import { getAllQrScenarios, getScenarioPath } from "./qrScenarios.js";
 
 /**
@@ -105,10 +100,10 @@ export async function generateQR(symbolRaw, amountRaw, overrideAddress = null) {
 export async function getOrCreateQR(symbol, amount, overrideAddress = null, productName = null, quantity = null, category = null) {
   const all = await getAllQrScenarios();
     const match = all.find(s =>
-      s.rawSymbol === symbol &&
+      normalizeSymbol(s.rawSymbol) === normalizeSymbol(symbol) &&
       amountsRoughlyEqual(s.expectedAmount, amount) &&
       s.productName === productName &&
-      s.quantity === String(quantity) &&
+      String(s.quantity) === String(quantity) &&
       s.category === category
     );
 
