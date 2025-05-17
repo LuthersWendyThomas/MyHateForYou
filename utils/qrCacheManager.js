@@ -4,28 +4,27 @@ import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import PQueue from "p-queue";
-import { generateQR } from "./generateQR.js"; // Importing generateQR for QR generation
+import { generateQR } from "./generateQR.js";
 import {
   sanitizeAmount,
   getFallbackPath,
   FALLBACK_DIR,
   normalizeSymbol,
   getAmountFilename
-} from "./fallbackPathUtils.js"; // Import helpers for sanitation, normalization, and filename handling
-import { getAllQrScenarios } from "./qrScenarios.js"; // Import qrScenarios.js for fetching all QR scenarios
+} from "./fallbackPathUtils.js";
+import { getAllQrScenarios } from "./qrScenarios.js";
 
-import { NETWORKS } from "./fetchCryptoPrice.js"; // Use NETWORKS from fetchCryptoPrice.js for network rates
-import { WALLETS } from "../config/config.js"; // WALLETS from config for wallet address resolution
+import { NETWORKS } from "./fetchCryptoPrice.js";
+import { WALLETS } from "../config/config.js";
 
-const MAX_CONCURRENCY = 2;      // 🔒 Minimalus, kad neperkrautų CPU / disk I/O / rate limitų
-const MAX_RETRIES = 10;         // ♻️ Daugiau šansų kiekvienam scenarijui
-const BASE_DELAY_MS = 3000;     // 🛡️ Stabilesnis backoff’as (apie 3s → 6s → 12s → 24s... iki ~30s)
+const MAX_CONCURRENCY = 2;
+const MAX_RETRIES = 10;
+const BASE_DELAY_MS = 3000;
 
 function sleep(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
-// Attempt to generate QR and handle fallback if necessary
 async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, total }, successful, failed) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
@@ -41,15 +40,10 @@ async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, tot
         throw new Error("Invalid QR buffer");
       }
 
-      try {
-        await fs.writeFile(filePath, buffer);
-        successful.add(filePath);
-        console.log(`✅ [${index}/${total}] ${rawSymbol} → ${expectedAmount}`);
-        return;
-      } catch (err) {
-        throw new Error(`❌ Failed to write QR fallback: ${filename} → ${err.message}`);
-      }
-
+      await fs.writeFile(filePath, buffer);
+      successful.add(filePath);
+      console.log(`✅ [${index}/${total}] ${rawSymbol} → ${expectedAmount}`);
+      return;
     } catch (err) {
       const delay = BASE_DELAY_MS * Math.pow(2, attempt);
       console.warn(`⏳ [${index}/${total}] Retry #${attempt + 1} → ${rawSymbol}: ${err.message}`);
@@ -60,14 +54,12 @@ async function attemptGenerate({ rawSymbol, expectedAmount, filename, index, tot
   failed.push({ rawSymbol, expectedAmount, filename });
 }
 
-// Initialize QR cache directory if it doesn't exist
 export async function initQrCacheDir() {
   if (!existsSync(FALLBACK_DIR)) {
     await fs.mkdir(FALLBACK_DIR, { recursive: true });
   }
 }
 
-// Clean up expired QR codes from the cache directory
 export async function cleanQrCacheDir() {
   try {
     const files = await fs.readdir(FALLBACK_DIR);
@@ -81,11 +73,10 @@ export async function cleanQrCacheDir() {
   }
 }
 
-// Generate full QR cache (either forced or based on existing scenarios)
 export async function generateFullQrCache(forceComplete = true) {
   await initQrCacheDir();
 
-  const scenarios = await getAllQrScenarios(); // Get all the QR scenarios from the source of truth
+  const scenarios = await getAllQrScenarios();
   const totalCount = scenarios.length;
 
   console.log(`🚀 [QR Cache] Generating ${totalCount} fallback QR codes...`);
@@ -132,7 +123,6 @@ export async function validateQrFallbacks(autoFix = true) {
     const corrupt = [];
     const missing = [];
 
-    // ✅ DUPLICATE CHECK
     if (expectedSet.size !== scenarios.length) {
       console.warn(`⚠️ Duplicate filenames detected! Unique: ${expectedSet.size}, Raw: ${scenarios.length}`);
       const filenameCount = {};
@@ -187,27 +177,28 @@ export async function validateQrFallbacks(autoFix = true) {
         const amount = sanitizeAmount(parseFloat(amtRaw));
         if (!amount || isNaN(amount) || amount <= 0) continue;
 
-queue.add(async () => {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const buffer = await generateQR(symbol, amount);
-      if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 256) {
-        throw new Error(`Invalid buffer on attempt ${attempt + 1}`);
+        queue.add(async () => {
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              const buffer = await generateQR(symbol, amount);
+              if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 256) {
+                throw new Error(`Invalid buffer on attempt ${attempt + 1}`);
+              }
+
+              const filePath = path.join(FALLBACK_DIR, filename);
+              await fs.writeFile(filePath, buffer);
+              console.log(`✅ Regenerated: ${symbol} ${amount}`);
+              return;
+            } catch (err) {
+              const delay = 1000 * (attempt + 1);
+              console.warn(`⏳ Retry #${attempt + 1} for ${filename} → ${err.message}`);
+              await sleep(delay);
+            }
+          }
+
+          console.warn(`❌ Final failure after retries: ${filename}`);
+        });
       }
-
-      const filePath = path.join(FALLBACK_DIR, filename);
-      await fs.writeFile(filePath, buffer);
-      console.log(`✅ Regenerated: ${symbol} ${amount}`);
-      return; // 🎯 Sėkmė – sustabdyti ciklą
-    } catch (err) {
-      const delay = 1000 * (attempt + 1);
-      console.warn(`⏳ Retry #${attempt + 1} for ${filename} → ${err.message}`);
-      await sleep(delay);
-    }
-  }
-
-  console.warn(`❌ Final failure after retries: ${filename}`);
-});
 
       await queue.onIdle();
       console.log(`🧬 Regeneration complete.`);
